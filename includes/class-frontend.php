@@ -160,6 +160,9 @@ class Songpress_Frontend {
 		}
 		wp_enqueue_style( 'songpress' );
 		$uid = get_current_user_id();
+		if ( isset( $_GET['sp_song'] ) && empty( $_GET['sp_view'] ) && Songpress_Caps::can_edit_song( absint( $_GET['sp_song'] ) ) ) {
+			return Songpress_Editor::render( absint( $_GET['sp_song'] ) ); // people who can edit a song open it in the editor
+		}
 		if ( isset( $_GET['sp_song'] ) ) {
 			return self::song_view( absint( $_GET['sp_song'] ), $uid ) . wp_kses_post( songpress_public_donate_link() );
 		}

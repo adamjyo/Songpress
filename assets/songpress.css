@@ -278,3 +278,5 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 @media (max-width:719px){.spe-member,.spe-mhead{grid-template-columns:1fr}.spe-mhead{display:none}}
 @container (min-width:720px){.spe-addmember .spe-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .sp-forgot{font-size:13px;text-align:center;color:var(--sp-mute);margin:0}
+
+.sp-app a.spe-viewlink{margin-left:auto;color:var(--sp-soft);font-size:14px}
