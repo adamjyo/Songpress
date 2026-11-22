@@ -122,7 +122,7 @@ class Songpress_Import_Analyzer {
 			}
 		}
 		foreach ( $m['identifiers'] as $i ) {
-			if ( in_array( $i['kind'], array( 'isrc', 'distrokid' ), true ) ) {
+			if ( in_array( $i['kind'], array( 'isrc' ), true ) ) {
 				return true;
 			}
 		}

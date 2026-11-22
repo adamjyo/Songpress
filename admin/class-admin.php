@@ -222,7 +222,7 @@ class Songpress_Admin {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Saved.', 'songpress' ) . '</p></div>';
 		}
 		if ( isset( $_GET['dropped'] ) ) {
-			echo '<div class="notice notice-warning"><p>' . esc_html__( 'ISRC and DistroKid codes were not saved because this is the original work. Add a version and enter them there.', 'songpress' ) . '</p></div>';
+			echo '<div class="notice notice-warning"><p>' . esc_html__( 'The ISRC was not saved because this is the original work. Add a version and enter them there.', 'songpress' ) . '</p></div>';
 		}
 		if ( isset( $_GET['noacct'] ) ) {
 			/* translators: %s: names */
@@ -325,7 +325,7 @@ class Songpress_Admin {
 		}
 
 		echo '<details><summary>' . esc_html__( 'Codes and links', 'songpress' ) . '</summary>';
-		echo '<p class="sp-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. ISRC and DistroKid codes belong on versions.', 'songpress' ) . '</p>';
+		echo '<p class="sp-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. The ISRC belongs on versions.', 'songpress' ) . '</p>';
 		self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
 		self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, __( 'https://', 'songpress' ) );
 		echo '</details>';

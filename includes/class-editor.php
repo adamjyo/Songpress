@@ -116,7 +116,7 @@ class Songpress_Editor {
 		$legacy = $song && 0 === $version && ( '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		$rel    = '<section class="spe-panel simple" data-panel="release"><h3>' . esc_html__( 'Release', 'songpress' ) . '</h3>';
 		if ( $song && ( $version > 0 || $legacy ) ) {
-			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. ISRC and DistroKid numbers go under Codes and links.', 'songpress' ) . '</p>';
+			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. The ISRC goes under Codes and links.', 'songpress' ) . '</p>';
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
@@ -161,7 +161,7 @@ class Songpress_Editor {
 		$o .= '<label class="spe-field adv"><span>ChordPro</span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box to open the ChordPro tool. Use the button below to type here instead.', 'songpress' ) . '</small><button type="button" class="spe-btn" id="spe-cp-open">' . esc_html__( 'Open the ChordPro tool', 'songpress' ) . '</button></label>' . self::chordpro_popup() . '</section>';
 
 		/* Codes and links */
-		$o .= '<section class="spe-panel adv" data-panel="codes"><h3>' . esc_html__( 'Codes and links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. ISRC and DistroKid codes belong on versions.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel ' . ( $root ? 'simple' : 'adv' ) . '" data-panel="codes"><h3>' . esc_html__( 'Codes and links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. The ISRC belongs on versions; the others are shared by every version.', 'songpress' ) . '</p>';
 		$o .= self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
 		if ( ! $root ) {
 		$o .= self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, 'https://' );
@@ -195,7 +195,7 @@ class Songpress_Editor {
 			$o .= '<p class="spe-note ok">' . esc_html__( 'Saved.', 'songpress' ) . '</p>';
 		}
 		if ( isset( $_GET['sp_dropped'] ) ) {
-			$o .= '<p class="spe-note warn">' . esc_html__( 'ISRC and DistroKid codes were not saved because this is the original work. Add a version and enter them there.', 'songpress' ) . '</p>';
+			$o .= '<p class="spe-note warn">' . esc_html__( 'The ISRC was not saved because this is the original work. Add a version and enter them there.', 'songpress' ) . '</p>';
 		}
 		if ( isset( $_GET['sp_noacct'] ) ) {
 			/* translators: %s: names */

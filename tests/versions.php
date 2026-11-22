@@ -121,6 +121,7 @@ require __DIR__ . '/../includes/class-sessions.php';
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
 function people( $id, $role ) { $o = array(); foreach ( Songpress_Songs::credits( $id ) as $c ) { if ( $c->role === $role ) { $o[] = $c->name . ':' . ( null === $c->share ? '-' : (float) $c->share ); } } return $o; }
+function wp_ids( $id ) { $o = array(); foreach ( Songpress_Songs::identifiers( $id ) as $i ) { $o[] = $i->kind; } sort( $o ); return $o; }
 function put( $table, $row ) { global $wpdb; $wpdb->insert( $wpdb->prefix . 'songpress_' . $table, $row ); }
 
 // original work 0001 with 3 writers, a performer, and codes
@@ -655,6 +656,13 @@ check( 'sync twice changes nothing', Songpress_Songs::sync_shared( $sa ), 0 );
 Songpress_Songs::update( $sb, array( 'story' => 'from version' ) );
 Songpress_Songs::sync_shared( $sb );
 check( 'editing a version also updates the original', Songpress_Songs::get( $sa )->story, 'from version' );
+$da = Songpress_Songs::create( array( 'title' => 'Code Song', 'status' => 'writing' ), 1 );
+$db_ = Songpress_Songs::create_version( $da, 1 );
+Songpress_Songs::replace_identifiers( $db_, array( array( 'kind' => 'distrokid', 'value' => 'DK9' ), array( 'kind' => 'isrc', 'value' => 'US9' ) ), 1 );
+check( 'lift moves a version DistroKid number to the original', array( Songpress_Songs::lift_distrokid() >= 1, wp_ids( $da ) ), array( true, array( 'distrokid' ) ) );
+Songpress_Songs::replace_identifiers( $da, array( array( 'kind' => 'ascap', 'value' => 'A1' ), array( 'kind' => 'distrokid', 'value' => 'DK9' ) ), 0 );
+Songpress_Songs::sync_shared( $da );
+check( 'original keeps ASCAP and DistroKid and shares them; version keeps its ISRC', array( wp_ids( $da ), wp_ids( $db_ ) ), array( array( 'ascap', 'distrokid' ), array( 'ascap', 'distrokid', 'isrc' ) ) );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
