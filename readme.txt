@@ -30,6 +30,13 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.7.0 =
+* Members and People are now one: a single People screen (and rail item). A person is a profile and a login together: photo, bio and IPI, plus class and password. People without a login can be given one; logins show on the list.
+* Each person has an earnings report: all time and per source (ASCAP, MLC, DistroKid as a performer, CCLI), per quarter, and top songs. The list shows what each person has earned.
+* Rename a person and their login together (first.last), with credits and earnings following the new name. Open your own person, check the name, and save to change adamjyo to adam.page; you will sign in again with the new login and the same password.
+* DistroKid statements now go to the song's performers; ASCAP, MLC and CCLI go to the writers by their splits.
+* Bands, Labels and Publishers keep their own lists.
+
 = 0.6.0 =
 * New Upload / Download page in the rail replaces every upload form in the app. Pick what you are uploading from a dropdown and its tool appears: Works, the old catalog file, photos and bios, the DistroKid stats page, and statements from DistroKid, MLC, ASCAP and CCLI (CSV or TSV; CCLI PDFs too where the server has pdftotext).
 * Statements are matched to songs by ISRC, then title, saved per song, quarter and source (replacing what that source held for the quarter), and each writer's share is worked out from the credits. Lines with no matching song are reported, not lost silently.

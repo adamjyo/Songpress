@@ -566,7 +566,7 @@ class Songpress_Money {
 		return $id ? '<a href="' . esc_url( Songpress_Editor::edit_url( (int) $id ) ) . '">' . esc_html( $label ) . '</a>' : esc_html( $label );
 	}
 
-	private static function bars( array $items ) {
+	public static function bars( array $items ) {
 		$max = 0;
 		foreach ( $items as $i ) {
 			$max = max( $max, (float) $i[1] );

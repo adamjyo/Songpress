@@ -11,7 +11,7 @@ class Songpress_Editor {
 
 	/** Address of the list, without any editor or message parameters. */
 	public static function list_url() {
-		return remove_query_arg( array( 'sp_edit', 'sp_saved', 'sp_err', 'sp_noacct', 'sp_shares', 'sp_dropped', 'sp_archived', 'sp_tab', 'sp_song', 'sp_view', 'sp_page', 'sp_members', 'saved', 'err', 'done', 'skipped', 'accounts', 'left', 'nomedia', 'profile', 'kind', 'loaded', 'b', 'p', 'loaderr', 'artist', 'checked' ) );
+		return remove_query_arg( array( 'sp_edit', 'sp_saved', 'sp_err', 'sp_noacct', 'sp_shares', 'sp_dropped', 'sp_archived', 'sp_tab', 'sp_song', 'sp_view', 'sp_page', 'sp_members', 'saved', 'err', 'done', 'skipped', 'accounts', 'left', 'nomedia', 'profile', 'kind', 'loaded', 'b', 'p', 'loaderr', 'artist', 'checked', 'person', 'type', 'm_ok', 'm_err' ) );
 	}
 
 	public static function edit_url( $id ) {

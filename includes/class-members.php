@@ -13,7 +13,7 @@ class Songpress_Members {
 	}
 
 	public static function url() {
-		return add_query_arg( 'sp_members', '1', Songpress_Editor::list_url() );
+		return Songpress_Persons::url();
 	}
 
 	/** The address a new person opens: the app's login screen with their username filled in. */
@@ -88,6 +88,7 @@ class Songpress_Members {
 			self::go( array( 'sp_err' => rawurlencode( $uid->get_error_message() ) ) );
 		}
 		Songpress_Caps::assign( $uid, $class );
+		Songpress_Profiles::upsert( 'person', $first . ' ' . $last, array() );
 		self::stash( array( array( 'name' => $first . ' ' . $last, 'login' => $login, 'pass' => $pass ) ) );
 		self::go( array( 'sp_saved' => rawurlencode( __( 'Login created. Copy the invitation below and send it to them.', 'songpress' ) ) ) );
 	}
@@ -134,17 +135,15 @@ class Songpress_Members {
 		self::go( array( 'sp_saved' => rawurlencode( $msg ) ) );
 	}
 
-	public static function render() {
+	/** The People screen. With $inner, only the invitations, class list and add form (People puts its own list under them). */
+	public static function render( $inner = false ) {
+		if ( ! $inner ) {
+			return Songpress_Persons::render();
+		}
 		if ( ! Songpress_Caps::can( 'members' ) ) {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Only Managers can see members.', 'songpress' ) . '</p></div>';
 		}
-		$o = '<div class="songpress sp-app sp-editor sp-members"><div class="spe-top"><h2>' . esc_html__( 'Members', 'songpress' ) . '</h2></div>';
-		if ( isset( $_GET['sp_saved'] ) ) {
-			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_saved'] ) ) ) . '</p>';
-		}
-		if ( isset( $_GET['sp_err'] ) ) {
-			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>';
-		}
+		$o = '';
 		$key   = 'songpress_invites_' . get_current_user_id();
 		$items = get_transient( $key );
 		if ( is_array( $items ) && $items ) {
@@ -179,34 +178,7 @@ class Songpress_Members {
 		$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Password (blank makes one)', 'songpress' ) . '</span><input name="pass" autocomplete="off" placeholder="' . esc_attr__( 'at least 8 characters', 'songpress' ) . '"></label></div>';
 		$o .= '<p class="spe-help">' . esc_html__( 'The username is firstname.lastname.', 'songpress' ) . '</p><button type="submit" class="spe-save">' . esc_html__( 'Create login', 'songpress' ) . '</button></form>';
 
-		/* Everyone */
-		$ids = array_map( 'intval', get_users( array( 'meta_key' => Songpress_Caps::META, 'meta_compare' => 'EXISTS', 'fields' => 'ID' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
-		foreach ( get_users( array( 'capability' => 'manage_options', 'fields' => 'ID' ) ) as $admin_id ) {
-			$ids[] = (int) $admin_id;
-		}
-		$ids = array_values( array_unique( $ids ) );
-		$o  .= '<h3>' . esc_html__( 'Everyone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_member_update', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_update">';
-		$o  .= '<div class="spe-head spe-mhead"><span>' . esc_html__( 'Person', 'songpress' ) . '</span><span>' . esc_html__( 'Class', 'songpress' ) . '</span><span>' . esc_html__( 'New password', 'songpress' ) . '</span></div>';
-		foreach ( $ids as $uid ) {
-			$u = get_userdata( $uid );
-			if ( ! $u ) {
-				continue;
-			}
-			$class = Songpress_Caps::class_of( $uid );
-			$o    .= '<div class="spe-member"><span class="spe-who">' . Songpress_Profiles::chip( $u->display_name, 28, 'person' ) . '<span><b>' . esc_html( $u->display_name ) . '</b><br><small>' . esc_html( $u->user_login ) . '</small></span></span>';
-			if ( Songpress_Caps::is_wp_admin( $uid ) ) {
-				$o .= '<span><b>' . esc_html__( 'Manager', 'songpress' ) . '</b> <small>' . esc_html__( '(WordPress administrator)', 'songpress' ) . '</small></span><span></span>';
-			} else {
-				$o .= '<select name="class[' . (int) $uid . ']"><option value="">' . esc_html__( 'No access (remove)', 'songpress' ) . '</option>';
-				foreach ( Songpress_Caps::assignable() as $k => $c ) {
-					$o .= '<option value="' . esc_attr( $k ) . '"' . selected( $class, $k, false ) . '>' . esc_html( $c[0] ) . '</option>';
-				}
-				$o .= '</select><input name="pw[' . (int) $uid . ']" autocomplete="off" placeholder="' . esc_attr__( 'leave blank to keep', 'songpress' ) . '">';
-			}
-			$o .= '</div>';
-		}
-		$o .= '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form>';
-		$o .= '<script>document.addEventListener("click",function(e){var b=e.target.closest(".spe-copytext");if(!b)return;var t=b.parentNode.querySelector("textarea");t.select();try{navigator.clipboard.writeText(t.value);b.textContent="Copied";}catch(x){document.execCommand("copy");}});</script></div>';
+		$o .= '<script>document.addEventListener("click",function(e){var b=e.target.closest(".spe-copytext");if(!b)return;var t=b.parentNode.querySelector("textarea");t.select();try{navigator.clipboard.writeText(t.value);b.textContent="' . esc_js( __( 'Copied', 'songpress' ) ) . '";}catch(x){}});</script>';
 		return $o;
 	}
 }

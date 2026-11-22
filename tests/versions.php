@@ -85,6 +85,7 @@ require __DIR__ . '/../includes/class-art.php';
 require __DIR__ . '/../includes/class-agreements.php';
 require __DIR__ . '/../includes/class-registrations.php';
 require __DIR__ . '/../includes/class-uploads.php';
+require __DIR__ . '/../includes/class-persons.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -448,6 +449,17 @@ foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
 	if ( false === $GLOBALS['wpdb']->get_results( Songpress_Uploads::sql( $k ), ARRAY_A ) ) { ++$bad; }
 }
 check( 'every download query runs', $bad, 0 );
+
+if ( ! function_exists( 'sanitize_user' ) ) { function sanitize_user( $s ) { return preg_replace( '/[^a-z0-9._@ -]/i', '', $s ); } }
+// People: names, logins, report
+check( 'split name', array( Songpress_Persons::split_name( 'Adam Page' ), Songpress_Persons::split_name( 'Mary Ann Lee' ) ), array( array( 'Adam', 'Page' ), array( 'Mary Ann', 'Lee' ) ) );
+check( 'login is first.last', Songpress_Persons::login_for( 'Adam', 'Page' ), 'adam.page' );
+$cw = $GLOBALS['wpdb']->get_var( "SELECT song_id FROM wp_songpress_earnings WHERE src='mlc' LIMIT 1" );
+$GLOBALS['wpdb']->query( "INSERT INTO wp_songpress_person_earnings (person,person_key,work_title,song_id,quarter,src,amount) VALUES ('Zed Tester','zedtester','Harbor Lights',$cw,'2026-Q2','mlc',5),('Zed Tester','zedtester','Harbor Lights',$cw,'2026-Q2','distrokid',3),('Zed Tester','zedtester','Harbor Lights',$cw,'2026-Q1','ascap',2)" );
+$rp = Songpress_Persons::report( 'zed tester' );
+check( 'person report totals by source', array( $rp['total'], $rp['sources']['mlc'], $rp['sources']['distrokid'], $rp['sources']['ascap'], $rp['sources']['ccli'] ), array( 10.0, 5.0, 3.0, 2.0, 0.0 ) );
+check( 'person report quarters newest first', array_keys( $rp['quarters'] ), array( '2026-Q2', '2026-Q1' ) );
+check( 'earned total for a person', Songpress_Persons::total_for( 'Zed Tester' ), 10.0 );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

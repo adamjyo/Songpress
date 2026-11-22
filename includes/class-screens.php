@@ -29,7 +29,7 @@ class Songpress_Screens {
 			return Songpress_Editor::edit_url( isset( $args['song'] ) ? (int) $args['song'] : 0 );
 		}
 		if ( 'songpress-members' === $page ) {
-			return Songpress_Members::url();
+			return Songpress_Persons::url();
 		}
 		$slug = preg_replace( '/^songpress-/', '', $page );
 		unset( $args['page'] );
@@ -37,6 +37,9 @@ class Songpress_Screens {
 	}
 
 	public static function render( $slug ) {
+		if ( 'people' === $slug && ( empty( $_GET['kind'] ) || 'person' === $_GET['kind'] ) && empty( $_GET['profile'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return Songpress_Persons::render();
+		}
 		if ( 'uploads' === $slug ) {
 			return Songpress_Uploads::render();
 		}

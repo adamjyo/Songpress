@@ -1,0 +1,273 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+/**
+ * People: one list where a person's profile (photo, bio, IPI) and their SongPress login (class, password) are the
+ * same record, with a report of what they have earned from ASCAP, MLC, DistroKid (as a performer) and CCLI.
+ * Bands, labels and publishers stay on their own lists. No email is ever sent.
+ */
+class Songpress_Persons {
+
+	public static function init() {
+		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
+	}
+
+	public static function url( $args = array() ) {
+		return add_query_arg( array_merge( array( 'sp_page' => 'people' ), $args ), Songpress_Editor::list_url() );
+	}
+
+	/** First and last name from a display name: the last word is the last name. */
+	public static function split_name( $name ) {
+		$w = preg_split( '/\s+/', trim( (string) $name ) );
+		if ( count( $w ) < 2 ) {
+			return array( (string) $name, '' );
+		}
+		$last = array_pop( $w );
+		return array( implode( ' ', $w ), $last );
+	}
+
+	/** "adam.page" from first and last name. */
+	public static function login_for( $first, $last ) {
+		return preg_replace( '/\s+/', '', (string) sanitize_user( strtolower( trim( $first ) . '.' . trim( $last ) ), true ) );
+	}
+
+	/** Every person: profile and login matched by name. Each row: key, name, profile, user. */
+	public static function rows() {
+		global $wpdb;
+		$t   = Songpress_Install::table( 'profiles' );
+		$out = array();
+		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE kind = 'person' ORDER BY name LIMIT 2000" ) as $p ) { // phpcs:ignore WordPress.DB
+			$out[ Songpress_Profiles::key( $p->name ) ] = array( 'name' => $p->name, 'profile' => $p, 'user' => null );
+		}
+		$ids = array_map( 'intval', get_users( array( 'meta_key' => Songpress_Caps::META, 'meta_compare' => 'EXISTS', 'fields' => 'ID' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+		foreach ( get_users( array( 'capability' => 'manage_options', 'fields' => 'ID' ) ) as $a ) {
+			$ids[] = (int) $a;
+		}
+		foreach ( array_unique( $ids ) as $uid ) {
+			$u = get_userdata( $uid );
+			if ( ! $u ) {
+				continue;
+			}
+			$k = Songpress_Profiles::key( $u->display_name );
+			if ( ! isset( $out[ $k ] ) ) {
+				$out[ $k ] = array( 'name' => $u->display_name, 'profile' => null, 'user' => null );
+			}
+			$out[ $k ]['user'] = $u;
+		}
+		uasort( $out, function ( $a, $b ) {
+			return strcasecmp( $a['name'], $b['name'] );
+		} );
+		return $out;
+	}
+
+	public static function total_for( $name ) {
+		$key = Songpress_Money::person_key( $name );
+		$sum = 0.0;
+		foreach ( '' === $key ? array() : Songpress_Money::my_rows( $key ) as $r ) {
+			$sum += (float) $r->total;
+		}
+		return $sum;
+	}
+
+	/** What one person earned: totals per source, per quarter and source, and their top songs. Pure data. */
+	public static function report( $name ) {
+		$key  = Songpress_Money::person_key( $name );
+		$rows = '' === $key ? array() : Songpress_Money::my_rows( $key );
+		$src  = array();
+		foreach ( array_keys( Songpress_Money::SOURCES ) as $s ) {
+			$src[ $s ] = 0.0;
+		}
+		$q   = array();
+		$all = 0.0;
+		foreach ( $rows as $r ) {
+			$src[ $r->src ]         = ( $src[ $r->src ] ?? 0 ) + (float) $r->total;
+			$q[ $r->quarter ][ $r->src ] = (float) $r->total;
+			$all                   += (float) $r->total;
+		}
+		krsort( $q );
+		return array( 'total' => $all, 'sources' => $src, 'quarters' => $q, 'songs' => '' === $key ? array() : Songpress_Money::my_songs( $key, 10 ) );
+	}
+
+	/* ---------- rename ---------- */
+
+	private static function go( $args ) {
+		wp_safe_redirect( add_query_arg( $args, self::url() ) );
+		exit;
+	}
+
+	public static function handle_rename() {
+		check_admin_referer( 'songpress_person_rename' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		global $wpdb;
+		$uid   = absint( $_POST['uid'] ?? 0 );
+		$old   = sanitize_text_field( wp_unslash( $_POST['old'] ?? '' ) );
+		$first = sanitize_text_field( wp_unslash( $_POST['first'] ?? '' ) );
+		$last  = sanitize_text_field( wp_unslash( $_POST['last'] ?? '' ) );
+		$new   = trim( $first . ' ' . $last );
+		$back  = array( 'person' => Songpress_Profiles::key( $old ) );
+		if ( '' === $first || '' === $last ) {
+			self::go( $back + array( 'sp_err' => rawurlencode( __( 'Enter a first and last name.', 'songpress' ) ) ) );
+		}
+		$nk = Songpress_Profiles::key( $new );
+		$ok = Songpress_Profiles::key( $old );
+		$pt = Songpress_Install::table( 'profiles' );
+		$clash = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$pt} WHERE kind = 'person' AND name_key = %s", $nk ) ); // phpcs:ignore WordPress.DB
+		$mine  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$pt} WHERE kind = 'person' AND name_key = %s", $ok ) ); // phpcs:ignore WordPress.DB
+		if ( $clash && $clash !== $mine ) {
+			self::go( $back + array( 'sp_err' => rawurlencode( __( 'Someone with that name is already in People.', 'songpress' ) ) ) );
+		}
+		$login = '';
+		$self  = false;
+		if ( $uid ) {
+			$u = get_userdata( $uid );
+			if ( ! $u ) {
+				self::go( $back );
+			}
+			$login = self::login_for( $first, $last );
+			$other = '' === $login ? 0 : (int) username_exists( $login );
+			if ( '' === $login || ( $other && $other !== $uid ) ) {
+				self::go( $back + array( 'sp_err' => rawurlencode( __( 'That login is taken or not valid.', 'songpress' ) ) ) );
+			}
+			$wpdb->update( $wpdb->users, array( 'user_login' => $login, 'user_nicename' => sanitize_title( $login ), 'display_name' => $new ), array( 'ID' => $uid ) );
+			update_user_meta( $uid, 'first_name', $first );
+			update_user_meta( $uid, 'last_name', $last );
+			update_user_meta( $uid, 'nickname', $new );
+			clean_user_cache( $uid );
+			$self = get_current_user_id() === $uid;
+		}
+		if ( $mine ) {
+			$wpdb->update( $pt, array( 'name' => $new, 'name_key' => $nk, 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $mine ) );
+			Songpress_Profiles::reset_cache();
+		} else {
+			Songpress_Profiles::upsert( 'person', $new, array() );
+		}
+		// credits and earnings follow the new name
+		if ( $ok !== $nk ) {
+			$ct = Songpress_Install::table( 'credits' );
+			$wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET name = %s WHERE LOWER(TRIM(name)) = %s", $new, $ok ) ); // phpcs:ignore WordPress.DB
+			$pe = Songpress_Install::table( 'person_earnings' );
+			$wpdb->query( $wpdb->prepare( "UPDATE {$pe} SET person = %s, person_key = %s WHERE person_key = %s", $new, Songpress_Money::person_key( $new ), Songpress_Money::person_key( $old ) ) ); // phpcs:ignore WordPress.DB
+		}
+		if ( $self ) {
+			wp_clear_auth_cookie();
+			wp_safe_redirect( Songpress_Members::invite_link( $login ) );
+			exit;
+		}
+		self::go( array( 'person' => $nk, 'sp_saved' => rawurlencode( '' !== $login ? sprintf( /* translators: 1: name 2: login */ __( 'Renamed to %1$s. Their login is now %2$s.', 'songpress' ), $new, $login ) : sprintf( __( 'Renamed to %s.', 'songpress' ), $new ) ) ) );
+	}
+
+	/* ---------- screens ---------- */
+
+	public static function render() {
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Only Managers can see people.', 'songpress' ) . '</p></div>';
+		}
+		$one = isset( $_GET['person'] ) ? Songpress_Profiles::key( sanitize_text_field( wp_unslash( $_GET['person'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$all = self::rows();
+		return '' !== $one && isset( $all[ $one ] ) ? self::render_one( $all[ $one ] ) : self::render_list( $all );
+	}
+
+	private static function notes() {
+		$o = '';
+		if ( isset( $_GET['sp_saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_saved'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		if ( isset( $_GET['sp_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		return $o;
+	}
+
+	private static function render_list( array $all ) {
+		// the invitation boxes and the add form are the old Members screen, still used for the login side
+		$o = Songpress_Members::render( true );
+		$o = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . esc_html__( 'People', 'songpress' ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a person without a login', 'songpress' ) . '</a></div>' . self::notes() . $o;
+		$o .= '<h3>' . esc_html__( 'Everyone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_member_update', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_update">';
+		$o .= '<div class="spe-head spe-mhead"><span>' . esc_html__( 'Person', 'songpress' ) . '</span><span>' . esc_html__( 'Class', 'songpress' ) . '</span><span>' . esc_html__( 'New password', 'songpress' ) . '</span><span>' . esc_html__( 'Earned', 'songpress' ) . '</span></div>';
+		foreach ( $all as $k => $r ) {
+			$u    = $r['user'];
+			$earn = Songpress_Money::money( self::total_for( $r['name'] ) );
+			$o   .= '<div class="spe-member"><span class="spe-who">' . Songpress_Profiles::chip( $r['name'], 28, 'person' ) . '<span><a href="' . esc_url( self::url( array( 'person' => $k ) ) ) . '"><b>' . esc_html( $r['name'] ) . '</b></a><br><small>' . esc_html( $u ? $u->user_login : __( 'no login', 'songpress' ) ) . '</small></span></span>';
+			if ( $u && Songpress_Caps::is_wp_admin( $u->ID ) ) {
+				$o .= '<span><b>' . esc_html__( 'Manager', 'songpress' ) . '</b> <small>' . esc_html__( '(WordPress administrator)', 'songpress' ) . '</small></span><span></span>';
+			} elseif ( $u ) {
+				$class = Songpress_Caps::class_of( $u->ID );
+				$o    .= '<select name="class[' . (int) $u->ID . ']"><option value="">' . esc_html__( 'No access (remove)', 'songpress' ) . '</option>';
+				foreach ( Songpress_Caps::assignable() as $ck => $c ) {
+					$o .= '<option value="' . esc_attr( $ck ) . '"' . selected( $class, $ck, false ) . '>' . esc_html( $c[0] ) . '</option>';
+				}
+				$o .= '</select><input name="pw[' . (int) $u->ID . ']" autocomplete="off" placeholder="' . esc_attr__( 'leave blank to keep', 'songpress' ) . '">';
+			} else {
+				$o .= '<span><small>' . esc_html__( 'Open the person to give them a login', 'songpress' ) . '</small></span><span></span>';
+			}
+			$o .= '<span class="n">' . esc_html( $earn ) . '</span></div>';
+		}
+		return $o . '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form></div>';
+	}
+
+	private static function render_one( array $r ) {
+		$u    = $r['user'];
+		$name = $r['name'];
+		list( $first, $last ) = self::split_name( $name );
+		if ( $u ) {
+			$fm = (string) get_user_meta( $u->ID, 'first_name', true );
+			$lm = (string) get_user_meta( $u->ID, 'last_name', true );
+			if ( '' !== $fm && '' !== $lm ) {
+				list( $first, $last ) = array( $fm, $lm );
+			} elseif ( 'adamjyo' === $u->user_login ) {
+				list( $first, $last ) = array( 'Adam', 'Page' );
+			}
+		}
+		$o  = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . Songpress_Profiles::chip( $name, 40, 'person' ) . esc_html( $name ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></div>' . self::notes();
+		$o .= '<p>' . ( $r['profile'] ? '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => (int) $r['profile']->id, 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Edit photo, bio, contact and IPI', 'songpress' ) . '</a>' : '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a profile', 'songpress' ) . '</a>' ) . '</p>';
+
+		$o .= '<h3>' . esc_html__( 'Name and login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false )
+			. '<input type="hidden" name="action" value="songpress_person_rename"><input type="hidden" name="uid" value="' . (int) ( $u ? $u->ID : 0 ) . '"><input type="hidden" name="old" value="' . esc_attr( $name ) . '">'
+			. '<label class="spe-field"><span>' . esc_html__( 'First name', 'songpress' ) . '</span><input name="first" value="' . esc_attr( $first ) . '" required></label>'
+			. '<label class="spe-field"><span>' . esc_html__( 'Last name', 'songpress' ) . '</span><input name="last" value="' . esc_attr( $last ) . '" required></label>';
+		$o .= '<p class="spe-help">' . ( $u ? sprintf( /* translators: 1: current login 2: new login */ esc_html__( 'Login now: %1$s. Saving makes it %2$s (first.last). Credits and earnings follow the new name.', 'songpress' ), '<b>' . esc_html( $u->user_login ) . '</b>', '<b>' . esc_html( self::login_for( $first, $last ) ) . '</b>' ) . ( get_current_user_id() === $u->ID ? ' ' . esc_html__( 'This is you, so you will be asked to sign in again with the new login. Your password stays the same.', 'songpress' ) : '' ) : esc_html__( 'This person has no login yet.', 'songpress' ) ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Save name and login', 'songpress' ) . '</button></form>';
+
+		if ( ! $u ) {
+			$o .= '<h3>' . esc_html__( 'Give them a login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_member_add', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_add"><input type="hidden" name="first" value="' . esc_attr( $first ) . '"><input type="hidden" name="last" value="' . esc_attr( $last ) . '"><label class="spe-field"><span>' . esc_html__( 'Class', 'songpress' ) . '</span><select name="class_new">';
+			foreach ( Songpress_Caps::assignable() as $ck => $c ) {
+				$o .= '<option value="' . esc_attr( $ck ) . '"' . selected( 'viewer', $ck, false ) . '>' . esc_html( $c[0] ) . '</option>';
+			}
+			$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Password (blank makes one)', 'songpress' ) . '</span><input name="pass" autocomplete="off"></label><button class="spe-save" type="submit">' . esc_html__( 'Create login', 'songpress' ) . '</button></form>';
+		}
+
+		$rep = self::report( $name );
+		$o  .= '<h3>' . esc_html__( 'Earnings', 'songpress' ) . '</h3>';
+		if ( ! $rep['quarters'] ) {
+			return $o . '<p class="spe-help">' . esc_html__( 'No earnings yet. They appear when statements are loaded on the Upload / Download page and this person is credited on the songs (as a writer for ASCAP, MLC and CCLI, as a performer for DistroKid).', 'songpress' ) . '</p></div>';
+		}
+		$o .= '<ul class="songpress-stats"><li>' . esc_html__( 'All time', 'songpress' ) . '<strong>' . esc_html( Songpress_Money::money( $rep['total'] ) ) . '</strong></li>';
+		foreach ( $rep['sources'] as $s => $v ) {
+			$lab = Songpress_Money::SOURCES[ $s ] ?? strtoupper( $s );
+			$o  .= '<li>' . esc_html( 'distrokid' === $s ? $lab . ' ' . __( '(as performer)', 'songpress' ) : $lab ) . '<strong>' . esc_html( Songpress_Money::money( $v ) ) . '</strong></li>';
+		}
+		$o .= '</ul><div class="spm-scroll"><table class="spm-table"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th>';
+		$cols = array_keys( $rep['sources'] );
+		foreach ( $cols as $s ) {
+			$o .= '<th class="n">' . esc_html( Songpress_Money::SOURCES[ $s ] ?? strtoupper( $s ) ) . '</th>';
+		}
+		$o .= '<th class="n">' . esc_html__( 'Total', 'songpress' ) . '</th></tr></thead><tbody>';
+		foreach ( $rep['quarters'] as $q => $by ) {
+			$o .= '<tr><td>' . esc_html( $q ) . '</td>';
+			foreach ( $cols as $s ) {
+				$o .= '<td class="n">' . esc_html( isset( $by[ $s ] ) ? Songpress_Money::money( $by[ $s ] ) : '' ) . '</td>';
+			}
+			$o .= '<td class="n"><b>' . esc_html( Songpress_Money::money( array_sum( $by ) ) ) . '</b></td></tr>';
+		}
+		$o .= '</tbody></table></div>';
+		if ( $rep['songs'] ) {
+			$items = array();
+			foreach ( $rep['songs'] as $s ) {
+				$items[] = array( $s->work_title, (float) $s->total, Songpress_Money::money( $s->total ) );
+			}
+			$o .= '<h3>' . esc_html__( 'Top songs', 'songpress' ) . '</h3>' . Songpress_Money::bars( $items );
+		}
+		return $o . '</div>';
+	}
+}

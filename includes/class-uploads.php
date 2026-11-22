@@ -232,7 +232,7 @@ class Songpress_Uploads {
 			$rows[]         = array( (int) $id, $q, $src, round( $amt, 6 ) );
 			$writers        = array();
 			foreach ( Songpress_Songs::credits( (int) $id ) as $c ) {
-				if ( 'writer' === $c->role && '' !== trim( $c->name ) ) {
+				if ( ( 'distrokid' === $src ? 'performer' : 'writer' ) === $c->role && '' !== trim( $c->name ) ) {
 					$writers[] = $c;
 				}
 			}
@@ -405,7 +405,7 @@ class Songpress_Uploads {
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
 			foreach ( self::STATEMENTS as $k => $s ) {
 				$extra = '<input type="hidden" name="src" value="' . esc_attr( $k ) . '"><label class="spu-q">' . esc_html__( 'Quarter (optional, like 2026 Q2)', 'songpress' ) . ' <input type="text" name="quarter" placeholder="2026 Q2" size="9"></label> ';
-				$o    .= $panel( $k, '<p class="spe-help">' . esc_html( $s[2] ) . ' ' . esc_html__( 'Lines are matched to your songs by ISRC, then by title. For each quarter in the file, this replaces what this source held for that quarter. Each writer\'s share is worked out from the credits.', 'songpress' ) . '</p>' . $form( 'songpress_statement', 'songpress_statement', 'file', $s[1], __( 'Load statement', 'songpress' ), $extra ) );
+				$o    .= $panel( $k, '<p class="spe-help">' . esc_html( $s[2] ) . ' ' . esc_html__( 'Lines are matched to your songs by ISRC, then by title. For each quarter in the file, this replaces what this source held for that quarter. Writers share ASCAP, MLC and CCLI by their credit splits; DistroKid goes to the performers.', 'songpress' ) . '</p>' . $form( 'songpress_statement', 'songpress_statement', 'file', $s[1], __( 'Load statement', 'songpress' ), $extra ) );
 			}
 		}
 
