@@ -252,6 +252,16 @@ check( 'band chip uses the band photo', false !== strpos( Songpress_Profiles::ch
 check( 'person chip uses the person photo', false !== strpos( Songpress_Profiles::chip( 'Echo', 28, 'person' ), 'art-71' ), true );
 check( 'roles map to kinds', array( Songpress_Profiles::kind_for_role( 'writer' ), Songpress_Profiles::kind_for_role( 'performer' ), Songpress_Profiles::kind_for_role( 'publisher' ), Songpress_Profiles::kind_for_role( 'artist' ) ), array( 'person', 'person', 'publisher', 'band' ) );
 unlink( $old );
+$sa = Songpress_Songs::query( array( 'order' => 'title', 'dir' => 'asc', 'per_page' => 50 ) );
+$sd = Songpress_Songs::query( array( 'order' => 'title', 'dir' => 'desc', 'per_page' => 50 ) );
+$ta = array_map( function ( $r ) { return $r->title; }, $sa['rows'] );
+$td = array_map( function ( $r ) { return $r->title; }, $sd['rows'] );
+check( 'sort by title ascending', $ta, array_values( $ta ) === $ta && $ta === (function ( $x ) { sort( $x ); return $x; })( $ta ) ? $ta : 'not sorted' );
+check( 'sort descending is the reverse', array_reverse( $ta ), $td );
+$sw = Songpress_Songs::query( array( 'order' => 'writer', 'per_page' => 50 ) );
+check( 'sort by writer runs', is_array( $sw['rows'] ), true );
+$sx = Songpress_Songs::query( array( 'order' => 'bad; DROP', 'per_page' => 50 ) );
+check( 'unknown sort column is ignored', $sx['total'], $sa['total'] );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

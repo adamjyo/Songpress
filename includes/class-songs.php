@@ -106,7 +106,17 @@ class Songpress_Songs {
 		$sql    = implode( ' AND ', $where );
 
 		$total_sql = "SELECT COUNT(*) FROM {$s} s WHERE {$sql}";
-		$rows_sql  = "SELECT s.* FROM {$s} s WHERE {$sql} ORDER BY s.family_id DESC, s.version_no DESC LIMIT %d OFFSET %d";
+		$dir   = ( isset( $args['dir'] ) && 'desc' === $args['dir'] ) ? 'DESC' : 'ASC';
+		$cols  = array(
+			'serial' => 's.serial',
+			'title'  => 's.title',
+			'genre'  => 's.genre',
+			'artist' => 's.artist',
+			'status' => 's.status',
+			'writer' => "(SELECT MIN(w.name) FROM {$c} w WHERE w.song_id = s.id AND w.role = 'writer')",
+		);
+		$order = isset( $args['order'], $cols[ $args['order'] ] ) ? $cols[ $args['order'] ] . " {$dir}, s.serial ASC" : 's.family_id DESC, s.version_no DESC';
+		$rows_sql  = "SELECT s.* FROM {$s} s WHERE {$sql} ORDER BY {$order} LIMIT %d OFFSET %d";
 		$total     = (int) ( $vals ? $wpdb->get_var( $wpdb->prepare( $total_sql, $vals ) ) : $wpdb->get_var( $total_sql ) );
 		$rows      = $wpdb->get_results( $wpdb->prepare( $rows_sql, array_merge( $vals, array( $per, $offset ) ) ) );
 		return array( 'rows' => $rows, 'total' => $total );

@@ -166,3 +166,12 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-searchbar .songpress-search{flex:1;min-width:0;margin:0}
 .sp-app a.songpress-add{flex:none;width:48px;height:48px;border-radius:12px;background:var(--sp-accent);color:#14110a;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:1;font-weight:500;text-decoration:none}
 .sp-app a.songpress-add:hover{background:#ffb83d}
+
+.songpress-colhead{display:flex;gap:14px;padding:0 4px 8px;font-size:12px;letter-spacing:.04em;text-transform:uppercase}
+.songpress-ch-play{flex:none;width:48px}
+.songpress-ch-main{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:6px 14px}
+.sp-app .songpress-colhead a{color:var(--sp-mute);white-space:nowrap}
+.sp-app .songpress-colhead a:hover,.sp-app .songpress-colhead a.on{color:var(--sp-accent)}
+@container (min-width:620px){
+ .songpress-ch-main{display:grid;grid-template-columns:56px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;gap:0 12px;align-items:center}
+}
