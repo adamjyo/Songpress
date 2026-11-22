@@ -730,11 +730,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 @keyframes spToastIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%)}}
 .songpress-searchbar .songpress-len{flex:none;margin:0}
 .spn-auds{position:absolute;left:0;top:0;width:0;height:0;z-index:5}
-.spn-au{position:absolute;box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:0 10px;border:1px solid #34302b;border-radius:10px;background:#1c1916;font:13px system-ui,sans-serif;color:#d9d2c8;overflow:hidden}
+.spn-au{position:absolute;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 36px 4px 12px;border:1px solid #34302b;border-radius:8px;background:#1c1916;font:12px/1.2 system-ui,sans-serif;color:#d9d2c8;overflow:hidden}
 .spn-au[hidden]{display:none}
-.spn-au>span{flex:none;max-width:35%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.spn-au audio{height:34px;flex:1;min-width:0}
-.spn-auedit{flex:none;border:0;background:transparent;color:#9d958a;cursor:pointer;font-size:15px}.spn-auedit:hover{color:var(--acc)}
+.spn-au>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cfc7ba;letter-spacing:.2px}
+.spn-au audio{height:30px;width:100%;min-width:0;display:block}
+.spn-auedit{position:absolute;right:6px;top:4px;border:0;background:transparent;color:#9d958a;cursor:pointer;font-size:15px}.spn-auedit:hover{color:var(--acc)}
 .spn-audbox{position:absolute;z-index:7;box-shadow:0 10px 30px rgba(0,0,0,.5);margin:0;padding:12px;border:1px solid #34302b;border-radius:12px;background:#17140f}
 .spn-audx{position:absolute;right:8px;top:4px;border:0;background:transparent;color:#d9d2c8;font-size:18px;cursor:pointer}
 .spn-drop{padding:22px 12px;text-align:center;border:2px dashed #4a443b;border-radius:10px;color:#cfc7ba;font:14px system-ui,sans-serif;cursor:pointer}

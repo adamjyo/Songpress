@@ -604,7 +604,7 @@ function auds(){var t=$('spn-body'),a=audLinks(t.value),h=$('spn-auds');if(t.hid
  if(key!==audKey){audKey=key;h.innerHTML=a.map(function(x){return '<div class="spn-au"><span>♪ '+esc(x[0]||'Audio')+'</span><audio controls preload="none" src="'+esc(x[1])+'"></audio><button type="button" class="spn-auedit" title="Edit the link" aria-label="Edit the link">✎</button></div>'}).join('')}
  var n=h.children,foc=document.activeElement===t,ss=t.selectionStart,se=t.selectionEnd,i,x,g,y1,y2,top;
  for(i=0;i<a.length&&i<n.length;i++){x=a[i];g=n[i];y1=caretXY(t,x[2]);y2=caretXY(t,x[3]);top=t.offsetTop+y1.y-t.scrollTop;
-  g.style.left=t.offsetLeft+'px';g.style.width=t.clientWidth+'px';g.style.top=top+'px';g.style.height=Math.max(y2.y+y2.h-y1.y,46)+'px';g.hidden=foc&&ss<x[3]&&se>x[2]}}
+  g.style.left=t.offsetLeft+'px';g.style.width=t.clientWidth+'px';g.style.top=top+'px';g.style.height=Math.max(y2.y+y2.h-y1.y,54)+'px';g.hidden=foc&&ss<x[3]&&se>x[2]}}
 $('spn-auds').addEventListener('click',function(e){var b=e.target.closest('.spn-auedit');if(!b)return;var a=audLinks($('spn-body').value),i=Array.prototype.indexOf.call($('spn-auds').children,b.parentNode),t=$('spn-body');if(!a[i])return;t.focus();t.selectionStart=t.selectionEnd=a[i][2]+1;auds()});
 document.addEventListener('selectionchange',function(){if(document.activeElement===$('spn-body'))auds()});
 $('spn-body').addEventListener('blur',function(){auds()});
