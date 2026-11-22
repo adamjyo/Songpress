@@ -38,7 +38,7 @@ class Songpress_Audit {
 
 	public static function areas() {
 		return array(
-			'songs'         => __( 'Songs', 'songpress' ),
+			'songs'         => __( 'Works', 'songpress' ),
 			'notes'         => __( 'Notes', 'songpress' ),
 			'people'        => __( 'People', 'songpress' ),
 			'money'         => __( 'Stats', 'songpress' ),
