@@ -1370,11 +1370,13 @@ class Songpress_Admin {
 			$file = plugin_basename( SONGPRESS_FILE );
 			$url  = wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( $file ) ), 'upgrade-plugin_' . $file );
 			if ( current_user_can( 'update_plugins' ) ) {
-				echo '<p style="margin:0"><a class="button button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Update now', 'songpress' ) . '</a> ';
+				echo '<p style="margin:0" id="sp-upd"><a class="button button-primary" id="sp-upd-go" href="' . esc_url( $url ) . '" data-plugin="' . esc_attr( $file ) . '" data-slug="' . esc_attr( dirname( $file ) ) . '" data-nonce="' . esc_attr( wp_create_nonce( 'updates' ) ) . '" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-to="' . esc_attr( $rel['version'] ) . '">' . esc_html__( 'Update now', 'songpress' ) . '</a> <span id="sp-upd-msg" role="status"></span> ';
 				if ( '' !== $rel['url'] ) {
 					echo '<a href="' . esc_url( $rel['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'What changed', 'songpress' ) . '</a>';
 				}
 				echo '</p>';
+				echo '<script>(function(){var b=document.getElementById("sp-upd-go"),m=document.getElementById("sp-upd-msg");if(!b)return;b.addEventListener("click",function(e){e.preventDefault();if(b.disabled)return;b.disabled=true;b.classList.add("disabled");m.style.color="";m.textContent=' . wp_json_encode( __( 'Updating…', 'songpress' ) ) . ';var fd=new FormData();fd.append("action","update-plugin");fd.append("_ajax_nonce",b.dataset.nonce);fd.append("plugin",b.dataset.plugin);fd.append("slug",b.dataset.slug);'
+					. 'fetch(b.dataset.ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(j&&j.success){m.style.color="#1a7f37";m.textContent="✓ "+' . wp_json_encode( __( 'Updated to version', 'songpress' ) ) . '+" "+((j.data&&j.data.newVersion)||b.dataset.to).replace(/^Version\s*/i,"")+". "+' . wp_json_encode( __( 'Reload this page to see everything new.', 'songpress' ) ) . ';b.style.display="none";}else{var t=(j&&j.data&&(j.data.errorMessage||j.data.error))||' . wp_json_encode( __( 'The update did not finish.', 'songpress' ) ) . ';m.style.color="#b32d2e";m.textContent=t;b.disabled=false;b.classList.remove("disabled");b.textContent=' . wp_json_encode( __( 'Try again', 'songpress' ) ) . ';var l=document.createElement("a");l.href=b.href;l.textContent=" "+' . wp_json_encode( __( 'or use the WordPress update screen', 'songpress' ) ) . ';m.appendChild(l);}}).catch(function(){m.style.color="#b32d2e";m.textContent=' . wp_json_encode( __( 'The update could not be started.', 'songpress' ) ) . ';b.disabled=false;b.classList.remove("disabled");});});})();</script>';
 			} else {
 				echo '<p style="margin:0">' . esc_html__( 'Ask a WordPress administrator to install the update.', 'songpress' ) . '</p>';
 			}
