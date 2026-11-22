@@ -59,7 +59,22 @@ class Songpress_Screens {
 		return $o . '</nav>';
 	}
 
+	/** People and Link writers share one rail entry. */
+	public static function people_tabs( $active ) {
+		$o = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'People', 'songpress' ) . '">';
+		foreach ( array( 'people' => __( 'People', 'songpress' ), 'link' => __( 'Link writers', 'songpress' ) ) as $k => $l ) {
+			$o .= '<a href="' . esc_url( 'people' === $k ? self::url( 'people', array( 'kind' => 'person' ) ) : self::url( $k ) ) . '"' . ( $k === $active ? ' class="on" aria-current="page"' : '' ) . '>' . esc_html( $l ) . '</a>';
+		}
+		return $o . '</nav>';
+	}
+
 	public static function render( $slug ) {
+		if ( 'link' === $slug && Songpress_Caps::can( 'link' ) ) {
+			return ( Songpress_Caps::can( 'members' ) ? self::people_tabs( 'link' ) : '' ) . self::render_one( 'link' );
+		}
+		if ( 'people' === $slug && ( empty( $_GET['kind'] ) || 'person' === $_GET['kind'] ) && empty( $_GET['profile'] ) && Songpress_Caps::can( 'link' ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			return self::people_tabs( 'people' ) . self::render_one( 'people' );
+		}
 		if ( in_array( $slug, array( 'registrations', 'agreements' ), true ) && Songpress_Caps::can( $slug ) ) {
 			return self::rights_tabs( $slug ) . self::render_one( $slug );
 		}

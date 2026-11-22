@@ -136,7 +136,7 @@ class Songpress_Frontend {
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
-			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page && 'person' === $cur );
+			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, ( 'people' === $page && 'person' === $cur ) || 'link' === $page );
 			$kn = function ( $kind, $label ) use ( $cat_url, $page, $people, $cur ) {
 				return self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => $kind ), $cat_url ), $label, $people, 'people' === $page && $cur === $kind );
 			};
@@ -144,7 +144,6 @@ class Songpress_Frontend {
 			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
 			$nav .= $mk( 'activity', __( 'Activity log', 'songpress' ), $svg( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ), 'activity' );
 			$nav .= $mk( 'uploads', __( 'Upload / Download', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
-			$nav .= $mk( 'link', __( 'Link writers', 'songpress' ), $svg( '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>' ), 'link' );
 			$nav .= $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 			if ( Songpress_Caps::can( 'export' ) ) {
 				$nav .= self::nav_item( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ), __( 'Export CSV', 'songpress' ), $svg( '<path d="M12 15V3M7 8l5-5 5 5M4 20h16"/>' ), false );
