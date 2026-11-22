@@ -757,3 +757,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
  body.admin-bar .spn{height:calc(100dvh - 32px)}
  .spn-wrap{height:100%}
 }
+.spn-top{position:relative}
+.spn-pop{position:absolute;left:14px;top:58px;z-index:20;min-width:230px;padding:6px;background:#1c1916;border:1px solid #34302b;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.55)}
+.spn-pop button{display:block;width:100%;text-align:left;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:#e8e4dc;font:13px system-ui,sans-serif;cursor:pointer}
+.spn-pop button:hover{background:#2a261f;color:var(--acc)}
+.spn-pop i{display:block;height:1px;margin:5px 6px;background:#34302b}

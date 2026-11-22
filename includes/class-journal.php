@@ -441,7 +441,8 @@ class Songpress_Journal {
 		$o   .= '<div class="spn-side"><div class="spn-top">';
 		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'foc' => array( '⛶', __( 'Focus: hide everything but the note', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
 			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
-		}
+		}		$o .= '<div class="spn-pop" id="spn-pop" hidden><button type="button" data-go="sel">' . esc_html__( 'Open or selected notes (.md)', 'songpress' ) . '</button><button type="button" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</button><button type="button" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</button><button type="button" data-go="tb">' . esc_html__( 'All for Bear (.textbundle)', 'songpress' ) . '</button><i></i><button type="button" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</button><button type="button" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</button>' . ( class_exists( 'Songpress_ChordTool' ) ? '<button type="button" data-go="tool">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' : '' ) . '</div>';
+
 		$o .= '<input class="spn-search" id="spn-search" type="search" placeholder="' . esc_attr__( 'Search', 'songpress' ) . '"></div><div class="spn-list" id="spn-list"></div></div>';
 		$o .= '<div class="spn-main"><button type="button" class="spn-tgl spn-tgl-list" data-act="list" title="' . esc_attr__( 'Show or hide the list', 'songpress' ) . '">◧</button><button type="button" class="spn-tgl spn-tgl-info" data-act="info" title="' . esc_attr__( 'Show or hide the details', 'songpress' ) . '">◨</button>';
 		$o .= '<div class="spn-editor" id="spn-editor"><input class="spn-title" id="spn-title" placeholder="' . esc_attr__( 'Title', 'songpress' ) . '"><div class="spn-card"><div class="spn-auds" id="spn-auds"></div><textarea class="spn-body" id="spn-body" placeholder="' . esc_attr__( 'Write here. ^0378 links a song, #tag adds a tag.', 'songpress' ) . '"></textarea><div class="spn-prev" id="spn-prev" hidden></div><div class="spn-audbox" id="spn-audbox" hidden><button type="button" class="spn-audx" id="spn-audx" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button><div class="spn-drop" id="spn-drop" tabindex="0" role="button">' . esc_html__( 'Drop audio here to add it to WordPress media, or click to search or upload', 'songpress' ) . '</div><div class="spn-audpick" id="spn-audpick" hidden><input type="search" id="spn-audq" placeholder="' . esc_attr__( 'Search WordPress media', 'songpress' ) . '"><div id="spn-audres" class="spn-audres"></div><button type="button" id="spn-audup" class="spn-audupb">' . esc_html__( 'Upload from this computer…', 'songpress' ) . '</button></div></div>';
@@ -621,6 +622,11 @@ $('spn-audq').addEventListener('input',function(){clearTimeout(audT);audT=setTim
 $('spn-audup').addEventListener('click',function(){pickFile('aud','audio/*')});
 $('spn-audx').addEventListener('click',function(){$('spn-audbox').hidden=true});
 $('spn-body').addEventListener('input',auds);
+function expSel(){var ids=Object.keys(sel).map(Number),ns=ids.length?notes.filter(function(n){return sel[n.id]}):(cur&&cur.id?[cur]:[]);
+ if(!ns.length){setStatus('Open or select a note first');return}
+ download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
+$('spn-pop').addEventListener('click',function(e){var x=e.target.closest('[data-go]');if(!x)return;var g=x.getAttribute('data-go');this.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on');if(g==='sel')expSel();else if(D.urls[g])location.href=D.urls[g]});
+document.addEventListener('click',function(e){var pm=$('spn-pop');if(!pm||pm.hidden)return;if(e.target.closest('#spn-pop')||e.target.closest('[data-act=exp]'))return;pm.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on')});
 function mdFile(n){return '# '+head(n)+'\n\n'+(n.notes||'')+'\n'}
 function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
 function pick(id){var n=notes.find(function(x){return x.id===id});if(!n)return;(dirty?save(true):Promise.resolve()).then(function(){fill(n);if(window.innerWidth<=800)root.classList.remove('m-list')})}
@@ -636,9 +642,7 @@ root.querySelector('.spn-top').addEventListener('click',function(e){
  var b=e.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');
  if(a==='new')newNote();
  else if(a==='imp')location.href=D.urls.import;
- else if(a==='exp'){var ids=Object.keys(sel).map(Number),ns=ids.length?notes.filter(function(n){return sel[n.id]}):(cur&&cur.id?[cur]:[]);
-  if(!ns.length){setStatus('Open or select a note first');return}
-  download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
+ else if(a==='exp'){var pm=$('spn-pop');pm.hidden=!pm.hidden;b.classList.toggle('on',!pm.hidden)}
  else if(a==='sel'){selMode=!selMode;b.classList.toggle('on',selMode);if(!selMode)sel={};renderList()}
  else if(a==='sort'){asc=!asc;renderList()}
  else if(a==='lay')root.classList.toggle('no-tags');else if(a==='foc')root.classList.toggle('focus')});
