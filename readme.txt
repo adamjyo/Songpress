@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.59.2 =
+* Works list: shorter search hint so it fits on a phone.
+
 = 0.59.1 =
 * Search: every song search (works list, admin list, pitch picker) finds writers, performers, artist, title, serial number, lyrics, style and theme.
 
