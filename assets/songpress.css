@@ -604,3 +604,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 
 /* the serial reads as part of the title: same size, same baseline */
 .spe-top h2 .songpress-serial{font-size:inherit;font-weight:600;margin-right:.3em;letter-spacing:0}
+
+.spe-field input[type=date]{color-scheme:dark;min-height:40px}

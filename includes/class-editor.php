@@ -23,6 +23,13 @@ class Songpress_Editor {
 	}
 
 	private static function input( $name, $label, $song, $extra = '', $class = '' ) {
+		// Date fields get the browser's calendar picker. A value that is not a plain YYYY-MM-DD (old free text) stays a text box, so nothing is blanked.
+		if ( false !== strpos( $extra, 'placeholder="YYYY-MM-DD"' ) ) {
+			$v = (string) self::f( $song, $name );
+			if ( '' === $v || preg_match( '/^\d{4}-\d{2}-\d{2}$/', $v ) ) {
+				return '<label class="spe-field ' . esc_attr( $class ) . '"><span>' . esc_html( $label ) . '</span><input type="date" name="' . esc_attr( $name ) . '" value="' . esc_attr( $v ) . '"></label>';
+			}
+		}
 		return '<label class="spe-field ' . esc_attr( $class ) . '"><span>' . esc_html( $label ) . '</span><input name="' . esc_attr( $name ) . '" value="' . esc_attr( self::f( $song, $name ) ) . '" ' . $extra . '></label>';
 	}
 

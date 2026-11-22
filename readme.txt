@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.48.0
+Stable tag: 0.48.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.48.1 =
+* The date fields in the work editor (written on, copyright date, release date, produced on) open a calendar picker. A date that is old free text rather than YYYY-MM-DD stays a text box so it is never blanked.
 
 = 0.48.0 =
 * On a version, the top field is now "Release title" (the name of that release, often different from the work title). The work title itself is set on the original work and is the same on every version. The heading shows the release title when there is one.
