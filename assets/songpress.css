@@ -1,0 +1,34 @@
+.songpress{max-width:640px;margin:0 auto}
+.songpress-search input{width:100%;box-sizing:border-box;height:48px;padding:0 14px;border-radius:12px;border:1px solid #c3c4c7;font-size:16px}
+.songpress-list{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.songpress-list a{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #dcdcde;border-radius:14px;text-decoration:none;color:inherit}
+.songpress-thumb,.songpress-noart{flex:none;width:56px;height:56px;border-radius:10px;object-fit:cover;background:#f0f0f1;display:flex;align-items:center;justify-content:center;color:#8c8f94}
+.songpress-meta{display:flex;flex-direction:column;min-width:0}
+.songpress-title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.songpress-by{color:#50575e;font-size:.9em}
+.songpress-sub{color:#646970;font-size:.85em}
+.songpress-serial{font-family:ui-monospace,Menlo,monospace}
+.songpress-hero{position:relative;margin:0 -1rem}
+.songpress-cover{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+.songpress-noart.songpress-cover{width:100%;height:auto;aspect-ratio:1/1;border-radius:0;font-size:64px}
+.songpress-audio{position:absolute;left:0;right:0;bottom:0;width:100%}
+.songpress-chartlabel{text-transform:uppercase;letter-spacing:.06em;font-size:.75em;color:#646970}
+.songpress-chart{white-space:pre-wrap;overflow-x:auto;font-size:15px;line-height:1.5}
+.songpress-stats{list-style:none;display:flex;gap:12px;padding:0}
+.songpress-stats li{flex:1;border:1px solid #dcdcde;border-radius:14px;padding:12px;text-align:center}
+.songpress-stats strong{display:block;font-size:1.6em}
+.songpress-donate{text-align:center;margin:28px 0 8px}
+.songpress-donate a{text-decoration:none;font-weight:600;letter-spacing:.04em}
+@media print{.songpress-donate{display:none}}
+
+.sp-cp{font-size:16px;line-height:1.3}
+.sp-cp-line{margin:.35em 0}
+.sp-cp-seg{display:inline-block;vertical-align:top;white-space:pre-wrap}
+.sp-cp-ch{display:block;font-weight:700;color:#b26a00;font-size:.85em;min-height:1.2em;padding-right:.4em}
+.sp-cp-ly{display:block}
+.sp-cp-title{margin:.2em 0}
+.sp-cp-sub,.sp-cp-label,.sp-cp-comment{color:#646970;font-style:italic;margin:.3em 0}
+.sp-cp-tag{display:inline-block;border:1px solid #dcdcde;border-radius:10px;padding:0 8px;font-size:.8em;margin:2px 4px 2px 0}
+.sp-cp-gap{height:.8em}
+.sp-cp-chorus{border-left:3px solid #f5a524;padding-left:10px;margin:.5em 0}
+.sp-cp-tab{overflow-x:auto;font-size:13px}

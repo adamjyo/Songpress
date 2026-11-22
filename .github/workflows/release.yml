@@ -1,0 +1,37 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite
+      - name: Tag matches plugin version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          HEAD_VER=$(grep -m1 '^ \* Version:' songpress.php | sed 's/.*Version:[[:space:]]*//')
+          CONST_VER=$(grep -m1 "define( 'SONGPRESS_VERSION'" songpress.php | sed "s/.*, '\(.*\)' );/\1/")
+          echo "tag=$TAG header=$HEAD_VER constant=$CONST_VER"
+          [ "$TAG" = "$HEAD_VER" ] && [ "$TAG" = "$CONST_VER" ] || { echo "Tag, plugin header and SONGPRESS_VERSION must all match"; exit 1; }
+      - name: Lint and test
+        run: |
+          find . -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n1 php -l > /dev/null
+          php tests/run.php
+          php tests/versions.php
+      - name: Build zip
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          mkdir -p build/songpress
+          git archive HEAD | tar -x -C build/songpress
+          (cd build && zip -rq "../songpress-$VER.zip" songpress)
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "songpress-${GITHUB_REF_NAME#v}.zip" --title "SongPress ${GITHUB_REF_NAME#v}" --generate-notes

@@ -1,0 +1,110 @@
+<?php
+defined( 'ABSPATH' ) || exit;
+
+class Songpress_Install {
+
+	public static function table( $name ) {
+		global $wpdb;
+		return $wpdb->prefix . 'songpress_' . $name;
+	}
+
+	public static function activate() {
+		self::create_tables();
+		Songpress_Caps::migrate_old_roles();
+			Songpress_Caps::migrate_class_names();
+		add_option( 'songpress_delete_on_uninstall', '0' );
+		add_option( 'songpress_public_donate', '0' );
+		add_option( 'songpress_donate_prompt', 'pending' ); // asked once, on the first visit to a SongPress screen
+		update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
+		self::create_pages();
+	}
+
+	public static function deactivate() {
+		// Data, roles and settings are kept. Removal only happens in uninstall.php, and only if the owner asked for it.
+	}
+
+	public static function maybe_upgrade() {
+		if ( get_option( 'songpress_db_version' ) !== SONGPRESS_DB_VERSION ) {
+			self::create_tables();
+			Songpress_Caps::migrate_old_roles();
+			Songpress_Caps::migrate_class_names();
+			update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
+		}
+		if ( ! get_option( 'songpress_pages_done' ) ) {
+			self::create_pages();
+		}
+	}
+
+	/** The two front-end pages. Only created when missing, never overwritten, and only by someone who may publish pages. */
+	public static function pages() {
+		return array(
+			'songpress_page_catalog' => array( 'title' => __( 'Catalog', 'songpress' ), 'code' => '[songpress_catalog]' ),
+			'songpress_page_profile' => array( 'title' => __( 'My songs', 'songpress' ), 'code' => '[songpress_profile]' ),
+		);
+	}
+
+	public static function page_ok( $id ) {
+		$p = $id ? get_post( (int) $id ) : null;
+		return $p && 'page' === $p->post_type && 'trash' !== $p->post_status;
+	}
+
+	/** @return int number of pages created */
+	public static function create_pages() {
+		if ( ! current_user_can( 'publish_pages' ) ) {
+			return 0;
+		}
+		$made = 0;
+		foreach ( self::pages() as $opt => $def ) {
+			if ( self::page_ok( get_option( $opt ) ) ) {
+				continue;
+			}
+			$id = wp_insert_post( array(
+				'post_type'    => 'page',
+				'post_status'  => 'publish',
+				'post_title'   => $def['title'],
+				'post_content' => '<!-- wp:shortcode -->' . $def['code'] . '<!-- /wp:shortcode -->',
+			), true );
+			if ( ! is_wp_error( $id ) && $id ) {
+				update_option( $opt, (int) $id );
+				++$made;
+			}
+		}
+		update_option( 'songpress_pages_done', '1' );
+		return $made;
+	}
+
+	public static function table_names() {
+		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history' );
+	}
+
+	/** Where the schema lives. Edit SongPress.SQL, not this file, to change the database. */
+	public static function sql_file() {
+		return SONGPRESS_DIR . 'SongPress.SQL';
+	}
+
+	/** Split SongPress.SQL into statements, with the placeholders filled in. */
+	public static function statements( $sql, $prefix, $charset ) {
+		$sql = preg_replace( '/^\s*--.*$/m', '', $sql );
+		$sql = str_replace( array( '{prefix}', '{charset}' ), array( $prefix, $charset ), $sql );
+		$out = array();
+		foreach ( preg_split( '/;\s*(?:\n|$)/', $sql ) as $stmt ) {
+			$stmt = trim( $stmt );
+			if ( '' !== $stmt ) {
+				$out[] = $stmt . ';';
+			}
+		}
+		return $out;
+	}
+
+	public static function create_tables() {
+		global $wpdb;
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+		$sql = file_get_contents( self::sql_file() );
+		if ( false === $sql ) {
+			return;
+		}
+		foreach ( self::statements( $sql, $wpdb->prefix, $wpdb->get_charset_collate() ) as $stmt ) {
+			dbDelta( $stmt );
+		}
+	}
+}

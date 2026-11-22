@@ -1,0 +1,63 @@
+<?php
+/**
+ * Plugin Name:       SongPress
+ * Plugin URI:        https://github.com/adamjyo/Songpress
+ * GitHub Plugin URI: adamjyo/Songpress
+ * Description:       A song catalog manager. Keep every song and every version under one serial number, share your catalog, and see your own works.
+ * Version:           0.1.0
+ * Requires at least: 6.2
+ * Requires PHP:      7.4
+ * Author:            Adam Yoo
+ * License:           GPL-2.0-or-later
+ * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain:       songpress
+ *
+ * SongPress works with WordPress. It is not made or endorsed by WordPress or by the author of the
+ * unrelated "Songpress" chord-typesetting program.
+ */
+
+defined( 'ABSPATH' ) || exit;
+
+define( 'SONGPRESS_VERSION', '0.1.0' );
+define( 'SONGPRESS_DB_VERSION', '6' );
+define( 'SONGPRESS_FILE', __FILE__ );
+define( 'SONGPRESS_DIR', plugin_dir_path( __FILE__ ) );
+define( 'SONGPRESS_URL', plugin_dir_url( __FILE__ ) );
+define( 'SONGPRESS_COFFEE_URL', 'https://www.buymeacoffee.com/adamjyoo' );
+
+require_once SONGPRESS_DIR . 'includes/class-serial.php';
+require_once SONGPRESS_DIR . 'includes/class-install.php';
+require_once SONGPRESS_DIR . 'includes/class-history.php';
+require_once SONGPRESS_DIR . 'includes/class-chordpro.php';
+require_once SONGPRESS_DIR . 'includes/class-media.php';
+require_once SONGPRESS_DIR . 'includes/class-updater.php';
+require_once SONGPRESS_DIR . 'includes/class-caps.php';
+require_once SONGPRESS_DIR . 'includes/class-songs.php';
+require_once SONGPRESS_DIR . 'includes/class-import-analyzer.php';
+require_once SONGPRESS_DIR . 'includes/class-import.php';
+require_once SONGPRESS_DIR . 'includes/class-frontend.php';
+require_once SONGPRESS_DIR . 'admin/class-admin.php';
+
+register_activation_hook( __FILE__, array( 'Songpress_Install', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'Songpress_Install', 'deactivate' ) );
+
+add_action( 'plugins_loaded', function () {
+	Songpress_Install::maybe_upgrade();
+	add_filter( 'user_has_cap', array( 'Songpress_Caps', 'filter_user_caps' ), 10, 4 );
+	Songpress_Frontend::init();
+	Songpress_Updater::init();
+	if ( is_admin() ) {
+		Songpress_Admin::init();
+	}
+} );
+
+/** Donate link for SongPress's own admin screens. */
+function songpress_donate_link() {
+	return '<p class="songpress-donate"><a href="' . esc_url( SONGPRESS_COFFEE_URL ) . '" target="_blank" rel="noopener noreferrer">'
+		. esc_html__( 'Donate: buy me a cup of coffee', 'songpress' ) . '</a></p>';
+}
+
+/** Donate link for public pages. Empty unless the site owner turned it on in SongPress > Settings. */
+function songpress_public_donate_link() {
+	return '1' === get_option( 'songpress_public_donate', '0' ) ? songpress_donate_link() : '';
+}
