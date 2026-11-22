@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.52.2 =
+* The empty audio box shows an empty player instead of a description. Click it, or drop a file on it, to add audio.
+
 = 0.52.1 =
 * A "Cover art tool" button sits to the right of the Cover art label and opens the Art studio for that work in a new tab.
 
