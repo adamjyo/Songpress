@@ -798,6 +798,13 @@ check( 'history notes scheduled and released', array( in_array( 'scheduled', $ha
 $sch = array_values( array_filter( $hr, fn( $r ) => 'scheduled' === $r->action ) )[0];
 check( 'scheduled line reads with the date', Songpress_History::describe( $sch ), 'Scheduled for release on 2030-05-05' );
 
+// search finds a song by writer, artist, title, serial, lyrics, style and theme
+$GLOBALS['wpdb']->query( "UPDATE wp_songpress_songs SET style = 'zydeco', themes = 'harvest moon', artist = 'The Lanterns', lyrics = 'quokka river' WHERE id = " . (int) $v0 );
+foreach ( array( 'writer' => 'B', 'artist' => 'Lanterns', 'title' => 'Harbor', 'serial' => '0001', 'lyrics' => 'quokka', 'style' => 'zydeco', 'theme' => 'harvest', 'nothing' => 'zzznomatch' ) as $what => $term ) {
+	$r = Songpress_Songs::query( array( 'search' => $term, 'archived' => 'any' ) );
+	check( 'search by ' . $what, in_array( (int) $v0, array_map( function ( $x ) { return (int) $x->id; }, $r['rows'] ), true ), 'nothing' !== $what );
+}
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

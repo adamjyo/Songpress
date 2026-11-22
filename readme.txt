@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.59.1 =
+* Search: every song search (works list, admin list, pitch picker) finds writers, performers, artist, title, serial number, lyrics, style and theme.
+
 = 0.59.0 =
 * Profile: a quarterly income chart under the Works and Released cards, and a list of the songs the person wrote or performed with what each has made on DistroKid.
 * Shared songs stay readable without logging in; the works list and profile still need a login.

@@ -211,8 +211,16 @@ class Songpress_Songs {
 		}
 		if ( isset( $args['search'] ) && '' !== trim( $args['search'] ) ) {
 			$like    = '%' . $wpdb->esc_like( trim( $args['search'] ) ) . '%';
-			$where[] = "(s.title LIKE %s OR s.serial LIKE %s OR s.artist LIKE %s OR s.id IN (SELECT lb.song_id FROM {$c} lb WHERE lb.role = 'label' AND lb.name LIKE %s))";
-			array_push( $vals, $like, $like, $like, $like );
+			// title, serial, artist, style, theme, lyrics (every level), and anyone credited as a writer, performer, producer or label
+			$cols    = array( 's.title', 's.alt_titles', 's.release_title', 's.serial', 's.artist', 's.style', 's.themes', 's.lyrics', 's.chords_lyrics', 's.chordpro', 's.genre' );
+			$parts   = array();
+			foreach ( $cols as $col ) {
+				$parts[] = "{$col} LIKE %s";
+				$vals[]  = $like;
+			}
+			$parts[] = "s.id IN (SELECT cs.song_id FROM {$c} cs WHERE cs.name LIKE %s)";
+			$vals[]  = $like;
+			$where[] = '(' . implode( ' OR ', $parts ) . ')';
 		}
 		$per    = max( 1, min( 100, (int) ( $args['per_page'] ?? 25 ) ) );
 		$offset = max( 0, ( (int) ( $args['page'] ?? 1 ) - 1 ) * $per );

@@ -143,7 +143,7 @@ class Songpress_Admin {
 			echo '</p><p class="sp-help">' . esc_html__( 'The Catalog and My songs pages for phones were already created for you. Find them in SongPress > Settings.', 'songpress' ) . '</p></div>';
 		}
 		echo '<form method="get"><input type="hidden" name="page" value="songpress">' . ( $arch ? '<input type="hidden" name="archived" value="1">' : '' ) . '<p class="search-box" style="float:none;margin:8px 0">';
-		echo '<input type="search" name="s" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Title, serial or artist', 'songpress' ) . '"> ';
+		echo '<input type="search" name="s" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Title, writer, artist, serial, lyrics, style or theme', 'songpress' ) . '"> ';
 		$artists = Songpress_Artists::all();
 		if ( count( $artists ) > 1 ) {
 			echo '<select name="artist"><option value="">' . esc_html__( 'All artists', 'songpress' ) . '</option>';

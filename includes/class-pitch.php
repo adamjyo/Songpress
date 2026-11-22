@@ -727,10 +727,14 @@ class Songpress_Pitch {
 	/** The step-by-step popup and its script. */
 	private static function wizard() {
 		global $wpdb;
-		$rows  = $wpdb->get_results( 'SELECT id, serial, title, artist FROM ' . Songpress_Install::table( 'songs' ) . ' ORDER BY serial DESC LIMIT 3000' ); // phpcs:ignore WordPress.DB
+		$rows  = $wpdb->get_results( 'SELECT id, serial, title, artist, style, themes, lyrics FROM ' . Songpress_Install::table( 'songs' ) . ' ORDER BY serial DESC LIMIT 3000' ); // phpcs:ignore WordPress.DB
+		$names = array();
+		foreach ( (array) $wpdb->get_results( 'SELECT song_id, name FROM ' . Songpress_Install::table( 'credits' ) ) as $c ) { // phpcs:ignore WordPress.DB
+			$names[ (int) $c->song_id ][] = $c->name;
+		}
 		$songs = array();
 		foreach ( (array) $rows as $r ) {
-			$songs[] = array( 'id' => (int) $r->id, 'serial' => (string) $r->serial, 'title' => (string) $r->title, 'band' => (string) $r->artist );
+			$songs[] = array( 'id' => (int) $r->id, 'serial' => (string) $r->serial, 'title' => (string) $r->title, 'band' => (string) $r->artist, 'q' => strtolower( implode( ' ', array_merge( (array) ( $names[ (int) $r->id ] ?? array() ), array( $r->style, $r->themes, substr( (string) $r->lyrics, 0, 600 ) ) ) ) ) );
 		}
 		$start = isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
 		$files = array();
@@ -774,7 +778,7 @@ function intro(t){return '<div class="spp-intro">'+t+'</div>'}
 function step1(){
  body.innerHTML=intro('<b>Which song are you pitching?</b> Pick one from your catalog. If it is not here yet, add it under Works first. Tip: pitch a song that is finished and sounds the way you want it heard.')+'<input id="spp-q" type="search" placeholder="Type a title, a serial number or a band…" autocomplete="off"><ul class="spp-list" id="spp-songs"></ul>';
  var inp=body.querySelector('#spp-q'),ul=body.querySelector('#spp-songs');
- function fill(){var t=inp.value.toLowerCase(),n=0,out='';D.songs.forEach(function(s){if(n<40&&(!t||(s.serial+' '+s.title+' '+s.band).toLowerCase().indexOf(t)>-1)){n++;out+='<li><button type="button" data-id="'+s.id+'"><b>'+h(s.serial)+'</b> '+h(s.title)+(s.band?' <span class="spe-help">· '+h(s.band)+'</span>':'')+'</button></li>'}});ul.innerHTML=out||'<li class="spe-help">No match.</li>'}
+ function fill(){var t=inp.value.toLowerCase(),n=0,out='';D.songs.forEach(function(s){if(n<40&&(!t||(s.serial+' '+s.title+' '+s.band+' '+(s.q||'')).toLowerCase().indexOf(t)>-1)){n++;out+='<li><button type="button" data-id="'+s.id+'"><b>'+h(s.serial)+'</b> '+h(s.title)+(s.band?' <span class="spe-help">· '+h(s.band)+'</span>':'')+'</button></li>'}});ul.innerHTML=out||'<li class="spe-help">No match.</li>'}
  inp.oninput=fill;fill();inp.focus();
  ul.onclick=function(e){var b=e.target.closest('button[data-id]');if(b)load(parseInt(b.getAttribute('data-id'),10),2)}
 }
