@@ -39,7 +39,7 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . '</div>';
+		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . ( wp_is_mobile() ? '' : '<button type="button" class="spe-btn spe-cptop" id="spe-cp-top">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' ) . '</div>';
 		$o       .= self::notices();
 		if ( $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing tab.', 'songpress' ) . '</p>';
@@ -221,7 +221,7 @@ class Songpress_Editor {
 			. 'function open(){if(!box.hidden)return;box.hidden=false;ready=false;if(!fr.getAttribute("src")){fr.setAttribute("src",ed.getAttribute("data-tool"));}else{send();}}'
 			. 'function close(){box.hidden=true;ed.blur();}'
 			. 'ed.addEventListener("focus",function(){if(!direct)open();});ed.addEventListener("blur",function(){direct=false;});'
-			. 'document.getElementById("spe-cp-open").addEventListener("click",open);'
+			. 'document.getElementById("spe-cp-open").addEventListener("click",open);var tp=document.getElementById("spe-cp-top");if(tp)tp.addEventListener("click",open);'
 			. 'window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data)return;var d=e.data;'
 			. 'if(d.type==="ct-ready"){ready=true;send();}'
 			. 'else if(d.type==="ct-save"){ed.value=String(d.text||"");ed.dispatchEvent(new Event("input",{bubbles:true}));close();}'
