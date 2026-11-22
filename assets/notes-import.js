@@ -1,3 +1,61 @@
+
+/* Notes import steps run through admin-ajax.php (some sites block admin-post.php); this page drives them. */
+(function () {
+	var job = document.getElementById('spu-job'), folder = document.getElementById('spu-folder'), busy = false;
+	function post(url, data) {
+		var b = new URLSearchParams(); Object.keys(data).forEach(function (k) { b.set(k, data[k]); });
+		return fetch(url, { method: 'POST', body: b, credentials: 'same-origin' }).then(function (r) {
+			return r.text().then(function (t) {
+				var j = null; try { j = JSON.parse(t); } catch (e) { /* not JSON */ }
+				if (!j) { throw new Error('The server answered HTTP ' + r.status + ': ' + (t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) || 'nothing')); }
+				return j;
+			});
+		});
+	}
+	function done(msg, err) {
+		var u = new URL(location.href); u.searchParams.delete('nj_go'); u.searchParams.delete('m_ok'); u.searchParams.delete('m_err');
+		u.searchParams.set(err ? 'm_err' : 'm_ok', msg); u.searchParams.set('sp_page', 'uploads'); u.searchParams.set('type', 'notes_files'); location.href = u.toString();
+	}
+	function show(j) {
+		var t = document.getElementById('spu-jobtxt'), b = document.getElementById('spu-jobbar');
+		if (t) { t.textContent = 'Importing… ' + j.done + ' of ' + j.total + ' notes · ' + j.added + ' added'; }
+		if (b && j.total) { b.style.width = Math.floor(100 * j.done / j.total) + '%'; }
+	}
+	function loop(url, nonce, fails) {
+		if (busy && !fails) { return; }
+		busy = true; fails = fails || 0;
+		post(url, { action: 'songpress_notes_step', _wpnonce: nonce }).then(function (j) {
+			if (!j.ok) { done(j.error || 'The import stopped.', true); return; }
+			if (j.go) { show(j); setTimeout(function () { loop(url, nonce, 0); }, 150); return; }
+			done(j.msg || 'Done.');
+		}).catch(function (er) {
+			if (fails < 4) { setTimeout(function () { loop(url, nonce, fails + 1); }, 4000 * (fails + 1)); return; }
+			busy = false; var t = document.getElementById('spu-jobtxt'); if (t) { t.textContent = 'Stopped: ' + er.message + ' Press Continue now to try again.'; }
+		});
+	}
+	if (job) {
+		var url = job.getAttribute('data-ajax'), nonce = job.getAttribute('data-step');
+		document.getElementById('spu-jobgo').addEventListener('click', function () { busy = false; loop(url, nonce, 0); });
+		document.getElementById('spu-jobx').addEventListener('click', function () {
+			post(url, { action: 'songpress_notes_cancel', _wpnonce: job.getAttribute('data-cancel') }).then(function (j) { done(j.msg || 'Cancelled.'); }).catch(function (er) { done(er.message, true); });
+		});
+		if (job.getAttribute('data-auto')) { loop(url, nonce, 0); }
+	}
+	if (folder) {
+		folder.addEventListener('submit', function (e) {
+			e.preventDefault();
+			var btn = folder.querySelector('button'); btn.disabled = true; btn.textContent = 'Reading the folder…';
+			var url = folder.getAttribute('data-ajax'), nonce = folder.getAttribute('data-step');
+			post(url, { action: 'songpress_notes_folder', _wpnonce: folder.querySelector('input[name=_wpnonce]').value }).then(function (j) {
+				if (!j.ok) { done(j.error || 'Could not read the folder.', true); return; }
+				var h = document.createElement('div'); h.className = 'notice notice-info';
+				h.innerHTML = '<p><strong id="spu-jobtxt">Importing…</strong></p><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden"><div id="spu-jobbar" style="height:8px;width:0;background:#f5a524"></div></div>';
+				folder.parentNode.insertBefore(h, folder); loop(url, nonce, 0);
+			}).catch(function (er) { btn.disabled = false; btn.textContent = 'Try again'; done(er.message, true); });
+		});
+	}
+}());
+
 /* Notes import: sends the chosen files to the server a few at a time, pauses every 100, and works around files the server will not take. */
 (function () {
 	var form = document.querySelector('form input[value=songpress_notes_import]');

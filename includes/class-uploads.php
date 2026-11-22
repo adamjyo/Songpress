@@ -54,6 +54,12 @@ class Songpress_Uploads {
 		add_action( 'admin_post_songpress_notes_import', array( __CLASS__, 'handle_notes_import' ) );
 		add_action( 'wp_ajax_songpress_notes_chunk', array( __CLASS__, 'ajax_notes_chunk' ) );
 		add_action( 'wp_ajax_songpress_notes_text', array( __CLASS__, 'ajax_notes_text' ) );
+		foreach ( array( 'folder' => 'handle_notes_folder', 'step' => 'handle_notes_step', 'cancel' => 'handle_notes_cancel' ) as $k => $fn ) {
+			add_action( 'wp_ajax_songpress_notes_' . $k, function () use ( $fn ) {
+				self::$ajax = true;
+				self::$fn();
+			} );
+		}
 		add_action( 'admin_post_songpress_notes_folder', array( __CLASS__, 'handle_notes_folder' ) );
 		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
 		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
@@ -272,6 +278,19 @@ class Songpress_Uploads {
 	/* ---------- handlers ---------- */
 
 	private static function back( $args ) {
+		if ( self::$ajax ) {
+			$job = get_option( self::NOTES_JOB );
+			wp_send_json( array(
+				'ok'    => empty( $args['m_err'] ),
+				'error' => (string) ( $args['m_err'] ?? '' ),
+				'msg'   => (string) ( $args['m_ok'] ?? '' ),
+				'go'    => ! empty( $args['nj_go'] ),
+				'done'  => is_array( $job ) ? (int) $job['done'] : 0,
+				'total' => is_array( $job ) ? (int) $job['total'] : 0,
+				'added' => is_array( $job ) ? (int) $job['added'] : 0,
+				'skip'  => is_array( $job ) ? (int) $job['skip'] : 0,
+			) );
+		}
 		$ret  = isset( $_POST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- checked by the handler.
 		$base = '' !== $ret ? $ret : Songpress_Editor::list_url();
 		wp_safe_redirect( add_query_arg( array_merge( array( 'sp_page' => 'uploads' ), $args ), $base ) );
@@ -409,6 +428,9 @@ class Songpress_Uploads {
 
 	/** The note being imported right now, so a crash can name it. */
 	private static $cur = '';
+
+	/** True when a step runs through admin-ajax.php: the answer is JSON, not a redirect. Some sites block /wp-admin/admin-post.php for people who log in on the front end. */
+	private static $ajax = false;
 
 	/** If PHP dies in the middle of an import (a blank page), remember why, so the Notes upload panel can show it next time. */
 	private static function watch( $what ) {
@@ -779,17 +801,12 @@ class Songpress_Uploads {
 				$njhtml .= '<div class="notice notice-error"><p><strong>' . esc_html( sprintf( /* translators: 1: what was running, 2: when */ __( 'The last %1$s stopped at %2$s UTC with:', 'songpress' ), $lf['what'], $lf['when'] ) ) . '</strong> ' . esc_html( $lf['msg'] . ' (' . $lf['file'] . ':' . $lf['line'] . ')' ) . '</p><p>' . esc_html( sprintf( /* translators: 1: memory limit, 2: time limit, 3: post size, 4: upload size */ __( 'This server allows: memory %1$s, %2$s seconds, a whole upload of %3$s, one file of %4$s.', 'songpress' ), $lf['mem'], $lf['time'], $lf['post'], $lf['upload'] ) ) . '</p></div>';
 			}
 			if ( is_array( $job ) && ! empty( $job['path'] ) && file_exists( $job['path'] ) ) {
-				$next   = wp_nonce_url( add_query_arg( array( 'action' => 'songpress_notes_step', 'sp_return' => rawurlencode( Songpress_Editor::list_url() ) ), admin_url( 'admin-post.php' ) ), 'songpress_notes_step' );
-				$cancel = wp_nonce_url( add_query_arg( array( 'action' => 'songpress_notes_cancel', 'sp_return' => rawurlencode( Songpress_Editor::list_url() ) ), admin_url( 'admin-post.php' ) ), 'songpress_notes_cancel' );
 				$pct    = $job['total'] ? (int) floor( 100 * $job['done'] / $job['total'] ) : 0;
-				$njhtml = '<div class="notice notice-info"><p><strong>' . esc_html( sprintf( /* translators: 1: notes done, 2: notes in all */ __( 'Importing… %1$s of %2$s notes.', 'songpress' ), number_format_i18n( $job['done'] ), number_format_i18n( $job['total'] ) ) ) . '</strong> ' . esc_html__( 'Keep this page open; it carries on by itself.', 'songpress' ) . '</p><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden"><div style="height:8px;width:' . $pct . '%;background:#f5a524"></div></div><p><a class="spe-btn" href="' . esc_url( $next ) . '">' . esc_html__( 'Continue now', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( $cancel ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a></p></div>';
-				if ( isset( $_GET['nj_go'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-					$njhtml .= '<script>setTimeout(function(){location.href=' . wp_json_encode( $next ) . ';},300);</script>';
-				}
+				$njhtml .= '<div class="notice notice-info" id="spu-job" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-step="' . esc_attr( wp_create_nonce( 'songpress_notes_step' ) ) . '" data-cancel="' . esc_attr( wp_create_nonce( 'songpress_notes_cancel' ) ) . '" data-auto="' . ( isset( $_GET['nj_go'] ) ? '1' : '' ) . '"><p><strong id="spu-jobtxt">' . esc_html( sprintf( /* translators: 1: notes done, 2: notes in all */ __( 'Importing… %1$s of %2$s notes.', 'songpress' ), number_format_i18n( $job['done'] ), number_format_i18n( $job['total'] ) ) ) . '</strong> ' . esc_html__( 'Keep this page open; it carries on by itself.', 'songpress' ) . '</p><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden"><div id="spu-jobbar" style="height:8px;width:' . $pct . '%;background:#f5a524"></div></div><p><button type="button" class="spe-btn" id="spu-jobgo">' . esc_html__( 'Continue now', 'songpress' ) . '</button> <button type="button" class="spe-btn" id="spu-jobx">' . esc_html__( 'Cancel', 'songpress' ) . '</button></p></div>';
 			}
 			$inc    = self::incoming_files();
 			$incdir = self::incoming_dir();
-			$njhtml .= '<div class="notice notice-info"><p><strong>' . esc_html__( 'Import from a folder on the server', 'songpress' ) . '</strong> ' . esc_html__( 'If your browser cannot read the files, put them (or a zip of them) in this folder with your host\'s file manager or FTP, then press the button.', 'songpress' ) . '</p><p><code>' . esc_html( $incdir ? str_replace( ABSPATH, '', $incdir ) : '' ) . '</code></p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_folder', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_folder"><input type="hidden" name="sp_return" value="' . $ret . '"><button class="spe-save" type="submit"' . ( $inc ? '' : ' disabled' ) . '>' . esc_html( sprintf( /* translators: %d: files waiting */ _n( 'Import %d file waiting in the folder', 'Import %d files waiting in the folder', count( $inc ), 'songpress' ), count( $inc ) ) ) . '</button></form></div>';
+			$njhtml .= '<div class="notice notice-info"><p><strong>' . esc_html__( 'Import from a folder on the server', 'songpress' ) . '</strong> ' . esc_html__( 'If your browser cannot read the files, put them (or a zip of them) in this folder with your host\'s file manager or FTP, then press the button.', 'songpress' ) . '</p><p><code>' . esc_html( $incdir ? str_replace( ABSPATH, '', $incdir ) : '' ) . '</code></p><form method="post" id="spu-folder" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-step="' . esc_attr( wp_create_nonce( 'songpress_notes_step' ) ) . '" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_folder', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_folder"><input type="hidden" name="sp_return" value="' . $ret . '"><button class="spe-save" type="submit"' . ( $inc ? '' : ' disabled' ) . '>' . esc_html( sprintf( /* translators: %d: files waiting */ _n( 'Import %d file waiting in the folder', 'Import %d files waiting in the folder', count( $inc ), 'songpress' ), count( $inc ) ) ) . '</button></form></div>';
 			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" data-cfg="' . esc_attr( wp_json_encode( array( 'nonce' => wp_create_nonce( 'songpress_notes_import' ), 'ajax' => admin_url( 'admin-ajax.php' ) ) ) ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button><div id="spu-nprog" hidden><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden;margin:10px 0 4px"><div id="spu-nbar" style="height:8px;width:0;background:#f5a524"></div></div><small id="spu-ntxt"></small></div></form><script src="' . esc_url( SONGPRESS_URL . 'assets/notes-import.js?ver=' . SONGPRESS_VERSION ) . '"></script>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
