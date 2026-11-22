@@ -136,12 +136,7 @@ class Songpress_Frontend {
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
-			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, ( 'people' === $page && 'person' === $cur ) || 'link' === $page );
-			$kn = function ( $kind, $label ) use ( $cat_url, $page, $people, $cur ) {
-				return self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => $kind ), $cat_url ), $label, $people, 'people' === $page && $cur === $kind );
-			};
-			$nav .= $kn( 'band', __( 'Bands', 'songpress' ) ) . $kn( 'label', __( 'Labels', 'songpress' ) ) . $kn( 'publisher', __( 'Publishers', 'songpress' ) );
-			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
+			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page );
 			$nav .= $mk( 'activity', __( 'Activity log', 'songpress' ), $svg( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ), 'activity' );
 			$nav .= $mk( 'uploads', __( 'Upload / Download', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
 			$nav .= $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
