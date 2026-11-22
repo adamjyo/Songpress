@@ -823,6 +823,9 @@ class Songpress_Admin {
 			update_option( 'songpress_accounts_ready', '1' );
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			$people = Songpress_People::backfill_all( 20 );
+			if ( $people['remaining'] > 0 ) {
+				Songpress_People::schedule( 30 );
+			}
 		}
 		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ), 'filled' => (int) ( $out['filled'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
 	}
@@ -1196,20 +1199,19 @@ class Songpress_Admin {
 			/* translators: 1: accounts created, 2: credits linked, 3: writers still without an account */
 			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Created %1$d accounts and linked %2$d credits. %3$d writers still have no account.', 'songpress' ), absint( $_GET['made'] ), absint( $_GET['credits'] ?? 0 ), absint( $_GET['left'] ?? 0 ) ) ) . '</p></div>';
 		}
-		$todo = ( Songpress_Caps::can( 'members' ) && Songpress_People::ready() ) ? count( Songpress_People::unlinked_names() ) : 0;
-		echo '<h2>' . esc_html__( 'Give every writer an account', 'songpress' ) . '</h2>';
-		echo '<p class="sp-help">' . esc_html__( 'Each writer gets a login named firstname.lastname with the Viewer class. These accounts have no email and a random password, so nobody can sign in until you add their email (SongPress > Members) and they use "Lost your password?". The same name always gets the same account. New writers added to a song get one automatically.', 'songpress' ) . '</p>';
+		$todo = Songpress_People::ready() ? count( Songpress_People::unlinked_names() ) : 0;
 		if ( $todo ) {
-			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-			wp_nonce_field( 'songpress_make_accounts' );
-			echo '<input type="hidden" name="action" value="songpress_make_accounts">';
-			/* translators: %d: number of writers */
-			submit_button( sprintf( _n( 'Create an account for %d writer (up to 100 at a time)', 'Create accounts for %d writers (up to 100 at a time)', $todo, 'songpress' ), $todo ), 'primary', 'submit', false );
-			echo '</form>';
-		} elseif ( ! Songpress_People::ready() ) {
-			echo '<p>' . esc_html__( 'Accounts are made after your first import. Import your old catalog, or choose "Start fresh" on the Import screen.', 'songpress' ) . '</p>';
+			Songpress_People::schedule( 5 );
+		}
+		echo '<h2>' . esc_html__( 'Every writer is a person', 'songpress' ) . '</h2>';
+		echo '<p class="sp-help">' . esc_html__( 'Anyone credited as a writer automatically becomes a person with a login (firstname.lastname, Viewer class), whether they come from an import or are typed into a song. The same name always gets the same account. Nobody is emailed: set a password for someone from People when they should sign in.', 'songpress' ) . '</p>';
+		if ( ! Songpress_People::ready() ) {
+			echo '<p>' . esc_html__( 'This starts after your first import. Import your old catalog, or choose "Start fresh" on the Upload / Download screen.', 'songpress' ) . '</p>';
+		} elseif ( $todo ) {
+			/* translators: %d: number of writers still waiting */
+			echo '<p>' . esc_html( sprintf( _n( '%d writer is still being given an account. This happens in the background; check back in a minute.', '%d writers are still being given accounts. This happens in the background; check back in a minute.', $todo, 'songpress' ), $todo ) ) . '</p>';
 		} else {
-			echo '<p>' . esc_html__( 'Every writer already has an account.', 'songpress' ) . '</p>';
+			echo '<p>' . esc_html__( 'Every writer has an account.', 'songpress' ) . '</p>';
 		}
 		echo '<h2 style="margin-top:24px">' . esc_html__( 'Link a writer to an account that already exists', 'songpress' ) . '</h2>';
 		$rows = self::unlinked_writers();

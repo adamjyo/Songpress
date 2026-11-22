@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.32.0
+Stable tag: 0.33.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.33.0 =
+* Every writer becomes a person with a login automatically. Writers from an import, or typed into a song, get their account without any button: a background top-up runs after an import, and checks about once an hour that no writer is left without one. The Create accounts button is gone; the Link writers tab now just reports progress and still lets you link a writer to an account you already have.
 
 = 0.32.0 =
 * Link writers is now a tab on the People screen instead of its own rail entry.

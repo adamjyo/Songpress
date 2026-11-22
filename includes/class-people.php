@@ -9,6 +9,41 @@ defined( 'ABSPATH' ) || exit;
 class Songpress_People {
 	const KEY_META = 'songpress_person_key';
 
+	const CRON = 'songpress_people_topup';
+
+	public static function init() {
+		add_action( self::CRON, array( __CLASS__, 'topup' ) );
+		add_action( 'init', array( __CLASS__, 'watch' ) );
+	}
+
+	/** Keeps going in the background until every writer has an account: a batch now, another a minute later while any remain. */
+	public static function topup() {
+		if ( ! self::ready() ) {
+			return;
+		}
+		$r = self::backfill_all( 20 );
+		if ( $r['remaining'] > 0 && ( $r['created'] + $r['linked'] ) > 0 ) {
+			self::schedule( 60 );
+		}
+	}
+
+	public static function schedule( $in = 30 ) {
+		if ( ! wp_next_scheduled( self::CRON ) ) {
+			wp_schedule_single_event( time() + (int) $in, self::CRON );
+		}
+	}
+
+	/** Once an hour at most, notice writers without an account and start the background top-up. */
+	public static function watch() {
+		if ( ! self::ready() || get_transient( 'songpress_people_ok' ) ) {
+			return;
+		}
+		set_transient( 'songpress_people_ok', 1, HOUR_IN_SECONDS );
+		if ( self::unlinked_names( 1 ) ) {
+			self::schedule( 5 );
+		}
+	}
+
 	/** Accounts are made only once the first import has finished, or once a Manager chose to start fresh. */
 	public static function ready() {
 		return '1' === get_option( 'songpress_accounts_ready', '0' );
