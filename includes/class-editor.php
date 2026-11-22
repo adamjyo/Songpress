@@ -102,14 +102,19 @@ class Songpress_Editor {
 		}
 		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version. Type a username or email in Account to let that person see this song on their own profile.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Type a username or email in Account to let that person see this song on their own profile. Add as many people as the song has.', 'songpress' ) ) . '</p>';
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true, true );
-		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, false );
-		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, false );
 		if ( ! $root ) {
 			$o .= self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
 			$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false );
 		} else {
 			$o .= '<p class="spe-help">' . esc_html__( 'Performers and producers are added on each version. Changes here to the title, lyrics, chords, story, writers, publishers and labels are copied to every version.', 'songpress' ) . '</p>';
 		}
+		$o .= '</section>';
+
+		/* Publishing: the numbers, then who publishes and who releases it. Shared by every version except the ISRC. */
+		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any publishing numbers this song has (ISWC, ASCAP, BMI, MLC, CCLI, DistroKid and so on). There is no limit. The ISRC belongs on versions; everything else here is shared by every version.', 'songpress' ) . '</p>';
+		$o .= self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
+		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, true );
+		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, true );
 		$o .= '</section>';
 
 		/* Release: everything that belongs to one recording or release, so only versions have it. */
@@ -129,7 +134,7 @@ class Songpress_Editor {
 			$rel .= '</datalist>';
 			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . '</div>';
 		} else {
-			$rel .= '<p class="spe-help">' . esc_html__( 'Release details (release name, band, album, genre, key, tempo, dates) belong to versions. Add a version when this song is recorded or released.', 'songpress' ) . '</p>';
+			$rel .= '<p class="spe-help">' . esc_html__( 'Release details (release name, band, album, genre, key, tempo, dates) belong to versions. Add a version when this song is recorded or released.', 'songpress' ) . '</p>' . self::released_list( $song );
 		}
 		$rel .= '</section>';
 
@@ -160,13 +165,12 @@ class Songpress_Editor {
 		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'Chords and lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="chords_lyrics" rows="14"' . $ph( 'chords_lyrics' ) . '>' . esc_textarea( self::f( $song, 'chords_lyrics' ) ) . '</textarea>' . $hint( 'chords_lyrics' ) . '</label>';
 		$o .= '<label class="spe-field adv"><span>ChordPro</span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box to open the ChordPro tool. Use the button below to type here instead.', 'songpress' ) . '</small><button type="button" class="spe-btn" id="spe-cp-open">' . esc_html__( 'Open the ChordPro tool', 'songpress' ) . '</button></label>' . self::chordpro_popup() . '</section>';
 
-		/* Codes and links */
-		$o .= '<section class="spe-panel ' . ( $root ? 'simple' : 'adv' ) . '" data-panel="codes"><h3>' . esc_html__( 'Codes and links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. The ISRC belongs on versions; the others are shared by every version.', 'songpress' ) . '</p>';
-		$o .= self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
+		/* Links: streaming, store and video links belong to one version. */
 		if ( ! $root ) {
-		$o .= self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, 'https://' );
+			$o .= '<section class="spe-panel adv" data-panel="codes"><h3>' . esc_html__( 'Links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Streaming, store and video links for this version. There is no limit.', 'songpress' ) . '</p>';
+			$o .= self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, 'https://' );
+			$o .= '</section>';
 		}
-		$o .= '</section>';
 
 		/* Story and notes */
 		$o .= '<section class="spe-panel adv" data-panel="story"><h3>' . esc_html__( 'Story and notes', 'songpress' ) . '</h3>';
@@ -320,6 +324,29 @@ class Songpress_Editor {
 			$o .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v ) . '">';
 		}
 		return $o . '<button type="submit" class="' . esc_attr( $class ) . '">' . esc_html( $button ) . '</button></form>';
+	}
+
+	/** On the original work: the versions that have been released, each linked, with a short line of what it is. */
+	private static function released_list( $song ) {
+		if ( ! $song ) {
+			return '';
+		}
+		$res = Songpress_Songs::query( array( 'family_id' => (int) $song->family_id, 'per_page' => 100 ) );
+		$li  = '';
+		foreach ( $res['rows'] as $v ) {
+			if ( (int) $v->version_no < 1 ) {
+				continue;
+			}
+			if ( 'released' !== $v->status && '' === $v->release_title . $v->release_date ) {
+				continue;
+			}
+			$bits = array_filter( array( $v->release_date, $v->artist, $v->album, $v->genre, $v->musical_key, '' !== (string) $v->tempo ? $v->tempo . ' BPM' : '', $v->format ), 'strlen' );
+			$li  .= '<li><a href="' . esc_url( self::edit_url( $v->id ) ) . '"><span class="songpress-serial">' . esc_html( $v->serial ) . '</span> <b>' . esc_html( '' !== (string) $v->release_title ? $v->release_title : Songpress_Songs::display_title( $v ) ) . '</b></a>' . ( $bits ? '<small class="spe-help">' . esc_html( implode( ' · ', $bits ) ) . '</small>' : '' ) . '</li>';
+		}
+		if ( '' === $li ) {
+			return '<p class="spe-help">' . esc_html__( 'No version has been released yet.', 'songpress' ) . '</p>';
+		}
+		return '<h4>' . esc_html__( 'Released versions', 'songpress' ) . '</h4><ul class="spe-versions spe-released">' . $li . '</ul>';
 	}
 
 	private static function versions_panel( $song ) {

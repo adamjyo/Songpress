@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.44.4
+Stable tag: 0.45.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.45.0 =
+* New Publishing card right under People and splits: publishing numbers (ISWC, ASCAP, BMI, MLC, CCLI, DistroKid and so on), then publishers and labels. Links now have their own card on versions only.
+* On the original work, the Release card lists the released versions, each linked, with a short summary (date, artist, album, genre, key, tempo).
 
 = 0.44.4 =
 * The left rail stays put while the page scrolls, even when the theme wraps the page in something that would carry it away (a transform or similar): if the rail moves, the app lifts itself out of that wrapper.
