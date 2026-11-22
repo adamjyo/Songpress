@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.28.0
+Stable tag: 0.29.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.29.0 =
+* Sessions and Art studio are out of the rail (nothing is deleted; sessions are paused). The Art studio opens from an "Art studio" button at the top of a work's editor: its latest art project, or a new one for that work.
 
 = 0.28.0 =
 * The ChordPro tool is no longer in the rail; open it from the "ChordPro tool" button at the top of a work's editor (it loads that work's ChordPro and saves back to it). The editor's back link now reads "Works".

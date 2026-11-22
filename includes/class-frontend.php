@@ -140,12 +140,6 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'agreements' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'agreements', __( 'Agreements', 'songpress' ), $svg( '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/>' ), 'agreements' );
 		}
-		if ( Songpress_Caps::can( 'art' ) && ! wp_is_mobile() ) {
-			$nav .= $mk( 'art', __( 'Art studio', 'songpress' ), $svg( '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>' ), 'art' );
-		}
-		if ( Songpress_Caps::can( 'sessions' ) && ! wp_is_mobile() ) {
-			$nav .= $mk( 'sessions', __( 'Sessions', 'songpress' ), $svg( '<path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/>' ), 'sessions' );
-		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
 			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page && 'person' === $cur );

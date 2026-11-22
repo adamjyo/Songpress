@@ -39,7 +39,7 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . ( wp_is_mobile() ? '' : '<button type="button" class="spe-btn spe-cptop" id="spe-cp-top">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' ) . '</div>';
+		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'art' ) ? '<a class="spe-btn spe-arttop" href="' . esc_url( self::art_url( $id ) ) . '">' . esc_html__( 'Art studio', 'songpress' ) . '</a>' : '' ) . ( wp_is_mobile() ? '' : '<button type="button" class="spe-btn spe-cptop" id="spe-cp-top">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' ) . '</div>';
 		$o       .= self::notices();
 		if ( $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing tab.', 'songpress' ) . '</p>';
@@ -214,6 +214,14 @@ class Songpress_Editor {
 	}
 
 	/** The popup that holds the ChordPro tool (same page as the public tool, in a frame). Text goes in and out by message; nothing is sent anywhere. */
+	/** The Art studio for a work: its latest project if it has one, otherwise a new one for it. */
+	public static function art_url( $song_id ) {
+		global $wpdb;
+		$pid  = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'art' ) . ' WHERE song_id = %d ORDER BY updated_at DESC, id DESC LIMIT 1', (int) $song_id ) ); // phpcs:ignore WordPress.DB
+		$base = self::list_url();
+		return $pid ? add_query_arg( array( 'sp_page' => 'art', 'art' => $pid ), $base ) : add_query_arg( array( 'sp_page' => 'art', 'art' => 'new', 'song' => (int) $song_id ), $base );
+	}
+
 	private static function chordpro_popup() {
 		$o  = '<div id="spe-cp-modal" class="spe-cpm" hidden><div class="spe-cpm-in"><iframe id="spe-cp-frame" title="ChordPro tool"></iframe></div></div>';
 		$o .= '<script>(function(){var ed=document.getElementById("spe-chordpro");if(!ed)return;var box=document.getElementById("spe-cp-modal"),fr=document.getElementById("spe-cp-frame"),direct=false,ready=false,pending=null;'
