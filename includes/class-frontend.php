@@ -204,7 +204,9 @@ class Songpress_Frontend {
 		$order  = isset( $_GET['sp_sort'] ) ? sanitize_key( wp_unslash( $_GET['sp_sort'] ) ) : '';
 		$order  = in_array( $order, array( 'serial', 'title', 'genre', 'writer', 'artist', 'label', 'status' ), true ) ? $order : '';
 		$dir    = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc';
-		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
+		$len    = isset( $_GET['sp_n'] ) ? absint( $_GET['sp_n'] ) : 100;
+		$len    = ( $len >= 100 && $len <= 1000 && 0 === $len % 100 ) ? $len : 100;
+		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => $len, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
 		$out    = '<div class="songpress sp-app">' . ( $desktop ? self::tabs( 'catalog', 'top' ) . self::head( __( 'Works', 'songpress' ) ) : self::userbar( 'catalog' ) );
 		if ( $desktop && isset( $_GET['sp_deleted'] ) ) {
 			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Deleted %d song.', 'Deleted %d songs.', absint( $_GET['sp_deleted'] ), 'songpress' ), absint( $_GET['sp_deleted'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
@@ -216,16 +218,21 @@ class Songpress_Frontend {
 			$out .= '<p class="songpress-note">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 		if ( $desktop ) {
-			$ov = '';
-			foreach ( array( 'registrations' => __( 'All registrations', 'songpress' ), 'agreements' => __( 'All agreements', 'songpress' ) ) as $slug => $label ) {
-				if ( Songpress_Caps::can( $slug ) ) {
-					$ov .= '<a class="spe-btn" href="' . esc_url( add_query_arg( 'sp_page', $slug, Songpress_Editor::list_url() ) ) . '">' . esc_html( $label ) . '</a> ';
+			$ov = '<form method="get" class="songpress-len"><label>' . esc_html__( 'Show', 'songpress' ) . ' <select name="sp_n" onchange="this.form.submit()">';
+			for ( $i = 100; $i <= 1000; $i += 100 ) {
+				$ov .= '<option value="' . $i . '"' . selected( $len, $i, false ) . '>' . $i . '</option>';
+			}
+			$ov .= '</select> ' . esc_html__( 'works', 'songpress' ) . '</label>';
+			foreach ( array( 'sp_q' => $q, 'sp_status' => $status, 'sp_sort' => $order, 'sp_dir' => $dir ) as $k => $v ) {
+				if ( '' !== $v ) {
+					$ov .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v ) . '">';
 				}
 			}
-			$out .= '' !== $ov ? '<p class="songpress-ov">' . $ov . '</p>' : '';
+			$ov .= '</form>';
+			$out .= '<p class="songpress-ov">' . $ov . '</p>';
 		}
 		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
-		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
+		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
 		$bulk = $desktop && ( Songpress_Caps::can( 'edit_any' ) || Songpress_Caps::can( 'edit_own' ) );
 		if ( $bulk ) {
 			$out .= self::bulk_open();

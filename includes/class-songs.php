@@ -222,7 +222,7 @@ class Songpress_Songs {
 			$vals[]  = $like;
 			$where[] = '(' . implode( ' OR ', $parts ) . ')';
 		}
-		$per    = max( 1, min( 100, (int) ( $args['per_page'] ?? 25 ) ) );
+		$per    = max( 1, min( 1000, (int) ( $args['per_page'] ?? 25 ) ) );
 		$offset = max( 0, ( (int) ( $args['page'] ?? 1 ) - 1 ) * $per );
 		$sql    = implode( ' AND ', $where );
 

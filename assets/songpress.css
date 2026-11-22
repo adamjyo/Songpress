@@ -724,3 +724,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 #songpress-bulk:not(.sp-bulk-on) .songpress-pick,#songpress-bulk:not(.sp-bulk-on) .songpress-pickall{display:none}
 .songpress-bulkshowdel{font-size:13px;opacity:.8;margin-left:auto}
 .songpress-bulkdel[hidden]{display:none}
+.songpress-len{margin:0}.songpress-len select{min-height:34px;margin:0 4px}
