@@ -574,3 +574,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spp-badge.free{background:#2e7d4f;color:#fff}
 .spp-badge.mixed{border:1px solid #f5a524;color:#f5a524}
 .spp-badge.paid{background:#c0392b;color:#fff}
+.sp-side .sp-badge{background:#f5a524;color:#111;border-radius:9px;padding:0 7px;font-size:11px;font-weight:700;margin-left:auto}

@@ -744,11 +744,15 @@ Songpress_Pitch::save_kit( 1, array( 'mood' => 'warm', 'explicit_set' => 1, 'exp
 $kk = Songpress_Pitch::kit( 1 );
 check( 'kit saves only what was sent', array( $kk['wav'], $kk['bio'], $kk['mood'], $kk['explicit'] ), array( 'https://x.test/m.wav', 'Hello band', 'warm', 1 ) );
 check( 'the last bio is offered to the next work', Songpress_Pitch::last_bio(), 'Hello band' );
+$wpdb->query( "UPDATE " . Songpress_Install::table( 'songs' ) . " SET artist = 'Red Beard' WHERE id = 1" );
+check( 'a band reuses its own bio', array( Songpress_Pitch::band_bio( 'Red Beard' ), Songpress_Pitch::band_bio( 'Nobody' ), Songpress_Pitch::band_bio( '' ) ), array( 'Hello band', '', '' ) );
 check( 'outcome falls back to open', Songpress_Pitch::outcome( 'bogus' ), 'open' );
 check( 'a pitch needs a work and a destination', array( Songpress_Pitch::add( array( 'song_id' => 0, 'sent_to' => 'WXYZ' ) ), Songpress_Pitch::add( array( 'song_id' => 1 ) ) ), array( 0, 0 ) );
 $pid = Songpress_Pitch::add( array( 'song_id' => 1, 'channel' => 'spotify', 'sent_to' => 'WXYZ', 'sent_at' => '2026-01-01', 'follow_up' => '2026-01-10' ) );
 check( 'pitch is logged', $pid > 0, true );
 check( 'follow-up shows when due', array( count( Songpress_Pitch::rows( 'due', 0, '2026-01-09' ) ), count( Songpress_Pitch::rows( 'due', 0, '2026-01-10' ) ) ), array( 0, 1 ) );
+Songpress_Pitch::update( $pid, array( 'outcome' => 'open', 'follow_up' => '2026-01-10', 'sent_to' => 'KEXP', 'channel' => 'nacc', 'notes' => '' ) );
+check( 'a pitch can be re-pointed', array( Songpress_Pitch::rows( 'all' )[0]->sent_to, Songpress_Pitch::rows( 'all' )[0]->channel ), array( 'KEXP', 'nacc' ) );
 Songpress_Pitch::update( $pid, array( 'outcome' => 'placed', 'follow_up' => '', 'notes' => 'added' ) );
 check( 'a placed pitch is no longer due or waiting', array( count( Songpress_Pitch::rows( 'due', 0, '2026-02-01' ) ), count( Songpress_Pitch::rows( 'open' ) ), count( Songpress_Pitch::rows( 'all' ) ) ), array( 0, 0, 1 ) );
 Songpress_Pitch::delete( $pid );

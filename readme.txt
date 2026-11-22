@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.39.0
+Stable tag: 0.40.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.40.0 =
+* Pitch: the rail shows a count of follow-ups that are due. A band reuses its bio across songs. A logged pitch can be changed to a different place or recipient. Logged pitches appear in the Activity log.
 
 = 0.39.0 =
 * Pitch: paid routes are back (Play MPE, Groover and others), and every place carries a badge: green Free, amber Free + paid, red Paid. Free ones are listed first.

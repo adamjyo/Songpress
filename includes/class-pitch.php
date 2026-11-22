@@ -164,6 +164,15 @@ class Songpress_Pitch {
 		return true;
 	}
 
+	/** The most recent bio saved for any work by this band, so a band writes it once. */
+	public static function band_bio( $band ) {
+		global $wpdb;
+		if ( '' === trim( (string) $band ) ) {
+			return '';
+		}
+		return (string) $wpdb->get_var( $wpdb->prepare( 'SELECT k.bio FROM ' . self::kt() . ' k JOIN ' . Songpress_Install::table( 'songs' ) . " s ON s.id = k.song_id WHERE s.artist = %s AND k.bio <> '' ORDER BY k.updated_at DESC LIMIT 1", $band ) ); // phpcs:ignore WordPress.DB
+	}
+
 	/** The most recent bio typed for any work, to offer as a starting point. */
 	public static function last_bio() {
 		global $wpdb;
@@ -457,6 +466,12 @@ class Songpress_Pitch {
 	public static function update( $id, array $in ) {
 		global $wpdb;
 		$row = array( 'outcome' => self::outcome( (string) ( $in['outcome'] ?? '' ) ), 'follow_up' => self::date_in( $in['follow_up'] ?? '' ), 'notes' => sanitize_textarea_field( $in['notes'] ?? '' ), 'updated_at' => current_time( 'mysql' ) );
+		if ( isset( $in['sent_to'] ) ) {
+			$row['sent_to'] = mb_substr( sanitize_text_field( $in['sent_to'] ), 0, 191 );
+		}
+		if ( isset( $in['channel'] ) && isset( self::channel_names()[ sanitize_key( $in['channel'] ) ] ) ) {
+			$row['channel'] = sanitize_key( $in['channel'] );
+		}
 		return (bool) $wpdb->update( self::t(), $row, array( 'id' => (int) $id ) );
 	}
 
@@ -515,7 +530,7 @@ class Songpress_Pitch {
 				return array( 'ok' => (bool) $r[0], 'label' => $r[1], 'where' => $r[2], 'why' => $r[3] );
 			}, self::readiness( $f ) ),
 			'copies'  => self::copies( $f ),
-			'draft'   => '' === trim( $f['bio'] ) ? ( '' !== self::last_bio() ? self::last_bio() : self::draft_bio( $f ) ) : '',
+			'draft'   => '' === trim( $f['bio'] ) ? ( '' !== self::band_bio( $f['band'] ) ? self::band_bio( $f['band'] ) : ( '' !== self::last_bio() ? self::last_bio() : self::draft_bio( $f ) ) ) : '',
 			'edit'    => Songpress_Editor::edit_url( (int) $song->id ),
 		);
 	}
@@ -533,6 +548,9 @@ class Songpress_Pitch {
 		}
 		if ( 'log' === $op ) {
 			$id = self::add( $in );
+			if ( $id && class_exists( 'Songpress_Audit' ) ) {
+				Songpress_Audit::log( 'pitch', 'Logged a pitch', (string) $song->serial, array( 'song_id' => (int) $song->id, 'channel' => sanitize_key( $in['channel'] ?? '' ) ) );
+			}
 			return $id ? array( 'ok' => true, 'id' => $id ) : array( 'ok' => false, 'error' => 'Say where it went (a name or a site).' );
 		}
 		return self::song_reply( $song );
@@ -690,7 +708,12 @@ class Songpress_Pitch {
 			$o   .= '<details class="spp-row"><summary><span><b>' . esc_html( (string) $r->serial ) . '</b> ' . esc_html( (string) $r->title ) . '</span><span class="spp-meta">' . esc_html( ( $names[ $r->channel ] ?? '' ) . ( '' !== $r->sent_to ? ( isset( $names[ $r->channel ] ) ? ' · ' : '' ) . $r->sent_to : '' ) ) . '</span><span class="spp-chip ' . esc_attr( $late ? 'late' : $r->outcome ) . '">' . esc_html( $late ? __( 'Follow up', 'songpress' ) : ( self::OUTCOMES[ $r->outcome ] ?? 'Waiting' ) ) . '</span></summary>';
 			$o   .= Songpress_Money::form_open( 'songpress_pitch_update', 'spp-edit' ) . '<input type="hidden" name="pitch_id" value="' . (int) $r->id . '"><input type="hidden" name="sp_return" value="' . esc_attr( self::url( array( 'pf' => $flt ) ) ) . '">';
 			$o   .= '<p class="spe-help">' . esc_html( sprintf( /* translators: %s: date */ __( 'Sent %s', 'songpress' ), $r->sent_at ) ) . '</p>';
-			$o   .= '<label class="spe-field"><span>' . esc_html__( 'How it went', 'songpress' ) . '</span><select name="outcome">';
+			$o   .= '<label class="spe-field"><span>' . esc_html__( 'Where', 'songpress' ) . '</span><select name="channel">';
+			foreach ( $names as $cid => $cn ) {
+				$o .= '<option value="' . esc_attr( $cid ) . '"' . selected( $r->channel, $cid, false ) . '>' . esc_html( $cn ) . '</option>';
+			}
+			$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Sent to', 'songpress' ) . '</span><input name="sent_to" value="' . esc_attr( (string) $r->sent_to ) . '"></label>';
+			$o .= '<label class="spe-field"><span>' . esc_html__( 'How it went', 'songpress' ) . '</span><select name="outcome">';
 			foreach ( self::OUTCOMES as $k => $l ) {
 				$o .= '<option value="' . esc_attr( $k ) . '"' . selected( $r->outcome, $k, false ) . '>' . esc_html( $l ) . '</option>';
 			}
@@ -769,7 +792,7 @@ function step2(){
  +'<h4>Files</h4><p class="spe-help">Files live in your WordPress Media Library. Upload a new one, or search for one you already uploaded.</p>'+['wav','clean','instr','stems','photo','bio_url'].filter(function(x){return x!=='clean'||f.explicit||f.clean}).map(function(x){return fileRow(x,f)}).join('')
  +'<label class="spp-check"><input type="checkbox" id="spp-expl"'+(f.explicit?' checked':'')+'> This song has explicit lyrics (cursing). Radio will then need a clean version.</label>'
  +'<h4>Artist bio</h4><p class="spe-help">Two or three sentences: who you are, what you sound like, one thing that makes you interesting. Write it like you would say it to a new friend.</p><textarea id="spp-bio" rows="4" placeholder="e.g. Red Beard and Company is a Nashville Americana band…">'+h(f.bio||'')+'</textarea>'
- +(k?'<p><button type="button" class="spe-btn" id="spp-draft">Use a starting draft</button> <span class="spe-help">We write a rough one from your catalog (or reuse your last bio). Edit it so it sounds like you.</span></p>':'')
+ +(k?'<p><button type="button" class="spe-btn" id="spp-draft">Use a starting draft</button> <span class="spe-help">We reuse this band\\'s bio from another song, or write a rough one from your catalog. Edit it so it sounds like you.</span></p>':'')
  +'<label class="spe-field"><span>Mood or vibe (a few words)</span><input id="spp-mood" placeholder="e.g. warm, hopeful, late-night" value="'+a(f.mood||'')+'"></label>';
  var dr=body.querySelector('#spp-draft');if(dr)dr.onclick=function(){body.querySelector('#spp-bio').value=k};
  var ex=body.querySelector('#spp-expl');ex.onchange=function(){var o=collect();o.op='kit';o.song_id=S.id;o.explicit_set=1;o.explicit=ex.checked?1:0;api('songpress_pitch_ajax',o).then(function(r){if(r.ok){S.info=r;show()}})}
