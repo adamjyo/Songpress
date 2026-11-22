@@ -49,14 +49,28 @@ class Songpress_Install {
 		if ( ! get_option( 'songpress_pages_done' ) ) {
 			self::create_pages();
 		}
+		self::move_main_page();
 	}
 
 	/** The two front-end pages. Only created when missing, never overwritten, and only by someone who may publish pages. */
 	public static function pages() {
 		return array(
-			'songpress_page_catalog' => array( 'title' => __( 'Catalog', 'songpress' ), 'code' => '[songpress_catalog]' ),
-			'songpress_page_profile' => array( 'title' => __( 'My songs', 'songpress' ), 'code' => '[songpress_profile]' ),
+			'songpress_page_catalog' => array( 'title' => __( 'SongPress', 'songpress' ), 'slug' => 'desktop', 'code' => '[songpress_catalog]' ),
+			'songpress_page_profile' => array( 'title' => __( 'My songs', 'songpress' ), 'slug' => 'my-songs', 'code' => '[songpress_profile]' ),
 		);
+	}
+
+	/** The main page used to be made at /catalog. Move it to /desktop once, unless that address is taken or the owner already renamed it. */
+	public static function move_main_page() {
+		$id = (int) get_option( 'songpress_page_catalog' );
+		if ( ! current_user_can( 'edit_pages' ) || ! self::page_ok( $id ) || '1' === get_option( 'songpress_main_moved' ) ) {
+			return;
+		}
+		update_option( 'songpress_main_moved', '1' );
+		$p = get_post( $id );
+		if ( $p && 'catalog' === $p->post_name && ! get_page_by_path( 'desktop' ) ) {
+			wp_update_post( array( 'ID' => $id, 'post_name' => 'desktop', 'post_title' => 'SongPress' === $p->post_title || 'Catalog' === $p->post_title ? __( 'SongPress', 'songpress' ) : $p->post_title ) );
+		}
 	}
 
 	public static function page_ok( $id ) {
@@ -78,6 +92,7 @@ class Songpress_Install {
 				'post_type'    => 'page',
 				'post_status'  => 'publish',
 				'post_title'   => $def['title'],
+				'post_name'    => $def['slug'],
 				'post_content' => '<!-- wp:shortcode -->' . $def['code'] . '<!-- /wp:shortcode -->',
 			), true );
 			if ( ! is_wp_error( $id ) && $id ) {
