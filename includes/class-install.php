@@ -14,10 +14,16 @@ class Songpress_Install {
 			Songpress_Caps::migrate_class_names();
 		add_option( 'songpress_delete_on_uninstall', '0' );
 		add_option( 'songpress_public_donate', '0' );
-		add_option( 'songpress_accounts_ready', '0' ); // writer accounts are only made after the first import (or "start fresh")
+		// Writer accounts start once the catalog is ready: right away on a clean install, or after the first import when songs already exist.
+		add_option( 'songpress_accounts_ready', self::has_songs() ? '0' : '1' );
 		add_option( 'songpress_donate_prompt', 'pending' ); // asked once, on the first visit to a SongPress screen
 		update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
 		self::create_pages();
+	}
+
+	public static function has_songs() {
+		global $wpdb;
+		return (bool) $wpdb->get_var( 'SELECT 1 FROM ' . self::table( 'songs' ) . ' LIMIT 1' );
 	}
 
 	public static function deactivate() {

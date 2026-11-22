@@ -88,6 +88,18 @@ class Songpress_Admin {
 			$n = Songpress_Songs::count_archived();
 			echo '<ul class="subsubsub"><li><a href="' . esc_url( self::url( 'songpress' ) ) . '"' . ( $arch ? '' : ' class="current"' ) . '>' . esc_html__( 'Active', 'songpress' ) . '</a> | </li><li><a href="' . esc_url( self::url( 'songpress', array( 'archived' => 1 ) ) ) . '"' . ( $arch ? ' class="current"' : '' ) . '>' . esc_html__( 'Archived', 'songpress' ) . ' (' . (int) $n . ')</a></li></ul><br class="clear">';
 		}
+		if ( ! $res['total'] && '' === $q && '' === $status && ! $arch && Songpress_Caps::can( 'create' ) ) {
+			echo '<div class="songpress-welcome" style="background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:18px 22px;margin:14px 0;max-width:720px"><h2 style="margin-top:0">' . esc_html__( 'Welcome to SongPress', 'songpress' ) . '</h2>';
+			echo '<p>' . esc_html__( 'Your catalog is empty. Start with a song, or bring in an existing catalog.', 'songpress' ) . '</p><p>';
+			echo '<a class="button button-primary" href="' . esc_url( self::url( 'songpress-song' ) ) . '">' . esc_html__( 'Add your first song', 'songpress' ) . '</a> ';
+			if ( Songpress_Caps::can( 'import' ) ) {
+				echo '<a class="button" href="' . esc_url( self::url( 'songpress-import' ) ) . '">' . esc_html__( 'Import an S&P Catalog file', 'songpress' ) . '</a> ';
+			}
+			if ( Songpress_Caps::can( 'members' ) ) {
+				echo '<a class="button" href="' . esc_url( self::url( 'songpress-members' ) ) . '">' . esc_html__( 'Set up members', 'songpress' ) . '</a> ';
+			}
+			echo '</p><p class="sp-help">' . esc_html__( 'The Catalog and My songs pages for phones were already created for you. Find them in SongPress > Settings.', 'songpress' ) . '</p></div>';
+		}
 		echo '<form method="get"><input type="hidden" name="page" value="songpress">' . ( $arch ? '<input type="hidden" name="archived" value="1">' : '' ) . '<p class="search-box" style="float:none;margin:8px 0">';
 		echo '<input type="search" name="s" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Title, serial or artist', 'songpress' ) . '"> ';
 		echo '<select name="status"><option value="">' . esc_html__( 'All statuses', 'songpress' ) . '</option>';
@@ -613,7 +625,7 @@ class Songpress_Admin {
 		}
 		if ( ! Songpress_People::ready() ) {
 			echo '<h2 style="margin-top:24px">' . esc_html__( 'Starting from nothing?', 'songpress' ) . '</h2>';
-			echo '<p class="sp-help">' . esc_html__( 'Writer accounts are made after your first import. If you have nothing to import, start fresh and each writer you add will get an account.', 'songpress' ) . '</p>';
+			echo '<p class="sp-help">' . esc_html__( 'This catalog already has songs. Writer accounts are made after your first import. If you are not importing, start fresh and each writer you add will get an account.', 'songpress' ) . '</p>';
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 			wp_nonce_field( 'songpress_start_fresh' );
 			echo '<input type="hidden" name="action" value="songpress_start_fresh">';
