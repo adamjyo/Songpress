@@ -36,14 +36,27 @@ class Songpress_Screens {
 		return self::url( $slug, $args );
 	}
 
-	const SETTINGS_TABS = array( 'settings', 'lists', 'backups', 'health' );
+	const SETTINGS_TABS = array( 'settings', 'lists', 'backups', 'health', 'activity', 'uploads', 'import' );
 
-	/** The tab strip shared by Settings, Lists, Backups and Health. */
+	/** The tab strip shared by Settings, Lists, Backups, Health, Activity log and Upload / Download (plus the CSV export). */
 	public static function settings_tabs( $active ) {
-		$names = array( 'settings' => __( 'Settings', 'songpress' ), 'lists' => __( 'Lists', 'songpress' ), 'backups' => __( 'Backups', 'songpress' ), 'health' => __( 'Health', 'songpress' ) );
-		$o     = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'Settings sections', 'songpress' ) . '">';
-		foreach ( $names as $k => $l ) {
-			$o .= '<a href="' . esc_url( self::url( $k ) ) . '"' . ( $k === $active ? ' class="on" aria-current="page"' : '' ) . '>' . esc_html( $l ) . '</a>';
+		$active = 'import' === $active ? 'uploads' : $active;
+		$items  = array(
+			'settings' => array( __( 'Settings', 'songpress' ), 'settings' ),
+			'lists'    => array( __( 'Lists', 'songpress' ), 'settings' ),
+			'backups'  => array( __( 'Backups', 'songpress' ), 'settings' ),
+			'health'   => array( __( 'Health', 'songpress' ), 'settings' ),
+			'activity' => array( __( 'Activity log', 'songpress' ), 'activity' ),
+			'uploads'  => array( __( 'Upload / Download', 'songpress' ), 'import' ),
+		);
+		$o = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'Settings sections', 'songpress' ) . '">';
+		foreach ( $items as $k => $v ) {
+			if ( Songpress_Caps::can( $v[1] ) ) {
+				$o .= '<a href="' . esc_url( self::url( $k ) ) . '"' . ( $k === $active ? ' class="on" aria-current="page"' : '' ) . '>' . esc_html( $v[0] ) . '</a>';
+			}
+		}
+		if ( Songpress_Caps::can( 'export' ) ) {
+			$o .= '<a href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ) ) . '">' . esc_html__( 'Export CSV', 'songpress' ) . '</a>';
 		}
 		return $o . '</nav>';
 	}
@@ -87,7 +100,7 @@ class Songpress_Screens {
 		if ( in_array( $slug, array( 'registrations', 'agreements' ), true ) && Songpress_Caps::can( $slug ) ) {
 			return self::rights_tabs( $slug ) . self::render_one( $slug );
 		}
-		if ( in_array( $slug, self::SETTINGS_TABS, true ) && Songpress_Caps::can( 'settings' ) ) {
+		if ( in_array( $slug, self::SETTINGS_TABS, true ) ) {
 			return self::settings_tabs( $slug ) . self::render_one( $slug );
 		}
 		return self::render_one( $slug );

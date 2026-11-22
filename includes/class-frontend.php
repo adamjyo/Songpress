@@ -125,7 +125,7 @@ class Songpress_Frontend {
 		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
 		$nav     = self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
 		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
-			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'lists', 'backups', 'health' ), true ) ) || ( 'registrations' === $slug && 'agreements' === $page ) || ( 'agreements' === $slug && 'registrations' === $page );
+			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'lists', 'backups', 'health', 'activity', 'uploads', 'import' ), true ) ) || ( 'registrations' === $slug && 'agreements' === $page ) || ( 'agreements' === $slug && 'registrations' === $page );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on ) : '';
 		};
 		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
@@ -137,12 +137,7 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
 			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page );
-			$nav .= $mk( 'activity', __( 'Activity log', 'songpress' ), $svg( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ), 'activity' );
-			$nav .= $mk( 'uploads', __( 'Upload / Download', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
 			$nav .= $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
-			if ( Songpress_Caps::can( 'export' ) ) {
-				$nav .= self::nav_item( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ), __( 'Export CSV', 'songpress' ), $svg( '<path d="M12 15V3M7 8l5-5 5 5M4 20h16"/>' ), false );
-			}
 		}
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
 		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt="SongPress"></div>' . $nav . '<span class="sp-grow"></span>' . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
