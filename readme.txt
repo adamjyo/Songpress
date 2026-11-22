@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.5
+Stable tag: 0.63.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.6 =
+* Updates: the check reads the version from GitHub's API first (fresh within a minute of a push) and falls back to the raw file, which GitHub can serve up to five minutes late.
 
 = 0.63.5 =
 * Notes: the audio box drops in at the cursor, and the audio is inserted there.

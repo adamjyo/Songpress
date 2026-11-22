@@ -103,7 +103,13 @@ class Songpress_Updater {
 	/** The version in songpress.php on the main branch, so a push with a higher version number is an update without anyone publishing a release. */
 	private static function from_branch( $headers ) {
 		$repo = self::repo();
-		$res  = wp_remote_get( 'https://raw.githubusercontent.com/' . $repo . '/' . self::BRANCH . '/songpress.php?nocache=' . time(), array( 'timeout' => 8, 'headers' => $headers ) );
+		// GitHub's API answers within a minute of a push; raw.githubusercontent.com can serve a copy up to five minutes old.
+		$api  = $headers;
+		$api['Accept'] = 'application/vnd.github.raw+json';
+		$res  = wp_remote_get( 'https://api.github.com/repos/' . $repo . '/contents/songpress.php?ref=' . self::BRANCH . '&nocache=' . time(), array( 'timeout' => 8, 'headers' => $api ) );
+		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+			$res = wp_remote_get( 'https://raw.githubusercontent.com/' . $repo . '/' . self::BRANCH . '/songpress.php?nocache=' . time(), array( 'timeout' => 8, 'headers' => $headers ) );
+		}
 		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
 			return null;
 		}
