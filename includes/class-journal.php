@@ -15,6 +15,7 @@ class Songpress_Journal {
 		add_action( 'admin_post_songpress_journal_save', array( __CLASS__, 'handle_save' ) );
 		add_action( 'admin_post_songpress_journal_flag', array( __CLASS__, 'handle_flag' ) );
 		add_action( 'admin_post_songpress_journal_ajax', array( __CLASS__, 'handle_ajax' ) );
+		add_action( 'wp_ajax_songpress_journal_ajax', array( __CLASS__, 'handle_ajax' ) );
 	}
 
 	private static function t() {
@@ -325,6 +326,18 @@ class Songpress_Journal {
 			Songpress_Audit::log( 'notes', ( 'archived' === $what ? 'Archived or restored' : 'Pinned or unpinned' ) . ' a note', (string) ( self::row( $id )->title ?? '' ), array( 'entry_id' => $id ) );
 			return array( 'ok' => true, 'note' => self::shape( self::row( $id ) ) );
 		}
+		if ( 'delete_many' === $op ) {
+			$ids = array_filter( array_map( 'absint', explode( ',', (string) ( $in['ids'] ?? '' ) ) ) );
+			$ids = array_slice( array_values( array_unique( $ids ) ), 0, 500 );
+			foreach ( $ids as $gid ) {
+				$wpdb->delete( self::t(), array( 'id' => $gid ) );
+				$wpdb->delete( Songpress_Install::table( 'note_versions' ), array( 'entry_id' => $gid ) );
+			}
+			if ( $ids ) {
+				Songpress_Audit::log( 'notes', 'Deleted notes', (string) count( $ids ), array( 'entry_ids' => implode( ',', $ids ) ) );
+			}
+			return array( 'ok' => true, 'deleted' => $ids );
+		}
 		if ( 'delete' === $op && $id ) {
 			$gone = self::row( $id );
 			$wpdb->delete( self::t(), array( 'id' => $id ) );
@@ -430,7 +443,7 @@ class Songpress_Journal {
 		}
 		$data = array(
 			'today' => gmdate( 'Y-m-d' ),
-			'ajax'  => admin_url( 'admin-post.php' ),
+			'ajax'  => admin_url( 'admin-ajax.php' ),
 			'nonce' => wp_create_nonce( 'songpress_journal_ajax' ),
 			'aj'    => admin_url( 'admin-ajax.php' ),
 			'upnon' => wp_create_nonce( 'songpress_upload' ),
@@ -537,6 +550,7 @@ function renderList(){
  r.forEach(function(n){
   var x=pd(n.date);
   h+='<div class="spn-row'+(cur&&cur.id===n.id?' on':'')+(sel[n.id]?' sel':'')+'" data-id="'+n.id+'"><span class="spn-date"><b>'+(x?DOW[x.getUTCDay()]:'')+'</b><em>'+(x?x.getUTCDate():'')+'</em><small>'+(x?x.getUTCFullYear():'')+'</small></span><span class="spn-info2"><span class="spn-t">'+(n.pinned?'★ ':'')+esc(head(n))+'</span><span class="spn-p">'+esc(preview(n))+'</span></span></div>'});
+ var nsel=Object.keys(sel).length;if(selMode)h='<div class="spn-selbar" style="padding:8px 10px;position:sticky;top:0;background:inherit"><button type="button" class="spe-btn" data-delsel="1"'+(nsel?'':' disabled')+'>Delete '+nsel+' selected</button> <button type="button" class="spe-btn" data-allsel="1">Select all shown</button></div>'+h;
  if(total>r.length)h+='<button type="button" class="spe-btn" data-more="1" style="margin:10px">Show more ('+(total-r.length)+' left)</button>';
  $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>';renderCal()}
 function setStatus(s){$('spn-status').textContent=s||''}
@@ -660,6 +674,8 @@ function newNote(){(dirty?save(true):Promise.resolve()).then(function(){fill(bla
 
 $('spn-tags').addEventListener('click',function(e){var b=e.target.closest('[data-tag]');if(!b)return;tag=b.getAttribute('data-tag');renderTags();renderList()});
 $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-more]')){LIM+=300;renderList();return}
+ if(e.target.closest('[data-allsel]')){visible().slice(0,LIM).forEach(function(n){sel[n.id]=true});renderList();return}
+ if(e.target.closest('[data-delsel]')){var ids=Object.keys(sel);if(!ids.length)return;setStatus('Deleting…');post({op:'delete_many',ids:ids.join(',')}).then(function(r){if(!r.ok){setStatus(r.error||'Could not delete');return}var g={};r.deleted.forEach(function(i){g[i]=1});notes=notes.filter(function(x){return !g[x.id]});sel={};if(cur&&g[cur.id]){var v=visible();fill(v[0]||blank())}renderTags();renderList();setStatus('Deleted '+r.deleted.length+' notes.')}).catch(function(){setStatus('Could not reach the server')});return}
 
  var r=e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');
  if(selMode||e.metaKey||e.ctrlKey||e.shiftKey){sel[id]=!sel[id];if(!sel[id])delete sel[id];renderList();return}
@@ -691,8 +707,7 @@ $('spn-bar').addEventListener('click',function(e){
   post({op:'flag',entry_id:cur.id,flag:t==='pin'?'pinned':'archived'}).then(function(r){if(r.ok){cur=merge(r.note);b.classList.toggle('on',!!(t==='pin'?cur.pinned:cur.archived));renderTags();renderList()}})}
  else if(t==='del'){
   if(!cur||!cur.id){fill(blank());return}
-  if(!b.classList.contains('arm')){b.classList.add('arm');b.title='Click again to delete';setTimeout(function(){b.classList.remove('arm');b.title='Delete'},2500);return}
-  post({op:'delete',entry_id:cur.id}).then(function(r){if(r.ok){notes=notes.filter(function(x){return x.id!==r.deleted});var v=visible();fill(v[0]||blank());renderTags()}})}});
+  post({op:'delete',entry_id:cur.id}).then(function(r){if(r.ok){notes=notes.filter(function(x){return x.id!==r.deleted});var v=visible();fill(v[0]||blank());renderTags();renderList();setStatus('Deleted.')}else setStatus(r.error||'Could not delete')}).catch(function(){setStatus('Could not reach the server')})}});
 ['spn-title','spn-body','spn-f-date','spn-f-created','spn-f-place','spn-f-authors','spn-f-key','spn-f-tempo','spn-f-kind'].forEach(function(i){$(i).addEventListener('input',function(){if(i==='spn-body')sizeBody();touch()})});
 $('spn-f-tag').addEventListener('keydown',function(e){
  if(e.key!=='Enter')return;e.preventDefault();var v=this.value.trim().replace(/^[#$]+/,'').replace(/\s+/g,'-');if(!v)return;
