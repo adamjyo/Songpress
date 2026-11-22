@@ -556,7 +556,7 @@ function wrap(a,b,ph){
  t.value=v.slice(0,s)+a+m+b+v.slice(e);t.focus();t.selectionStart=s+a.length;t.selectionEnd=s+a.length+m.length;sizeBody();touch()}
 function lineStart(p){var t=$('spn-body'),v=t.value,s=t.selectionStart,ls=v.lastIndexOf('\n',s-1)+1;t.value=v.slice(0,ls)+p+v.slice(ls);t.focus();t.selectionStart=t.selectionEnd=s+p.length;sizeBody();touch()}
 function md(t){
- var s=esc(t),out=[],inCode=false,inList=false;
+ var s=esc(String(t).replace(/(\[[^\]\n]*\])[ \t]*\n[ \t]*\(/g,'$1(')),out=[],inCode=false,inList=false;
  s.split('\n').forEach(function(l){
   if(/^```/.test(l)){out.push(inCode?'</pre>':'<pre class="spn-cp">');inCode=!inCode;return}
   if(inCode){out.push(l);return}
@@ -569,7 +569,7 @@ function md(t){
  if(inList)out.push('</ul>');if(inCode)out.push('</pre>');
  return out.join('\n')}
 function inl(s){
- return s.replace(/\[♪\s*([^\]]*)\]\((https?:[^)\s]+)\)/g,'<span class="spn-au"><span>♪ $1</span><audio controls preload="none" src="$2"></audio></span>')
+ return s.replace(/\[(♪\s*)?([^\]]*)\]\s*\((https?:[^)\s]+)\)/g,function(m,n,t,u){return (n||isAud(u))?'<span class="spn-au"><span>♪ '+(t||'Audio')+'</span><audio controls preload="none" src="'+u+'"></audio></span>':m})
   .replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img src="$2" alt="$1">')
   .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
   .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*]+)\*/g,'$1<i>$2</i>')
@@ -597,7 +597,8 @@ function upload(file,kind){if(!D.canup){setStatus('You cannot upload files');ret
 function pickFile(kind,accept){var i=document.createElement('input');i.type='file';i.accept=accept;i.onchange=function(){if(i.files[0])upload(i.files[0],kind)};i.click()}
 function caretXY(t){var d=document.createElement('div'),c=getComputedStyle(t),p=['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderLeftWidth','boxSizing','whiteSpace','wordWrap','overflowWrap','tabSize'];p.forEach(function(k){d.style[k]=c[k]});d.style.position='absolute';d.style.visibility='hidden';d.style.top='0';d.style.left='-9999px';d.style.width=t.clientWidth+'px';d.style.whiteSpace='pre-wrap';d.style.wordWrap='break-word';d.textContent=t.value.slice(0,t.selectionStart);var m=document.createElement('span');m.textContent='\u200b';d.appendChild(m);document.body.appendChild(d);var r={x:m.offsetLeft,y:m.offsetTop,h:parseFloat(c.lineHeight)||m.offsetHeight||24};d.remove();return r}
 function placeBox(){var t=$('spn-body'),b=$('spn-audbox'),xy=caretXY(t),w=Math.min(420,t.clientWidth),l=Math.max(0,Math.min(xy.x,t.clientWidth-w));b.style.width=w+'px';b.style.left=(t.offsetLeft+l)+'px';b.style.top=(t.offsetTop+xy.y+xy.h-t.scrollTop+4)+'px'}
-function audLinks(t){var r=/\[♪\s*([^\]]*)\]\((https?:[^)\s]+)\)/g,m,o=[];while((m=r.exec(t)))o.push([m[1],m[2]]);return o}
+function isAud(u){return /\.(mp3|wav|m4a|aac|ogg|oga|flac)(\?|#|$)/i.test(u)}
+function audLinks(t){t=String(t).replace(/(\[[^\]\n]*\])[ \t]*\n[ \t]*\(/g,'$1(');var r=/\[(♪\s*)?([^\]]*)\]\s*\((https?:[^)\s]+)\)/g,m,o=[];while((m=r.exec(t)))if(m[1]||isAud(m[3]))o.push([m[2],m[3]]);return o}
 function auds(){var a=audLinks($('spn-body').value),h=$('spn-auds');if(!a.length){h.innerHTML='';return}var key=a.map(function(x){return x[1]}).join('|');if(h.getAttribute('data-k')===key)return;h.setAttribute('data-k',key);h.innerHTML=a.map(function(x){return '<div class="spn-au"><span>♪ '+esc(x[0]||'Audio')+'</span><audio controls preload="none" src="'+esc(x[1])+'"></audio></div>'}).join('')}
 function addAud(name,url){wrap('[♪ ',']('+url+')',name||'Audio');$('spn-audbox').hidden=true;auds()}
 var audT=null;
