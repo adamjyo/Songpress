@@ -209,14 +209,17 @@ class Songpress_Frontend {
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => $len, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
 		$out    = '<div class="songpress sp-app">' . ( $desktop ? self::tabs( 'catalog', 'top' ) . self::head( __( 'Works', 'songpress' ) ) : self::userbar( 'catalog' ) );
 		if ( $desktop && isset( $_GET['sp_deleted'] ) ) {
-			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Deleted %d song.', 'Deleted %d songs.', absint( $_GET['sp_deleted'] ), 'songpress' ), absint( $_GET['sp_deleted'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+			$out .= '<p class="songpress-toast" role="status">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Deleted %d song.', 'Deleted %d songs.', absint( $_GET['sp_deleted'] ), 'songpress' ), absint( $_GET['sp_deleted'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 		if ( $desktop && isset( $_GET['sp_bulk'] ) ) {
-			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: 1: songs changed, 2: songs skipped */ __( 'Updated %1$d songs. Skipped %2$d (not allowed, or the field does not apply to an original work).', 'songpress' ), absint( $_GET['sp_bulk'] ), absint( $_GET['sp_bskip'] ?? 0 ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+			$out .= '<p class="songpress-toast" role="status">' . esc_html( sprintf( /* translators: 1: songs changed, 2: songs skipped */ __( 'Updated %1$d songs. Skipped %2$d (not allowed, or the field does not apply to an original work).', 'songpress' ), absint( $_GET['sp_bulk'] ), absint( $_GET['sp_bskip'] ?? 0 ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 		if ( $desktop && isset( $_GET['sp_err'] ) ) {
-			$out .= '<p class="songpress-note">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+			$out .= '<p class="songpress-toast" role="status">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
+
+		$out   .= '<script>(function(){var t=document.querySelectorAll(".songpress-toast");if(!t.length)return;try{var u=new URL(location.href);["sp_deleted","sp_bulk","sp_bskip","sp_err"].forEach(function(k){u.searchParams.delete(k);});history.replaceState(null,"",u.toString());}catch(e){}t.forEach(function(n){setTimeout(function(){n.classList.add("out");setTimeout(function(){n.remove();},500);},4000);});})();</script>';
+		$lenbox = '';
 		if ( $desktop ) {
 			$ov = '<form method="get" class="songpress-len"><label>' . esc_html__( 'Show', 'songpress' ) . ' <select name="sp_n" onchange="this.form.submit()">';
 			for ( $i = 100; $i <= 1000; $i += 100 ) {
@@ -229,10 +232,10 @@ class Songpress_Frontend {
 				}
 			}
 			$ov .= '</form>';
-			$out .= '<p class="songpress-ov">' . $ov . '</p>';
+			$lenbox = $ov;
 		}
 		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
-		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
+		$out   .= '<div class="songpress-searchbar">' . $lenbox . '<form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
 		$bulk = $desktop && ( Songpress_Caps::can( 'edit_any' ) || Songpress_Caps::can( 'edit_own' ) );
 		if ( $bulk ) {
 			$out .= self::bulk_open();
@@ -350,7 +353,7 @@ class Songpress_Frontend {
 		$o .= '</datalist> <button type="submit" name="do" value="set" class="spe-save">' . esc_html__( 'Apply to selected', 'songpress' ) . '</button>';
 		if ( Songpress_Caps::can( 'delete' ) ) {
 			$o .= ' <label class="songpress-bulkshowdel"><input type="checkbox" class="songpress-bulkdelon"> ' . esc_html__( 'Show delete', 'songpress' ) . '</label>';
-			$o .= ' <button type="submit" name="do" value="delete" hidden class="spe-btn danger songpress-bulkdel" data-confirm="' . esc_attr__( 'Delete the selected works for good? An original work takes its versions with it. This cannot be undone.', 'songpress' ) . '">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
+			$o .= ' <button type="submit" name="do" value="delete" hidden class="spe-btn danger songpress-bulkdel"">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
 		}
 		$o .= '</div><script>(function(){var f=document.getElementById("songpress-bulk");if(!f)return;var bar=f.querySelector(".songpress-bulkbar"),all=f.querySelector(".songpress-pickall"),fld=f.querySelector(".songpress-bulkfield"),st=f.querySelector(".songpress-bulkstatus"),tx=f.querySelector(".songpress-bulktext"),n=f.querySelector(".songpress-bulkcount");'
 			. 'function boxes(){return f.querySelectorAll(".songpress-pick");}'

@@ -725,3 +725,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-bulkshowdel{font-size:13px;opacity:.8;margin-left:auto}
 .songpress-bulkdel[hidden]{display:none}
 .songpress-len{margin:0}.songpress-len select{min-height:34px;margin:0 4px}
+.songpress-toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99;margin:0;padding:10px 18px;border-radius:999px;background:var(--sp-card);color:inherit;border:1px solid var(--sp-accent,#e8a33d);box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:14px;animation:spToastIn .25s ease-out;transition:opacity .4s,transform .4s}
+.songpress-toast.out{opacity:0;transform:translateX(-50%) translateY(-12px)}
+@keyframes spToastIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%)}}
+.songpress-searchbar .songpress-len{flex:none;margin:0}

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.2
+Stable tag: 0.63.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.3 =
+* Works list: the length dropdown sits in front of the search. Notices such as Deleted 5 songs pop in and fade away. Deleting no longer asks for confirmation.
 
 = 0.63.2 =
 * Works list: choose how many works to show, 100 to 1000 in steps of 100 (replaces the All registrations and All agreements buttons, which stay in the sidebar).

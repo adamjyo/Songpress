@@ -459,7 +459,6 @@ class Songpress_Editor {
 				: __( 'This removes the song, its credits, codes, links, history and earnings. This cannot be undone.', 'songpress' ) ) . ' ' . esc_html__( 'Files in the Media Library stay, and the serial number is never given to another work.', 'songpress' ) . '</p>';
 			$o   .= '<form method="post" class="spe-inline" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_delete', '_wpnonce', true, false )
 				. '<input type="hidden" name="action" value="songpress_delete"><input type="hidden" name="song_id" value="' . (int) $id . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">'
-				. '<label><input type="checkbox" name="confirm" value="1" required> ' . esc_html__( 'Yes, delete it for good', 'songpress' ) . '</label> '
 				. '<button type="submit" class="spe-btn danger">' . esc_html( 0 === (int) $song->version_no ? __( 'Delete this work', 'songpress' ) : __( 'Delete this version', 'songpress' ) ) . '</button></form>';
 		}
 		$hist = Songpress_History::for_song( $id );

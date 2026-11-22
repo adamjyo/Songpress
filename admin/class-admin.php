@@ -567,9 +567,6 @@ class Songpress_Admin {
 		if ( ! Songpress_Caps::can( 'delete' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
-		if ( empty( $_POST['confirm'] ) ) {
-			self::back( 'songpress', array( 'err' => rawurlencode( __( 'Tick the box to confirm the delete.', 'songpress' ) ) ) );
-		}
 		$n = Songpress_Songs::delete( absint( $_POST['song_id'] ?? 0 ) );
 		self::back( 'songpress', array( 'deleted' => $n ) );
 	}
