@@ -31,8 +31,9 @@
 		var n = sec; tx.textContent = msg + ' (' + n + 's)';
 		var t = setInterval(function () { n--; if (n <= 0) { clearInterval(t); then(); return; } tx.textContent = msg + ' (' + n + 's)'; }, 1000);
 	}
-	function send(files) {
+	function send(files, zipFrom) {
 		var fd = new FormData();
+		if (zipFrom) { fd.append('zip_from', zipFrom); }
 		fd.append('action', 'songpress_notes_chunk'); fd.append('nonce', cfg.nonce);
 		files.forEach(function (x) { fd.append('files[]', x, x.name); });
 		return fetch(cfg.ajax, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) {
@@ -76,8 +77,10 @@
 			var failed = unreadable.map(function (n) { return n + ' (this computer could not read it: if it is in iCloud or Dropbox, copy it to a folder on this Mac first)'; }), units = [], cur = [], sz = 0;
 			ready.forEach(function (f, i) {
 				if (!f) { if (unreadable.indexOf(fl[i].name) < 0 && /\.(bear|md|txt|markdown|json|zip)$/i.test(fl[i].name)) { failed.push(fl[i].name + ' (over 3 MB even without pictures)'); } return; }
-				if (cur.length && (cur.length >= BATCH_FILES || sz + f.size > BATCH_BYTES)) { units.push(cur); cur = []; sz = 0; }
+				var isZip = /\.zip$/i.test(f.name);
+				if (cur.length && (isZip || cur.length >= BATCH_FILES || sz + f.size > BATCH_BYTES)) { units.push(cur); cur = []; sz = 0; }
 				cur.push(f); sz += f.size;
+				if (isZip) { units.push(cur); cur = []; sz = 0; }
 			});
 			if (cur.length) { units.push(cur); }
 			var total = ready.length, sent = 0, added = 0, skip = 0, lastBreak = 0, tries = 0;
@@ -92,12 +95,17 @@
 				if (!units.length) { finish(); return; }
 				if (sent + failed.length - lastBreak >= GROUP) { lastBreak = sent + failed.length; wait(REST, 'Batch ' + Math.floor(lastBreak / GROUP) + ' of ' + Math.ceil(total / GROUP) + ' done: ' + sent + ' of ' + total + ' files sent, ' + added + ' notes added. Resting before the next ' + GROUP + '', next); return; }
 				var unit = units[0];
-				send(unit).then(function (j) {
-					tries = 0; added += j.added; skip += j.skip; sent += unit.length; units.shift(); progress(); next();
+				send(unit, unit.zipFrom || 0).then(function (j) {
+					tries = 0; added += j.added; skip += j.skip;
+					if (j.zip && j.zip.next) { /* a zip is read a slice at a time */
+						unit.zipFrom = j.zip.next; tx.textContent = unit[0].name + ': ' + j.zip.next + ' of ' + j.zip.total + ' notes read · ' + added + ' added'; next(); return;
+					}
+					sent += unit.length; units.shift(); progress(); next();
 				}).catch(function (er) {
 					if (unit.length > 1) { /* find the file that is the trouble: send them one at a time */
 						units.shift(); unit.forEach(function (f, i) { units.splice(i, 0, [f]); }); tries = 0; next(); return;
 					}
+					if (/\.zip$/i.test(unit[0].name)) { failed.push(unit[0].name + ' (' + er.message + ')'); units.shift(); tries = 0; progress(); next(); return; }
 					/* one file the server will not take as an upload: send its text as a plain form field instead */
 					sendText(unit[0]).then(function (j) {
 						added += j.added; skip += j.skip; sent += 1; units.shift(); tries = 0; progress(); next();

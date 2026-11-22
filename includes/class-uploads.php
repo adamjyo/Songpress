@@ -512,6 +512,7 @@ class Songpress_Uploads {
 		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$added = 0;
 		$skip  = 0;
+		$zip   = null;
 		$tmps  = isset( $_FILES['files']['tmp_name'] ) && is_array( $_FILES['files']['tmp_name'] ) ? $_FILES['files']['tmp_name'] : array();
 		foreach ( $tmps as $i => $tmp ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 			if ( ! $tmp || ! is_uploaded_file( $tmp ) ) {
@@ -522,15 +523,23 @@ class Songpress_Uploads {
 			if ( preg_match( '/\.zip$/i', $name ) ) {
 				$z = class_exists( 'ZipArchive' ) ? new ZipArchive() : null;
 				if ( $z && true === $z->open( $tmp ) ) {
+					$hits = array();
 					for ( $k = 0; $k < $z->numFiles; $k++ ) {
 						$n = $z->getNameIndex( $k );
 						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) && 'info.json' !== basename( $n ) && false === strpos( $n, '__MACOSX/' ) ) {
-							$bn = basename( $n );
-							if ( 'text.md' === $bn && false !== strpos( dirname( $n ), '.textbundle' ) ) {
-								$bn = basename( dirname( $n ), '.textbundle' ) . '.md';
-							}
-							$one[] = array( $bn, (string) $z->getFromIndex( $k ) );
+							$hits[] = $k;
 						}
+					}
+					// a big zip is read 150 notes at a time; the browser asks again for the next slice
+					$from = isset( $_POST['zip_from'] ) ? max( 0, (int) $_POST['zip_from'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+					$zip  = array( 'total' => count( $hits ), 'next' => ( $from + 150 < count( $hits ) ) ? $from + 150 : 0 );
+					foreach ( array_slice( $hits, $from, 150 ) as $k ) {
+						$n  = $z->getNameIndex( $k );
+						$bn = basename( $n );
+						if ( 'text.md' === $bn && false !== strpos( dirname( $n ), '.textbundle' ) ) {
+							$bn = basename( dirname( $n ), '.textbundle' ) . '.md';
+						}
+						$one[] = array( $bn, (string) $z->getFromIndex( $k ) );
 					}
 					$z->close();
 				}
@@ -549,7 +558,7 @@ class Songpress_Uploads {
 				}
 			}
 		}
-		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip ) );
+		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip, 'zip' => $zip ) );
 	}
 
 	/** Ajax: one note sent as base64 text in an ordinary form field. A fallback for a file that the server's upload filter or firewall will not take. */
