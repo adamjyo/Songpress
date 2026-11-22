@@ -510,3 +510,9 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 /* rail: the selected link is shown by accent-coloured text, not a box */
 .sp-side a.on{background:transparent;color:#f5a524;font-weight:600}
 .sp-side a.on svg{color:#f5a524}
+
+/* rail: title and subtitle beside the logo */
+.sp-side-logo{display:flex;align-items:center;gap:10px}
+.sp-side-name{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.sp-side-name b{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:17px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.sp-side-name small{font-size:11px;color:#8a8f98;margin-top:2px}
