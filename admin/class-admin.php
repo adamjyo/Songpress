@@ -67,6 +67,23 @@ class Songpress_Admin {
 	}
 
 	private static function back( $page, $args = array() ) {
+		// A form posted from the front-end app carries sp_return: go back there, not to the WordPress admin.
+		$ret = isset( $_POST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- every caller has already checked its nonce.
+		if ( '' !== $ret ) {
+			$q = array();
+			foreach ( $args as $k => $v ) {
+				if ( 'song' === $k ) {
+					$q['sp_edit'] = (int) $v;
+				} else {
+					$q[ 'sp_' . $k ] = $v;
+				}
+			}
+			if ( 'songpress-song' !== $page ) {
+				unset( $q['sp_edit'] );
+			}
+			wp_safe_redirect( add_query_arg( $q, $ret ) );
+			exit;
+		}
 		wp_safe_redirect( self::url( $page, $args ) );
 		exit;
 	}
