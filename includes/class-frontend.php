@@ -13,11 +13,116 @@ class Songpress_Frontend {
 		add_shortcode( 'songpress_catalog', array( __CLASS__, 'catalog' ) );
 		add_shortcode( 'songpress_profile', array( __CLASS__, 'profile' ) );
 		add_action( 'template_redirect', array( __CLASS__, 'shared_page' ) );
+		add_action( 'template_redirect', array( __CLASS__, 'app_page' ), 6 );
+		add_action( 'wp_login_failed', array( __CLASS__, 'login_failed' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'assets' ) );
 	}
 
 	public static function assets() {
 		wp_register_style( 'songpress', SONGPRESS_URL . 'assets/songpress.css', array(), SONGPRESS_VERSION );
+	}
+
+	/** The page that holds a SongPress screen. The page the app was last opened on wins, so a page you made yourself (like /desktop) is used before the ones SongPress made. */
+	public static function main_id( $which ) {
+		$seen = (int) get_option( 'songpress_app_' . $which );
+		if ( $seen && Songpress_Install::page_ok( $seen ) ) {
+			return $seen;
+		}
+		return (int) get_option( 'songpress_page_' . $which );
+	}
+
+	private static function app_code( $post ) {
+		if ( ! $post || empty( $post->post_content ) ) {
+			return '';
+		}
+		foreach ( array( 'catalog', 'profile' ) as $w ) {
+			if ( has_shortcode( $post->post_content, 'songpress_' . $w ) ) {
+				return $w;
+			}
+		}
+		return '';
+	}
+
+	/** A failed login on the SongPress login screen comes back to it with a message, instead of the WordPress login page. */
+	public static function login_failed() {
+		if ( empty( $_POST['sp_app'] ) || empty( $_POST['redirect_to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- core handles the login; this only chooses where to send the failure.
+			return;
+		}
+		$to = wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['redirect_to'] ) ), '' ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( '' !== $to ) {
+			wp_safe_redirect( add_query_arg( 'sp_login', 'failed', remove_query_arg( 'sp_login', $to ) ) );
+			exit;
+		}
+	}
+
+	/** Any page that holds [songpress_catalog] or [songpress_profile] is shown as the SongPress app on its own, without the theme around it. */
+	public static function app_page() {
+		if ( is_admin() || ! is_singular( 'page' ) || ! empty( $_GET['sp_share'] ) ) {
+			return;
+		}
+		$post = get_queried_object();
+		$which = self::app_code( $post );
+		if ( '' === $which ) {
+			return;
+		}
+		if ( (int) get_option( 'songpress_app_' . $which ) !== (int) $post->ID ) {
+			update_option( 'songpress_app_' . $which, (int) $post->ID );
+		}
+		nocache_headers();
+		header( 'X-Robots-Tag: noindex, nofollow' );
+		header( 'Content-Type: text/html; charset=utf-8' );
+		$css  = esc_url( SONGPRESS_URL . 'assets/songpress.css?ver=' . SONGPRESS_VERSION );
+		$here = get_permalink( $post );
+		echo '<!doctype html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>' . esc_html( 'SongPress' ) . '</title><link rel="icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" type="image/svg+xml"><link rel="stylesheet" href="' . $css . '"></head><body class="sp-body">'; // phpcs:ignore WordPress.Security.EscapeOutput
+		if ( ! is_user_logged_in() ) {
+			echo self::login_screen( $here ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
+		} else {
+			echo self::shell( $which, $here ); // phpcs:ignore WordPress.Security.EscapeOutput
+		}
+		echo '</body></html>';
+		exit;
+	}
+
+	private static function login_screen( $here ) {
+		$failed = isset( $_GET['sp_login'] ) && 'failed' === $_GET['sp_login'];
+		$o  = '<div class="sp-login"><main>';
+		$o .= '<img class="sp-login-logo" src="' . esc_url( SONGPRESS_URL . 'assets/stacked-amber.svg' ) . '" alt="SongPress, a song catalog manager">';
+		$o .= '<section class="sp-card"><h1>' . esc_html__( 'Log in', 'songpress' ) . '</h1><p class="sp-sub">' . esc_html__( 'Your songs, releases and earnings in one place.', 'songpress' ) . '</p>';
+		if ( $failed ) {
+			$o .= '<p class="sp-err" role="alert">' . esc_html__( 'That username or password did not work. Try again, or reset your password.', 'songpress' ) . '</p>';
+		}
+		$o .= '<form method="post" action="' . esc_url( site_url( 'wp-login.php', 'login_post' ) ) . '">';
+		$o .= '<label for="sp-u">' . esc_html__( 'Username or email', 'songpress' ) . '</label><input id="sp-u" name="log" type="text" autocomplete="username" autocapitalize="none" required>';
+		$o .= '<label for="sp-p">' . esc_html__( 'Password', 'songpress' ) . '</label><input id="sp-p" name="pwd" type="password" autocomplete="current-password" required>';
+		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $here ) ) . '">';
+		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
+		$o .= '<a class="sp-forgot" href="' . esc_url( wp_lostpassword_url( $here ) ) . '">' . esc_html__( 'Forgot your password?', 'songpress' ) . '</a></section>';
+		$o .= wp_kses_post( songpress_public_donate_link() ) . '</main></div>';
+		return $o;
+	}
+
+	private static function nav_item( $href, $label, $icon, $on ) {
+		return '<a href="' . esc_url( $href ) . '"' . ( $on ? ' aria-current="page" class="on"' : '' ) . '>' . $icon . esc_html( $label ) . '</a>';
+	}
+
+	private static function shell( $which, $here ) {
+		$svg = function ( $d ) {
+			return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">' . $d . '</svg>';
+		};
+		$songs   = $svg( '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' );
+		$me      = $svg( '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' );
+		$people  = $svg( '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M21 20c0-2-1.5-3.6-4-4.4"/>' );
+		$manage  = $svg( '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>' );
+		$out     = ' <a href="' . esc_url( wp_logout_url( $here ) ) . '">' . $svg( '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>' ) . esc_html__( 'Log out', 'songpress' ) . '</a>';
+		$cat_url = self::main_id( 'catalog' ) ? get_permalink( self::main_id( 'catalog' ) ) : $here;
+		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
+		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
+		if ( Songpress_Caps::can( 'members' ) ) {
+			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( admin_url( 'admin.php?page=songpress-people' ), __( 'People', 'songpress' ), $people, false );
+			$nav .= self::nav_item( admin_url( 'admin.php?page=songpress' ), __( 'Manage', 'songpress' ), $manage, false );
+		}
+		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
+		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt="SongPress"></div>' . $nav . '<span class="sp-grow"></span>' . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
 	}
 
 	private static function gate() {
@@ -82,8 +187,8 @@ class Songpress_Frontend {
 
 	/** Songs / Profile tabs along the bottom, linking to the two pages SongPress made. */
 	private static function tabs( $on, $pos = 'bottom' ) {
-		$c = (int) get_option( 'songpress_page_catalog' );
-		$p = (int) get_option( 'songpress_page_profile' );
+		$c = self::main_id( 'catalog' );
+		$p = self::main_id( 'profile' );
 		if ( ! $c || ! $p || ! Songpress_Install::page_ok( $c ) || ! Songpress_Install::page_ok( $p ) ) {
 			return '';
 		}

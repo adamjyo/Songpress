@@ -61,6 +61,50 @@
 .sp-app .songpress-donate a{color:var(--sp-accent)}
 @media print{.songpress-donate,.songpress-tabs{display:none}}
 
+/* The standalone SongPress app: its own page, no theme around it. */
+.sp-body{margin:0;background:#0f1012;color:#e9eaec;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.sp-body *,.sp-body *::before,.sp-body *::after{box-sizing:border-box}
+.sp-body a{color:#f5a524;text-decoration:none}
+.sp-login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:48px 16px}
+.sp-login main{width:100%;max-width:400px;display:flex;flex-direction:column;gap:18px}
+.sp-login-logo{display:block;margin:0 auto;width:230px;max-width:100%;height:auto}
+.sp-card{background:#141518;border:1px solid #24262b;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.sp-card h1{margin:0;font:600 20px "Space Grotesk",Inter,system-ui,sans-serif}
+.sp-card .sp-sub{margin:4px 0 0;color:#a4a8b0}
+.sp-card form{display:flex;flex-direction:column;gap:6px}
+.sp-card label{color:#a4a8b0;font-size:13px;margin-top:8px}
+.sp-card label:first-of-type{margin-top:0}
+.sp-card input[type=text],.sp-card input[type=password]{height:44px;padding:0 12px;border-radius:10px;border:1px solid #2a2d33;background:#17181c;color:#e9eaec;font:inherit;font-size:16px}
+.sp-card input:focus{outline:2px solid #f5a524;outline-offset:1px}
+.sp-card button{margin-top:14px;height:46px;border-radius:10px;border:0;background:#f5a524;color:#14110a;font:inherit;font-weight:600;font-size:15px;cursor:pointer}
+.sp-card button:hover{background:#ffb83d}
+.sp-forgot{font-size:13px;text-align:center}
+.sp-err{margin:0;padding:10px 12px;border-radius:10px;background:#3d1517;color:#ff8a8f;font-size:13px}
+.sp-login .songpress-donate{margin:8px 0 0}
+.sp-shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.sp-side{background:#141518;border-right:1px solid #24262b;padding:24px 16px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sp-side-logo{padding:0 8px 20px}
+.sp-side-logo img{display:block}
+.sp-side a{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:8px;color:#a4a8b0}
+.sp-side a:hover{color:#fff}
+.sp-side a.on{background:#22252b;color:#fff;font-weight:500}
+.sp-side a.on svg{color:#f5a524}
+.sp-navgap{height:14px}
+.sp-grow{flex:1}
+.sp-main{min-width:0;padding:28px 36px}
+.sp-main .sp-app{max-width:1180px;margin:0;padding:0;background:transparent;border-radius:0;overflow:visible}
+.sp-main .songpress-head img,.sp-main .songpress-tabs{display:none!important}
+.sp-main .songpress-head{grid-template-columns:minmax(0,1fr)}
+.sp-main .songpress-head h2{font-size:28px;letter-spacing:-.01em}
+.sp-main .songpress-hero{margin-left:0;margin-right:0}
+@media (max-width:759px){
+ .sp-shell{display:block}
+ .sp-side{display:none}
+ .sp-main{padding:16px 0 0}
+ .sp-main .sp-app{padding:0 16px}
+ .sp-main .songpress-tabs-bottom{display:flex!important;position:sticky;bottom:0;margin:14px -16px 0}
+}
+
 /* Wide layouts respond to the width of the box SongPress sits in (your theme's content column), not the browser window. */
 @container (min-width:620px){
  .songpress-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
