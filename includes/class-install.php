@@ -18,6 +18,10 @@ class Songpress_Install {
 		add_option( 'songpress_accounts_ready', self::has_songs() ? '0' : '1' );
 		add_option( 'songpress_donate_prompt', 'pending' ); // asked once, on the first visit to a SongPress screen
 		update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
+		if ( '43' !== get_option( 'songpress_version_rules' ) ) {
+			Songpress_Songs::apply_version_rules();
+			update_option( 'songpress_version_rules', '43' );
+		}
 		self::ensure_artist();
 		self::create_pages();
 	}

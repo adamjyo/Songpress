@@ -379,6 +379,43 @@ class Songpress_Songs {
 		}
 	}
 
+	/**
+	 * One-time catch-up for versions made before the sharing rules (0.43.0). A per-version field that is still identical to the
+	 * original's was only a copy, so it is cleared; anything someone typed or changed in the version is kept. Labels are filled in
+	 * from the original when the version has none. Status is left alone. Returns the number of versions changed.
+	 */
+	public static function apply_version_rules() {
+		global $wpdb;
+		$t    = Songpress_Install::table( 'songs' );
+		$cr   = Songpress_Install::table( 'credits' );
+		$rows = $wpdb->get_results( "SELECT * FROM {$t} WHERE version_no > 0" );
+		$changed = 0;
+		foreach ( (array) $rows as $v ) {
+			$orig = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE family_id = %d AND version_no = 0", (int) $v->family_id ) );
+			if ( ! $orig ) {
+				continue;
+			}
+			$set = array();
+			foreach ( self::VERSION_FIELDS as $f ) {
+				if ( '' === (string) $orig->$f || '0' === (string) $orig->$f ) {
+					continue;
+				}
+				if ( (string) $v->$f === (string) $orig->$f ) {
+					$set[ $f ] = in_array( $f, array( 'audio_id', 'art_id' ), true ) ? 0 : '';
+				}
+			}
+			if ( $set ) {
+				$wpdb->update( $t, $set, array( 'id' => (int) $v->id ) );
+			}
+			$has = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$cr} WHERE song_id = %d AND role = 'label'", (int) $v->id ) );
+			if ( ! $has ) {
+				$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d AND role = 'label'", (int) $v->id, (int) $orig->id ) );
+			}
+			$changed += $set ? 1 : 0;
+		}
+		return $changed;
+	}
+
 	private static function copy_children( $from, $to ) {
 		global $wpdb;
 		// Each version has its own people. Writers, publishers and labels (with their splits) start as a copy so they can be changed

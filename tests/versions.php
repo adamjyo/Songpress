@@ -631,6 +631,13 @@ Songpress_Songs::update( $of, array( 'ai_prompt' => "line one\nline two", 'copyr
 check( 'prompt keeps its line breaks', Songpress_Songs::get( $of )->ai_prompt, "line one\nline two" );
 $ov = Songpress_Songs::create_version( $of, 1 );
 check( 'new version keeps copyright but starts without its own style and production date', array( Songpress_Songs::get( $ov )->style, Songpress_Songs::get( $ov )->copyright_date, Songpress_Songs::get( $ov )->production_date ), array( '', '2019-05-05', '' ) );
+$ro = Songpress_Songs::create( array( 'title' => 'Rule Song', 'status' => 'writing', 'style' => 'S', 'tempo' => '120', 'notes' => 'n', 'lyrics' => 'x' ), 1 );
+$rv = Songpress_Songs::create_version( $ro, 1 );
+Songpress_Songs::update( $rv, array( 'style' => 'S', 'tempo' => '99', 'notes' => 'n' ) );
+$rn = Songpress_Songs::apply_version_rules();
+$rg = Songpress_Songs::get( $rv );
+check( 'catch-up clears untouched copies, keeps edits and shared fields', array( $rn >= 1, $rg->style, $rg->tempo, $rg->notes, $rg->lyrics, Songpress_Songs::get( $ro )->style ), array( true, '', '99', '', 'x', 'S' ) );
+check( 'catch-up twice changes nothing', Songpress_Songs::apply_version_rules(), 0 );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
