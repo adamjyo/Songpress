@@ -679,3 +679,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-cardstyle{margin-left:auto;flex:none;max-width:45%;color:var(--sp-mute);font-size:12px;letter-spacing:.04em;text-transform:uppercase;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .songpress-card .songpress-play{flex:none;order:2}
 .songpress-list:has(.songpress-card){border:0;padding:0;margin-top:4px}
+.songpress-cardtext .songpress-title.songpress-notitle{color:var(--sp-mute);font-weight:500;font-style:italic}

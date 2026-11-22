@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.56.1 =
+* Phone works list: only an original work shows the work name. A version shows its release title, or "No release title" if it has none.
+
 = 0.56.0 =
 * Phones: the works list is a stack of cards. Each card has the cover art on the right, and on the left the work number, then the release title (the work title if there is none), then the artist, with the style at the far right of the artist line.
 
