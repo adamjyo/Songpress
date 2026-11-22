@@ -53,6 +53,9 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_signers (id INTEGER PRIMARY KEY AUTOINCREMENT, agreement_id INT, name TEXT, role TEXT, share TEXT, token TEXT UNIQUE, signed_as TEXT, signed_at TEXT, ip TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, session_date TEXT, session_time TEXT, title TEXT, song_id INT DEFAULT 0, location TEXT, notes TEXT, lyrics TEXT, audio_url TEXT, owner_user_id INT DEFAULT 0, source_key TEXT DEFAULT \'\', created_at TEXT, updated_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_people (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, name TEXT, person_key TEXT, user_id INT DEFAULT 0, ipi TEXT DEFAULT \'\', share TEXT DEFAULT \'\')' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, author TEXT, user_id INT DEFAULT 0, kind TEXT DEFAULT \'text\', body TEXT, audio_url TEXT, source_key TEXT DEFAULT \'\', created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
@@ -86,6 +89,7 @@ require __DIR__ . '/../includes/class-agreements.php';
 require __DIR__ . '/../includes/class-registrations.php';
 require __DIR__ . '/../includes/class-uploads.php';
 require __DIR__ . '/../includes/class-persons.php';
+require __DIR__ . '/../includes/class-sessions.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -472,6 +476,24 @@ $pl = Songpress_Persons::tidy_plan( array(
 	6 => array( 'login' => 'sam.kim2', 'display' => 'Sam Kim', 'admin' => true ),
 ) );
 check( 'tidy: rename when free, merge same person, leave different person and admins', $pl, array( array( 'rename', 1, 'abby.russ', 0 ), array( 'merge', 3, 'bob.lee', 2 ), array( 'replace', 8, 'di.fox', 7 ) ) );
+
+// Writing sessions
+if ( ! function_exists( 'get_users' ) ) { function get_users( $a = array() ) { return array(); } }
+check( 'people lines parse', Songpress_Sessions::parse_people( "Adam Page | 123 | 50\n\n  Bob\n" ), array( array( 'name' => 'Adam Page', 'ipi' => '123', 'share' => '50' ), array( 'name' => 'Bob', 'ipi' => '', 'share' => '' ) ) );
+check( 'lyric chat line reads plainly', array( Songpress_Sessions::chat_text( 'lyric', '{"from":"","to":"i love to sing"}' ), Songpress_Sessions::chat_text( 'lyric', '{"from":"a","to":"b"}' ), Songpress_Sessions::chat_text( 'text', 'hi' ) ), array( 'Lyric: i love to sing', 'Lyric changed: "a" to "b"', 'hi' ) );
+$sf = tempnam( sys_get_temp_dir(), 'ws' );
+$sp = new PDO( 'sqlite:' . $sf );
+$sp->exec( "CREATE TABLE writing_sessions (id INTEGER PRIMARY KEY, session_date TEXT, title TEXT, serial_number TEXT, writers TEXT, location TEXT, notes TEXT, lyrics TEXT, audio_url TEXT, created_at TEXT, updated_at TEXT, writer_name_1 TEXT, writer_ipi_1 TEXT, writer_share_1 TEXT, session_time TEXT, work_serial TEXT)" );
+$sp->exec( "INSERT INTO writing_sessions VALUES (9,'2026-09-27','Test 1','x','Adam Page','Starbucks','n','l','http://a/b.mp3','2026-09-27 05:50:26','2026-10-27 04:58:32','Adam Page','111','50','05:50','" . $GLOBALS['wpdb']->get_var( "SELECT serial FROM wp_songpress_songs ORDER BY id LIMIT 1" ) . "')" );
+$sp->exec( "CREATE TABLE writing_session_members (id INTEGER PRIMARY KEY, session_id INT, actor_id INT, name TEXT, created_at TEXT)" );
+$sp->exec( "INSERT INTO writing_session_members VALUES (1,9,5,'bob','x'),(2,9,6,'Adam Page','x')" );
+$sp->exec( "CREATE TABLE writing_session_chat (id INTEGER PRIMARY KEY, session_id INT, author TEXT, body TEXT, kind TEXT, audio_url TEXT, created_at TEXT)" );
+$sp->exec( "INSERT INTO writing_session_chat VALUES (4,9,'Adam Page','oh hey','text','','2026-09-27 06:01:08'),(5,9,'Adam Page','{\"from\":\"\",\"to\":\"x\"}','lyric','','2026-09-27 07:13:03')" );
+check( 'sessions import counts', Songpress_Sessions::import_pdo( $sp ), 1 );
+check( 'sessions import is repeatable', Songpress_Sessions::import_pdo( $sp ), 0 );
+check( 'session people merged without duplicates', array_map( function ( $p ) { return $p->name; }, Songpress_Sessions::people( 1 ) ), array( 'Adam Page', 'bob' ) );
+check( 'session chat kept once each, linked to the song', array( count( Songpress_Sessions::chat( 1 ) ), (int) $GLOBALS['wpdb']->get_var( "SELECT song_id FROM wp_songpress_sessions WHERE id = 1" ) > 0 ), array( 2, true ) );
+unlink( $sf );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

@@ -52,6 +52,9 @@ class Songpress_Screens {
 		if ( 'agreements' === $slug ) {
 			return Songpress_Agreements::render();
 		}
+		if ( 'sessions' === $slug ) {
+			return Songpress_Sessions::render();
+		}
 		if ( 'art' === $slug ) {
 			return Songpress_Art::render();
 		}

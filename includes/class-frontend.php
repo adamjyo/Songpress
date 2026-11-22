@@ -134,6 +134,9 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'art' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'art', __( 'Art studio', 'songpress' ), $svg( '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/>' ), 'art' );
 		}
+		if ( Songpress_Caps::can( 'sessions' ) && ! wp_is_mobile() ) {
+			$nav .= $mk( 'sessions', __( 'Sessions', 'songpress' ), $svg( '<path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/>' ), 'sessions' );
+		}
 		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'journal', __( 'Journal', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
 		}

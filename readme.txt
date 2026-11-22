@@ -30,6 +30,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.8.0 =
+* New Sessions in the rail: writing sessions with a date, time, place, the people in them (any number, with IPI and share), notes, lyrics, an audio link and a chat. A session can point at a song by serial.
+* Managers see every session; a writer sees the sessions they are in. Chat and editing are for the desktop app.
+* "Load the catalog file" on Upload / Download also brings across the old sessions, their writers and their chat (lyric changes read plainly).
+
 = 0.7.2 =
 * Tidy logins also replaces a leftover account from the old app that holds the plain login (it has no SongPress class), so abby.russ2 becomes abby.russ even then.
 

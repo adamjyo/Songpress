@@ -333,3 +333,51 @@ CREATE TABLE {prefix}songpress_registrations (
   PRIMARY KEY  (id),
   UNIQUE KEY family_society (family_id,society)
 ) {charset};
+
+-- Writing sessions: a dated get-together on a song (or an idea), with the people in it, notes, lyrics, an audio link and a chat.
+CREATE TABLE {prefix}songpress_sessions (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_date date NOT NULL,
+  session_time varchar(8) NOT NULL DEFAULT '',
+  title varchar(255) NOT NULL DEFAULT '',
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  location varchar(190) NOT NULL DEFAULT '',
+  notes longtext,
+  lyrics longtext,
+  audio_url text,
+  owner_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  source_key varchar(32) NOT NULL DEFAULT '',
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY session_date (session_date),
+  KEY song_id (song_id),
+  KEY source_key (source_key)
+) {charset};
+
+CREATE TABLE {prefix}songpress_session_people (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_id bigint(20) unsigned NOT NULL,
+  name varchar(191) NOT NULL,
+  person_key varchar(191) NOT NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  ipi varchar(32) NOT NULL DEFAULT '',
+  share varchar(16) NOT NULL DEFAULT '',
+  PRIMARY KEY  (id),
+  KEY session_id (session_id),
+  KEY person_key (person_key)
+) {charset};
+
+CREATE TABLE {prefix}songpress_session_chat (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  session_id bigint(20) unsigned NOT NULL,
+  author varchar(191) NOT NULL DEFAULT '',
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  kind varchar(12) NOT NULL DEFAULT 'text',
+  body text,
+  audio_url text,
+  source_key varchar(32) NOT NULL DEFAULT '',
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY session_id (session_id)
+) {charset};
