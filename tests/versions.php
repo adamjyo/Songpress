@@ -659,10 +659,10 @@ check( 'editing a version also updates the original', Songpress_Songs::get( $sa 
 $da = Songpress_Songs::create( array( 'title' => 'Code Song', 'status' => 'writing' ), 1 );
 $db_ = Songpress_Songs::create_version( $da, 1 );
 Songpress_Songs::replace_identifiers( $db_, array( array( 'kind' => 'distrokid', 'value' => 'DK9' ), array( 'kind' => 'isrc', 'value' => 'US9' ) ), 1 );
-check( 'lift moves a version DistroKid number to the original', array( Songpress_Songs::lift_distrokid() >= 1, wp_ids( $da ) ), array( true, array( 'distrokid' ) ) );
-Songpress_Songs::replace_identifiers( $da, array( array( 'kind' => 'ascap', 'value' => 'A1' ), array( 'kind' => 'distrokid', 'value' => 'DK9' ) ), 0 );
+Songpress_Songs::replace_identifiers( $da, array( array( 'kind' => 'ascap', 'value' => 'A1' ), array( 'kind' => 'distrokid', 'value' => 'ROOTDK' ) ), 0 );
 Songpress_Songs::sync_shared( $da );
-check( 'original keeps ASCAP and DistroKid and shares them; version keeps its ISRC', array( wp_ids( $da ), wp_ids( $db_ ) ), array( array( 'ascap', 'distrokid' ), array( 'ascap', 'distrokid', 'isrc' ) ) );
+$dkv = array(); foreach ( Songpress_Songs::identifiers( $db_ ) as $i ) { $dkv[ $i->kind ] = $i->value; } ksort( $dkv );
+check( 'ASCAP is shared; a version keeps its own DistroKid number and ISRC', array( wp_ids( $da ), $dkv ), array( array( 'ascap', 'distrokid' ), array( 'ascap' => 'A1', 'distrokid' => 'DK9', 'isrc' => 'US9' ) ) );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 

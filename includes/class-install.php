@@ -22,10 +22,6 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
-		if ( '44' !== get_option( 'songpress_codes_root' ) ) {
-			Songpress_Songs::lift_distrokid();
-			update_option( 'songpress_codes_root', '44' );
-		}
 		self::ensure_artist();
 		self::create_pages();
 	}

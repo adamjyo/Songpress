@@ -111,7 +111,7 @@ class Songpress_Editor {
 		$o .= '</section>';
 
 		/* Publishing: the numbers, then who publishes and who releases it. Shared by every version except the ISRC. */
-		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version, except the ISRC, which belongs to each version.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version, except the DistroKid number and the ISRC, which each version keeps for itself.', 'songpress' ) . '</p>';
 		$o .= self::code_fields( $song ? Songpress_Songs::identifiers( $id ) : array(), $root );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, true );
 		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, true );
@@ -260,7 +260,8 @@ class Songpress_Editor {
 	private static function code_fields( $existing, $root ) {
 		$shown = array( 'iswc' => 'ISWC', 'ascap' => 'ASCAP', 'bmi' => 'BMI', 'mlc' => 'MLC', 'ccli' => 'CCLI', 'distrokid' => 'DistroKid', 'copyright' => __( 'Copyright no.', 'songpress' ), 'work_id' => __( 'Work ID', 'songpress' ), 'upc' => 'UPC' );
 		if ( ! $root ) {
-			$shown['isrc'] = __( 'ISRC (this version)', 'songpress' );
+			$shown['distrokid'] = __( 'DistroKid (this version)', 'songpress' );
+			$shown['isrc']      = __( 'ISRC (this version)', 'songpress' );
 		}
 		$by = array();
 		foreach ( $existing as $c ) {
