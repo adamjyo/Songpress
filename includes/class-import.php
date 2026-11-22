@@ -29,6 +29,16 @@ class Songpress_Import {
 	}
 
 	public static function run( $path, $limit = 0 ) {
+		$auto = Songpress_Songs::$auto_users;
+		Songpress_Songs::$auto_users = false; // thousands of accounts in one request is too slow: use SongPress > Link writers afterwards
+		try {
+			return self::run_batch( $path, $limit );
+		} finally {
+			Songpress_Songs::$auto_users = $auto;
+		}
+	}
+
+	private static function run_batch( $path, $limit = 0 ) {
 		global $wpdb;
 		$songs = Songpress_Install::table( 'songs' );
 		$fam   = Songpress_Install::table( 'families' );

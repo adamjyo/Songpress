@@ -137,5 +137,19 @@ check( 'asset zip preferred', Songpress_Updater::package_url( array( 'zipball_ur
 check( 'snapshot used without asset', Songpress_Updater::package_url( array( 'zipball_url' => 'https://g/z' ) ), 'https://g/z' );
 check( 'repo name valid', array( Songpress_Updater::valid_repo( 'adamjyo/Songpress' ), Songpress_Updater::valid_repo( 'a/b/c' ), Songpress_Updater::valid_repo( 'x; rm' ) ), array( true, false, false ) );
 
+// writer accounts: usernames
+require_once __DIR__ . '/../includes/class-people.php';
+check( 'first.last', Songpress_People::username_for( 'John Lennon' ), 'john.lennon' );
+check( 'middle name dropped', Songpress_People::username_for( 'Paul James McCartney' ), 'paul.mccartney' );
+check( 'suffix dropped', Songpress_People::username_for( 'Martin Luther King Jr.' ), 'martin.king' );
+check( 'last, first order', Songpress_People::username_for( 'Lennon, John' ), 'john.lennon' );
+check( 'one name', Songpress_People::username_for( 'Cher' ), 'cher' );
+check( 'apostrophe and hyphen', Songpress_People::username_for( "Mary-Jane O'Neil" ), 'maryjane.oneil' );
+check( 'accents', Songpress_People::username_for( 'José Álvarez' ), 'jose.alvarez' );
+check( 'case and spacing', Songpress_People::username_for( '  ADAM   yoo ' ), 'adam.yoo' );
+check( 'nothing usable', Songpress_People::username_for( '???' ), '' );
+check( 'same person, same key', Songpress_People::key_for( 'Adam  Yoo' ) === Songpress_People::key_for( 'adam yoo' ), true );
+check( 'different people, different key', Songpress_People::key_for( 'Adam Yoo' ) === Songpress_People::key_for( 'Adam Young' ), false );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

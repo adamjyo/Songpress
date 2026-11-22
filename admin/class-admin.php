@@ -13,6 +13,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_export', array( __CLASS__, 'handle_export' ) );
 		add_action( 'wp_ajax_songpress_upload', array( 'Songpress_Media', 'ajax_upload' ) );
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
+		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
 		add_action( 'admin_post_songpress_share', array( __CLASS__, 'handle_share' ) );
 		add_action( 'admin_post_songpress_archive', array( __CLASS__, 'handle_archive' ) );
@@ -748,6 +749,9 @@ class Songpress_Admin {
 			if ( Songpress_Caps::is_wp_admin( $uid ) ) {
 				echo '<strong>' . esc_html__( 'Manager', 'songpress' ) . '</strong> <span class="sp-help">' . esc_html__( '(WordPress administrator)', 'songpress' ) . '</span>';
 			} else {
+				if ( '' === (string) $u->user_email ) {
+					echo '<input type="email" name="email[' . (int) $uid . ']" size="24" placeholder="' . esc_attr__( 'add email so they can sign in', 'songpress' ) . '"> ';
+				}
 				echo '<select name="class[' . (int) $uid . ']"><option value="">' . esc_html__( 'No access (remove)', 'songpress' ) . '</option>';
 				foreach ( Songpress_Caps::assignable() as $k => $c ) {
 					echo '<option value="' . esc_attr( $k ) . '"' . selected( $class, $k, false ) . '>' . esc_html( $c[0] ) . '</option>';
@@ -804,6 +808,15 @@ class Songpress_Admin {
 				}
 				if ( Songpress_Caps::class_of( $uid ) !== $class ) {
 					Songpress_Caps::assign( $uid, $class );
+					++$n;
+				}
+			}
+			$emails = isset( $_POST['email'] ) && is_array( $_POST['email'] ) ? wp_unslash( $_POST['email'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- sanitize_email below.
+			foreach ( $emails as $uid => $email ) {
+				$uid   = absint( $uid );
+				$email = sanitize_email( $email );
+				if ( $uid && is_email( $email ) && ! email_exists( $email ) && '' === (string) get_userdata( $uid )->user_email ) {
+					wp_update_user( array( 'ID' => $uid, 'user_email' => $email ) );
 					++$n;
 				}
 			}
@@ -882,6 +895,24 @@ class Songpress_Admin {
 		if ( isset( $_GET['missed'] ) ) {
 			echo '<div class="notice notice-warning"><p>' . esc_html( sprintf( /* translators: %s: names */ __( 'No account was found for: %s', 'songpress' ), sanitize_text_field( wp_unslash( $_GET['missed'] ) ) ) ) . '</p></div>';
 		}
+		if ( isset( $_GET['made'] ) ) {
+			/* translators: 1: accounts created, 2: credits linked, 3: writers still without an account */
+			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Created %1$d accounts and linked %2$d credits. %3$d writers still have no account.', 'songpress' ), absint( $_GET['made'] ), absint( $_GET['credits'] ?? 0 ), absint( $_GET['left'] ?? 0 ) ) ) . '</p></div>';
+		}
+		$todo = Songpress_Caps::can( 'members' ) ? count( Songpress_People::unlinked_names() ) : 0;
+		echo '<h2>' . esc_html__( 'Give every writer an account', 'songpress' ) . '</h2>';
+		echo '<p class="sp-help">' . esc_html__( 'Each writer gets a login named firstname.lastname with the Viewer class. These accounts have no email and a random password, so nobody can sign in until you add their email (SongPress > Members) and they use "Lost your password?". The same name always gets the same account. New writers added to a song get one automatically.', 'songpress' ) . '</p>';
+		if ( $todo ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( 'songpress_make_accounts' );
+			echo '<input type="hidden" name="action" value="songpress_make_accounts">';
+			/* translators: %d: number of writers */
+			submit_button( sprintf( _n( 'Create an account for %d writer (up to 100 at a time)', 'Create accounts for %d writers (up to 100 at a time)', $todo, 'songpress' ), $todo ), 'primary', 'submit', false );
+			echo '</form>';
+		} else {
+			echo '<p>' . esc_html__( 'Every writer already has an account.', 'songpress' ) . '</p>';
+		}
+		echo '<h2 style="margin-top:24px">' . esc_html__( 'Link to an existing account instead', 'songpress' ) . '</h2>';
 		$rows = self::unlinked_writers();
 		if ( ! $rows ) {
 			echo '<p>' . esc_html__( 'Every writer is linked, or there are no writers yet.', 'songpress' ) . '</p></div>';
@@ -900,6 +931,16 @@ class Songpress_Admin {
 		echo '</tbody></table>';
 		submit_button( __( 'Link the ticked writers', 'songpress' ) );
 		echo '</form>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	public static function handle_make_accounts() {
+		check_admin_referer( 'songpress_make_accounts' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$r = Songpress_People::backfill( 100 );
+		self::back( 'songpress-link', array( 'made' => $r['created'], 'credits' => $r['linked'], 'left' => $r['remaining'] ) );
 	}
 
 	public static function handle_link_writers() {

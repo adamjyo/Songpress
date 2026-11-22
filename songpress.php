@@ -33,6 +33,7 @@ require_once SONGPRESS_DIR . 'includes/class-media.php';
 require_once SONGPRESS_DIR . 'includes/class-updater.php';
 require_once SONGPRESS_DIR . 'includes/class-caps.php';
 require_once SONGPRESS_DIR . 'includes/class-songs.php';
+require_once SONGPRESS_DIR . 'includes/class-people.php';
 require_once SONGPRESS_DIR . 'includes/class-import-analyzer.php';
 require_once SONGPRESS_DIR . 'includes/class-import.php';
 require_once SONGPRESS_DIR . 'includes/class-frontend.php';

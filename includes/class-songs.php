@@ -272,8 +272,14 @@ class Songpress_Songs {
 		return mb_substr( implode( ', ', $parts ), 0, 480 );
 	}
 
+	/** When on, a writer with no account gets one (Viewer class) as the song is saved. The import turns it off and uses the batch button instead. */
+	public static $auto_users = true;
+
 	public static function replace_credits( $song_id, array $rows ) {
 		global $wpdb;
+		if ( self::$auto_users && class_exists( 'Songpress_People' ) ) {
+			$rows = Songpress_People::link_rows( $rows );
+		}
 		$t      = Songpress_Install::table( 'credits' );
 		$before = self::credit_signature( self::credits( $song_id ) );
 		$wpdb->delete( $t, array( 'song_id' => (int) $song_id ) );
