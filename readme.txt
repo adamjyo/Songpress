@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.38.1
+Stable tag: 0.38.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.38.2 =
+* Pitch: removed Apple Music Pitch and Amazon Music for Artists (they need an artist profile you already have access to).
 
 = 0.38.1 =
 * Pitch: removed Spotify for Artists, since only artists who already have access can use it.

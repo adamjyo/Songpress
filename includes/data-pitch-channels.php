@@ -9,16 +9,7 @@ return array (
     'tip' => 'Start with the free ones. Pick curators who play your genre, and skip any list that asks you to pay for streams.',
     'items' => 
     array (
-      1 => 
-      array (
-        'id' => 'apple',
-        'name' => 'Apple Music Pitch',
-        'cost' => 'Free',
-        'blurb' => 'Editorial playlists, radio, and genre pages. Track must already be delivered and unreleased. Aim for 10+ days before release.',
-        'url' => 'https://artists.apple.com/',
-        'cta' => 'Open Apple Music for Artists',
-      ),
-      2 => 
+      0 => 
       array (
         'id' => 'dailyplaylists',
         'name' => 'DailyPlaylists',
@@ -27,7 +18,7 @@ return array (
         'url' => 'https://dailyplaylists.com/',
         'cta' => 'Open DailyPlaylists',
       ),
-      3 => 
+      1 => 
       array (
         'id' => 'submithub',
         'name' => 'SubmitHub',
@@ -36,7 +27,7 @@ return array (
         'url' => 'https://www.submithub.com/',
         'cta' => 'Open SubmitHub',
       ),
-      4 => 
+      2 => 
       array (
         'id' => 'soundplate',
         'name' => 'Soundplate',
@@ -45,7 +36,7 @@ return array (
         'url' => 'https://soundplate.com/submit-music-spotify-playlists',
         'cta' => 'Browse Soundplate lists',
       ),
-      5 => 
+      3 => 
       array (
         'id' => 'groover',
         'name' => 'Groover',
@@ -54,7 +45,7 @@ return array (
         'url' => 'https://groover.co/',
         'cta' => 'Open Groover',
       ),
-      6 => 
+      4 => 
       array (
         'id' => 'musosoup',
         'name' => 'Musosoup',
@@ -63,16 +54,7 @@ return array (
         'url' => 'https://musosoup.com/',
         'cta' => 'Submit to Musosoup',
       ),
-      7 => 
-      array (
-        'id' => 'amazon',
-        'name' => 'Amazon Music for Artists',
-        'cost' => 'Free',
-        'blurb' => 'Claim the artist profile after DistroKid delivery. Use it for Amazon and Alexa playlist consideration and to watch where the song lands.',
-        'url' => 'https://artists.amazon.com/',
-        'cta' => 'Open Amazon for Artists',
-      ),
-      8 => 
+      5 => 
       array (
         'id' => 'playlistpal',
         'name' => 'PlaylistPal',
