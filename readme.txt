@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.21
+Stable tag: 0.63.22
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.22 =
+* Notes import: a file the server will not take no longer stops the import. A batch that fails is resent one file at a time; the file at fault is skipped and named at the end. Pictures embedded in a note's text (which can make one note several megabytes) are removed before sending.
 
 = 0.63.21 =
 * Notes import: when a batch is refused, the message now shows what the server actually answered.
