@@ -107,11 +107,7 @@
 
 /* Wide layouts respond to the width of the box SongPress sits in (your theme's content column), not the browser window. */
 @container (min-width:620px){
- .songpress-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
  .songpress-head h2{font-size:28px}
-}
-@container (min-width:960px){
- .songpress-list{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @container (min-width:720px){
  .songpress-cols{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:32px;align-items:start}
@@ -139,3 +135,14 @@
 .sp-cp-gap{height:.8em}
 .sp-cp-chorus{border-left:3px solid #f5a524;padding-left:10px;margin:.5em 0}
 .sp-cp-tab{overflow-x:auto;font-size:13px}
+
+/* Songs are a plain list: one row per song, full width, divided by hairlines. */
+.songpress-list{display:block;gap:0;border-top:1px solid var(--sp-line)}
+.songpress-list a.songpress-row{background:transparent;border:0;border-bottom:1px solid var(--sp-line);border-radius:0;padding:10px 4px}
+.songpress-list a.songpress-row:hover{background:#17181c;border-color:var(--sp-line)}
+.songpress-list .songpress-thumb,.songpress-list .songpress-noart{width:44px;height:44px}
+@container (min-width:620px){
+ .songpress-list .songpress-meta{display:grid;grid-template-columns:64px minmax(0,2fr) minmax(0,1.4fr) 110px;align-items:center;column-gap:16px}
+ .songpress-list .songpress-meta>span{margin:0}
+ .songpress-list .songpress-by{order:0}
+}
