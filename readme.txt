@@ -30,6 +30,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.13.0 =
+* Notes import: on Upload / Download, "Notes" takes one or more .bear, .md or .txt files, a zip of them, or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line; .md files can carry front matter (title, date, kind, pinned, key, tempo, authors, place). Files already loaded are skipped, and a note naming one song with ^0378 is linked to it.
+* Notes export: "Notes as Markdown files" downloads every note as a .md file in a zip (front matter keeps the key, tempo, authors and place, so they import straight back). Both are linked from the top of the Notes page.
+
 = 0.12.0 =
 * The lyric process: every work has three levels, ChordPro, then chords and lyrics, then lyrics. A level left blank falls back to the highest level that is filled in, stepped down (ChordPro becomes chords over the words, then plain lyrics). The song editor shows what each blank level is using, and a song page can switch between the levels.
 * Clicking into the ChordPro box in the song editor opens the ChordPro tool in a popup, loaded with that song's chart. "Use in song" puts the result back; "Type in the song form instead" lets you type directly. The tool still never touches the database.

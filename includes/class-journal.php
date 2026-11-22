@@ -286,7 +286,7 @@ class Songpress_Journal {
 		foreach ( array( 'list' => __( 'Notes', 'songpress' ), 'days' => __( 'Days', 'songpress' ), 'map' => __( 'Map', 'songpress' ) ) as $vk => $vl ) {
 			$o .= '<a class="spe-btn' . ( $view === $vk ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'notes', 'jview' => $vk ), $base ) ) . '">' . esc_html( $vl ) . '</a> ';
 		}
-		$o .= '</p>';
+		$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ) ) . '">' . esc_html__( 'Import notes (.bear, .md, .txt)', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .md', 'songpress' ) . '</a></p>';
 		if ( 'days' === $view ) {
 			return $o . self::days_html() . '</div>';
 		}
@@ -383,4 +383,136 @@ class Songpress_Journal {
 		}
 		return '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><div id="spj-map" style="height:460px;border-radius:10px"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>(function(){var P=' . wp_json_encode( $pts, JSON_HEX_TAG | JSON_HEX_AMP ) . ';if(!window.L)return;var m=L.map("spj-map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(m);var b=[];P.forEach(function(p){b.push([p[0],p[1]]);L.marker([p[0],p[1]]).addTo(m).bindPopup(document.createTextNode(p[2]).textContent);});m.fitBounds(b,{padding:[30,30],maxZoom:14});})();</script><p class="spe-help">' . esc_html( sprintf( /* translators: %d: notes */ _n( '%d note with a position.', '%d notes with a position.', count( $pts ), 'songpress' ), count( $pts ) ) ) . '</p>';
 	}
+
+	/* ---------- note files (.bear, .md, .txt) ---------- */
+
+	/** One note file into a note. Understands front matter (--- title: ... ---), Bear exports ("# Title", authors, "key | tempo | date") and plain text. Pure. */
+	public static function parse_note_file( $name, $text ) {
+		$base = preg_replace( '/\.(bear|md|txt|markdown)$/i', '', basename( (string) $name ) );
+		$text = str_replace( array( "\r\n", "\r" ), "\n", preg_replace( '/^\xEF\xBB\xBF/', '', (string) $text ) );
+		$n    = array( 'title' => '', 'date' => '', 'kind' => 'note', 'pinned' => 0, 'archived' => 0, 'song_key' => '', 'tempo' => '', 'authors' => '', 'place' => '', 'latitude' => '', 'longitude' => '', 'notes' => '' );
+		if ( preg_match( '/^---\n(.*?)\n---\n?(.*)$/s', $text, $m ) ) {
+			foreach ( explode( "\n", $m[1] ) as $line ) {
+				if ( ! preg_match( '/^([A-Za-z_]+):\s*(.*)$/', $line, $k ) ) {
+					continue;
+				}
+				$v = trim( $k[2] );
+				$v = preg_replace( '/^([\'"])(.*)\1$/', '$2', $v );
+				switch ( strtolower( $k[1] ) ) {
+					case 'title':
+						$n['title'] = $v;
+						break;
+					case 'date':
+						$n['date'] = $v;
+						break;
+					case 'kind':
+						$n['kind'] = self::kind( $v );
+						break;
+					case 'pinned':
+						$n['pinned'] = 'true' === strtolower( $v ) ? 1 : 0;
+						break;
+					case 'archived':
+						$n['archived'] = 'true' === strtolower( $v ) ? 1 : 0;
+						break;
+					case 'key':
+						$n['song_key'] = $v;
+						break;
+					case 'tempo':
+						$n['tempo'] = $v;
+						break;
+					case 'authors':
+						$n['authors'] = $v;
+						break;
+					case 'place':
+						$n['place'] = $v;
+						break;
+					case 'lat':
+					case 'latitude':
+						$n['latitude'] = $v;
+						break;
+					case 'lng':
+					case 'longitude':
+						$n['longitude'] = $v;
+						break;
+				}
+			}
+			$n['notes'] = rtrim( $m[2] );
+			if ( '' === $n['title'] ) {
+				$n['title'] = $base;
+			}
+			return $n;
+		}
+		$lines = explode( "\n", $text );
+		if ( isset( $lines[0], $lines[2] ) && preg_match( '/^#+\s/', $lines[0] ) && false !== strpos( $lines[2], '|' ) ) {
+			// Bear: "# Title", then authors, then "key | tempo | date", then the note
+			$n['title'] = trim( preg_replace( '/^#+\s*/', '', $lines[0] ) );
+			$i          = 1;
+			if ( false === strpos( $lines[1], '|' ) ) {
+				$n['authors'] = trim( $lines[1] );
+				$i            = 2;
+			}
+			if ( isset( $lines[ $i ] ) && false !== strpos( $lines[ $i ], '|' ) ) {
+				$p = array_map( 'trim', explode( '|', $lines[ $i ] ) );
+				$n['song_key'] = $p[0] ?? '';
+				$n['tempo']    = $p[1] ?? '';
+				$d             = $p[2] ?? '';
+				if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $d, $dm ) ) {
+					$n['date'] = $dm[1];
+				} elseif ( preg_match( '/^(\d{1,2})\/(\d{1,2})\/(\d{4})/', $d, $dm ) ) {
+					$n['date'] = sprintf( '%04d-%02d-%02d', $dm[3], $dm[1], $dm[2] );
+				}
+				++$i;
+			}
+			$n['notes'] = rtrim( implode( "\n", array_slice( $lines, $i ) ) );
+			if ( '' === $n['title'] ) {
+				$n['title'] = $base;
+			}
+			return $n;
+		}
+		$n['title'] = $base;
+		$n['notes'] = rtrim( $text );
+		if ( isset( $lines[0] ) && preg_match( '/^#\s+(.+)$/', $lines[0], $h ) ) {
+			$n['title'] = trim( $h[1] );
+			$n['notes'] = rtrim( ltrim( implode( "\n", array_slice( $lines, 1 ) ), "\n" ) );
+		}
+		return $n;
+	}
+
+	/** A note as a Markdown file (front matter, then the text). Pure. */
+	public static function note_to_md( $e ) {
+		$fm = array( 'title' => $e->title, 'date' => $e->log_date, 'kind' => $e->kind, 'pinned' => (int) $e->pinned ? 'true' : 'false', 'archived' => (int) $e->archived ? 'true' : 'false', 'key' => $e->song_key, 'tempo' => $e->tempo, 'authors' => $e->authors, 'place' => $e->place, 'latitude' => $e->latitude, 'longitude' => $e->longitude );
+		$o  = "---\n";
+		foreach ( $fm as $k => $v ) {
+			if ( '' !== (string) $v ) {
+				$o .= $k . ': ' . str_replace( "\n", ' ', (string) $v ) . "\n";
+			}
+		}
+		return $o . "---\n" . (string) $e->notes . "\n";
+	}
+
+	/** Add one parsed note. A note with the same source key is not added twice. Returns true when it was added. */
+	public static function add_note( array $n, $source_key = '' ) {
+		global $wpdb;
+		$j = self::t();
+		if ( '' !== $source_key && $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$j} WHERE source_key = %s", $source_key ) ) ) { // phpcs:ignore WordPress.DB
+			return false;
+		}
+		$byser = array();
+		foreach ( self::serials_in( $n['title'] . "\n" . $n['notes'] ) as $sr ) {
+			$id = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE serial = %s', $sr ) ); // phpcs:ignore WordPress.DB
+			if ( $id ) {
+				$byser[ $sr ] = $id;
+			}
+		}
+		$wpdb->insert( $j, array(
+			'log_date' => preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $n['date'] ) ? substr( $n['date'], 0, 10 ) : gmdate( 'Y-m-d' ),
+			'kind' => self::kind( (string) $n['kind'] ), 'title' => mb_substr( (string) $n['title'], 0, 255 ), 'notes' => (string) $n['notes'],
+			'place' => mb_substr( (string) $n['place'], 0, 191 ), 'song_id' => self::sole_song( $n['title'] . "\n" . $n['notes'], $byser ),
+			'pinned' => (int) $n['pinned'], 'archived' => (int) $n['archived'], 'song_key' => mb_substr( (string) $n['song_key'], 0, 16 ), 'tempo' => mb_substr( (string) $n['tempo'], 0, 16 ),
+			'authors' => mb_substr( (string) $n['authors'], 0, 255 ), 'latitude' => mb_substr( (string) $n['latitude'], 0, 24 ), 'longitude' => mb_substr( (string) $n['longitude'], 0, 24 ),
+			'source_key' => '' === $source_key ? null : $source_key, 'user_id' => get_current_user_id(), 'created_at' => current_time( 'mysql' ),
+		) );
+		return true;
+	}
 }
+

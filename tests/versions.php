@@ -451,7 +451,7 @@ check( 'applying again replaces, never doubles', (int) $GLOBALS['wpdb']->get_var
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
-	if ( 'catalog' === $k ) { continue; }
+	if ( in_array( $k, array( 'catalog', 'notes_md' ), true ) ) { continue; }
 	if ( false === $GLOBALS['wpdb']->get_results( Songpress_Uploads::sql( $k ), ARRAY_A ) ) { ++$bad; }
 }
 check( 'every download query runs', $bad, 0 );
@@ -532,6 +532,21 @@ check( 'chords and lyrics: lyrics fall back to it, ChordPro stays empty', array(
 $lv3 = Songpress_Songs::lyric_levels( (object) array( 'chordpro' => $cpx, 'chords_lyrics' => '', 'lyrics' => 'my own words' ) );
 check( 'a level that was typed is kept', array( $lv3['lyrics'][0], $lv3['lyrics'][1] ), array( 'my own words', 'own' ) );
 check( 'nothing at all', Songpress_Songs::lyric_levels( (object) array( 'chordpro' => '', 'chords_lyrics' => '', 'lyrics' => '' ) )['lyrics'], array( '', '' ) );
+
+// Note files
+$bn = Songpress_Journal::parse_note_file( 'wine.bear', "# Wine and Bread\nAdam Page\nG | 90bpm | 8/04/2007\n\nVerse 1\nyou said this wine" );
+check( 'bear note parsed', array( $bn['title'], $bn['authors'], $bn['song_key'], $bn['tempo'], $bn['date'], $bn['notes'] ), array( 'Wine and Bread', 'Adam Page', 'G', '90bpm', '2007-08-04', "\nVerse 1\nyou said this wine" ) );
+$fm = Songpress_Journal::parse_note_file( 'x.md', "---\ntitle: Idea\ndate: 2026-01-02\nkind: idea\npinned: true\nkey: Am\ntempo: 100\n---\nhello ^0378" );
+check( 'front matter note parsed', array( $fm['title'], $fm['date'], $fm['kind'], $fm['pinned'], $fm['song_key'], $fm['notes'] ), array( 'Idea', '2026-01-02', 'idea', 1, 'Am', 'hello ^0378' ) );
+$pl = Songpress_Journal::parse_note_file( 'My Thought.txt', "# Heading\nbody here" );
+$pl2 = Songpress_Journal::parse_note_file( 'My Thought.txt', "just words" );
+check( 'plain notes take the heading or the file name', array( $pl['title'], $pl['notes'], $pl2['title'], $pl2['notes'] ), array( 'Heading', 'body here', 'My Thought', 'just words' ) );
+check( 'adding a note once, then again', array( Songpress_Journal::add_note( $bn, 'file:t1' ), Songpress_Journal::add_note( $bn, 'file:t1' ) ), array( true, false ) );
+$row = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_journal WHERE source_key='file:t1'" );
+check( 'bear note stored with key, tempo, authors', array( $row->log_date, $row->song_key, $row->tempo, $row->authors ), array( '2007-08-04', 'G', '90bpm', 'Adam Page' ) );
+$md = Songpress_Journal::note_to_md( $row );
+$back = Songpress_Journal::parse_note_file( 'a.md', $md );
+check( 'md export round-trips', array( $back['title'], $back['date'], $back['song_key'], $back['tempo'], $back['authors'] ), array( 'Wine and Bread', '2007-08-04', 'G', '90bpm', 'Adam Page' ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
