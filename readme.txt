@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.47.1
+Stable tag: 0.47.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.47.2 =
+* DistroKid and UPC numbers now belong to versions, like the ISRC. They show on versions (tinted), not on the original work; they are not copied to new versions or synced between versions.
 
 = 0.47.1 =
 * The work editor no longer has the row of buttons (Registrations, Agreements, Pitch, Art studio, ChordPro tool) under the title. The serial number (NNNN-VV) is now the same size as the title and sits in line with it.

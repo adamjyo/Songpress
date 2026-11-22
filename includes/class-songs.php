@@ -19,9 +19,9 @@ class Songpress_Songs {
 	const SHARED_FIELDS = array( 'title', 'alt_titles', 'writing_date', 'copyright_date', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'themes' );
 	const SHARED_ROLES  = array( 'writer', 'publisher', 'label' );
 	/** Numbers each version keeps for itself: never copied to a new version and never synced. */
-	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid' );
-	/** Of those, the ones an original work may not hold. DistroKid may be entered on the original, but stays its own number there. */
-	const ROOT_DROPPED = array( 'isrc' );
+	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid', 'upc' );
+	/** The original work holds none of them: they belong to a recording or release, so they are dropped from an original. */
+	const ROOT_DROPPED = array( 'isrc', 'distrokid', 'upc' );
 
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
 	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
@@ -424,7 +424,7 @@ class Songpress_Songs {
 
 	/**
 	 * Copy the shared fields, the shared people (writers, publishers, labels) and the work-level codes from one song to every
-	 * other song in its family. Per-version fields, performers, producers, links and ISRC and DistroKid numbers are never touched.
+	 * other song in its family. Per-version fields, performers, producers, links and ISRC, DistroKid and UPC numbers are never touched.
 	 * Returns the number of songs updated.
 	 */
 	public static function sync_shared( $from_id ) {
@@ -491,7 +491,7 @@ class Songpress_Songs {
 		// without touching the original or any other version. Performers and producers differ per version, so they start empty.
 		$cr = Songpress_Install::table( 'credits' );
 		$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d AND role IN ('writer','publisher','label')", $to, $from ) );
-		// Work-level codes (ISWC, CCLI, MLC...) follow the song. The ISRC, DistroKid number and streaming links do not.
+		// Work-level codes (ISWC, CCLI, MLC...) follow the song. The ISRC, DistroKid, UPC and streaming links do not.
 		$id = Songpress_Install::table( 'identifiers' );
 		$in = implode( ',', array_fill( 0, count( self::RELEASE_IDENTIFIERS ), '%s' ) );
 		$wpdb->query( $wpdb->prepare( "INSERT INTO {$id} (song_id, kind, value) SELECT %d, kind, value FROM {$id} WHERE song_id = %d AND kind NOT IN ({$in})", array_merge( array( $to, $from ), self::RELEASE_IDENTIFIERS ) ) );
@@ -541,7 +541,7 @@ class Songpress_Songs {
 	}
 
 	/**
-	 * Replace a song's codes. Any number, any kind. The ISRC is dropped from an original work,
+	 * Replace a song's codes. Any number, any kind. The ISRC, DistroKid and UPC are dropped from an original work,
 	 * because the original has no release information. Returns the number of codes dropped for that reason.
 	 */
 	public static function replace_identifiers( $song_id, array $rows, $version_no ) {
