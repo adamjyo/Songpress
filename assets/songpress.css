@@ -157,7 +157,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-rowlink .songpress-icons:not(.songpress-writers){grid-area:band}
 .songpress-icons .sp-face{margin:0!important}
 @container (min-width:620px){
- a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(100px,1.6fr) 100px 100px;grid-template-areas:none}
+ a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px;grid-template-areas:none}
  .songpress-rowlink>*{grid-area:auto!important}
  .songpress-rowlink .songpress-sub{text-align:left}
 }
@@ -173,14 +173,14 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-app .songpress-colhead a{color:var(--sp-mute);white-space:nowrap}
 .sp-app .songpress-colhead a:hover,.sp-app .songpress-colhead a.on{color:var(--sp-accent)}
 @container (min-width:620px){
- .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(100px,1.6fr) 100px 100px;gap:0 12px;align-items:center}
+ .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px;gap:0 12px;align-items:center}
 }
 
 .songpress-serial{white-space:nowrap}
 
-/* Art and icons: one size. 100px in wide boxes, 56px on phones. */
+/* Art and icons: one size. 75px in wide boxes, 56px on phones. */
 :root{--sp-pic:56px}
-@container (min-width:620px){ .songpress-list,.songpress-colhead{--sp-pic:100px} }
+@container (min-width:620px){ .songpress-list,.songpress-colhead{--sp-pic:75px} }
 .songpress-play,.songpress-play .songpress-thumb,.songpress-list .songpress-thumb,.songpress-list .songpress-noart{width:var(--sp-pic,56px)!important;height:var(--sp-pic,56px)!important}
 .songpress-play{border-radius:12px}
 .songpress-list .songpress-icons{flex-wrap:wrap}
@@ -189,5 +189,5 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-ch-play{width:var(--sp-pic,56px)}
 .songpress-colhead .songpress-ch-band{text-align:left}
 @container (min-width:620px){
- .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(100px,1.6fr) 100px 100px}
+ .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px}
 }
