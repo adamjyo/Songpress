@@ -6,7 +6,7 @@ if ( '1' !== get_option( 'songpress_delete_on_uninstall' ) ) {
 	return;
 }
 global $wpdb;
-foreach ( array( 'artists', 'history', 'credits', 'identifiers', 'links', 'songs', 'families' ) as $t ) {
+foreach ( array( 'profiles', 'artists', 'history', 'credits', 'identifiers', 'links', 'songs', 'families' ) as $t ) {
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}songpress_{$t}" ); // phpcs:ignore WordPress.DB.PreparedSQL
 }
 delete_option( 'songpress_db_version' );

@@ -32,6 +32,7 @@ class Songpress_Import {
 		$auto = Songpress_Songs::$auto_users;
 		Songpress_Songs::$auto_users = false; // thousands of accounts in one request is too slow: use SongPress > Link writers afterwards
 		try {
+			Songpress_Profiles::import_sqlite( $path ); // photos and bios; safe to repeat on every batch
 			return self::run_batch( $path, $limit, $artist_id ? $artist_id : Songpress_Artists::default_id() );
 		} finally {
 			Songpress_Songs::$auto_users = $auto;

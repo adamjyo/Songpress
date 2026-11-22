@@ -19,7 +19,7 @@
 defined( 'ABSPATH' ) || exit;
 
 define( 'SONGPRESS_VERSION', '0.1.0' );
-define( 'SONGPRESS_DB_VERSION', '7' );
+define( 'SONGPRESS_DB_VERSION', '8' );
 define( 'SONGPRESS_FILE', __FILE__ );
 define( 'SONGPRESS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SONGPRESS_URL', plugin_dir_url( __FILE__ ) );
@@ -33,6 +33,7 @@ require_once SONGPRESS_DIR . 'includes/class-media.php';
 require_once SONGPRESS_DIR . 'includes/class-updater.php';
 require_once SONGPRESS_DIR . 'includes/class-caps.php';
 require_once SONGPRESS_DIR . 'includes/class-artists.php';
+require_once SONGPRESS_DIR . 'includes/class-profiles.php';
 require_once SONGPRESS_DIR . 'includes/class-songs.php';
 require_once SONGPRESS_DIR . 'includes/class-people.php';
 require_once SONGPRESS_DIR . 'includes/class-import-analyzer.php';

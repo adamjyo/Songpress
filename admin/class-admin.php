@@ -13,6 +13,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_export', array( __CLASS__, 'handle_export' ) );
 		add_action( 'wp_ajax_songpress_upload', array( 'Songpress_Media', 'ajax_upload' ) );
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
+		add_action( 'admin_post_songpress_profile_save', array( __CLASS__, 'handle_profile_save' ) );
 		add_action( 'admin_post_songpress_artist_save', array( __CLASS__, 'handle_artist_save' ) );
 		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
@@ -45,6 +46,7 @@ class Songpress_Admin {
 			array( 'link', 'songpress-link', 'page_link_writers', __( 'Link writers', 'songpress' ) ),
 			array( 'settings', 'songpress-settings', 'page_settings', __( 'Settings', 'songpress' ) ),
 			array( 'artists', 'songpress-artists', 'page_artists', __( 'Artists', 'songpress' ) ),
+			array( 'members', 'songpress-people', 'page_people', __( 'People', 'songpress' ) ),
 		) as $m ) {
 			// The song editor is also how writers open their own songs, so it is registered for anyone who can edit any song.
 			if ( Songpress_Caps::can( $m[0] ) || ( 'songpress-song' === $m[1] && Songpress_Caps::can( 'edit_own' ) ) ) {
@@ -87,6 +89,9 @@ class Songpress_Admin {
 		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Catalog', 'songpress' ) . '</h1>';
 		if ( Songpress_Caps::can( 'create' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-song', $artist ? array( 'artist' => $artist ) : array() ) ) . '">' . esc_html__( 'Add song', 'songpress' ) . '</a>';
+		}
+		if ( Songpress_Caps::can( 'members' ) ) {
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people' ) ) . '">' . esc_html__( 'People', 'songpress' ) . '</a>';
 		}
 		if ( Songpress_Caps::can( 'artists' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-artists' ) ) . '">' . esc_html__( 'Artists', 'songpress' ) . '</a>';
@@ -360,7 +365,7 @@ class Songpress_Admin {
 
 	private static function credit_row( $role, $i, $c, $with_user, $with_share ) {
 		$n = 'credits[' . $role . '][' . $i . ']';
-		$h = '<tr><td><input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $c->name ?? '' ) . '"></td>';
+		$h = '<tr><td>' . ( '' !== trim( (string) ( $c->name ?? '' ) ) ? Songpress_Profiles::chip( $c->name, 22 ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $c->name ?? '' ) . '"></td>';
 		$h .= '<td><input name="' . esc_attr( $n ) . '[ipi]" size="12" value="' . esc_attr( $c->ipi ?? '' ) . '"></td>';
 		if ( $with_share ) {
 			$share = ( isset( $c->share ) && null !== $c->share ) ? rtrim( rtrim( (string) $c->share, '0' ), '.' ) : '';
@@ -884,6 +889,105 @@ class Songpress_Admin {
 			self::back( 'songpress-artists', array( 'err' => rawurlencode( __( 'An artist needs a name.', 'songpress' ) ) ) );
 		}
 		self::back( 'songpress-artists', array( 'saved' => rawurlencode( __( 'Saved.', 'songpress' ) ) ) );
+	}
+
+	/* ---------- people (photos, bios, contact details) ---------- */
+
+	public static function page_people() {
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
+		}
+		global $wpdb;
+		wp_enqueue_media();
+		$t = Songpress_Install::table( 'profiles' );
+		if ( isset( $_GET['saved'] ) ) {
+			echo '<div class="notice notice-success"><p>' . esc_html__( 'Saved.', 'songpress' ) . '</p></div>';
+		}
+		$edit = isset( $_GET['profile'] ) ? sanitize_text_field( wp_unslash( $_GET['profile'] ) ) : '';
+		if ( '' !== $edit ) {
+			$p = 'new' === $edit ? null : $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE id = %d", absint( $edit ) ) );
+			self::profile_form( $p );
+			return;
+		}
+		$kind = isset( $_GET['kind'] ) && in_array( $_GET['kind'], Songpress_Profiles::KINDS, true ) ? sanitize_key( $_GET['kind'] ) : '';
+		$rows = $kind ? $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE kind = %s ORDER BY name LIMIT 500", $kind ) ) : $wpdb->get_results( "SELECT * FROM {$t} ORDER BY name LIMIT 500" );
+		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'People', 'songpress' ) . '</h1> <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people', array( 'profile' => 'new' ) ) ) . '">' . esc_html__( 'Add', 'songpress' ) . '</a><hr class="wp-header-end">';
+		echo '<p class="sp-help">' . esc_html__( 'Photos, bios and contact details for writers, performers, bands and publishers. They show beside names on songs. Photos come from the Media Library.', 'songpress' ) . '</p><p>';
+		foreach ( array( '' => __( 'All', 'songpress' ), 'person' => __( 'People', 'songpress' ), 'band' => __( 'Bands', 'songpress' ), 'publisher' => __( 'Publishers', 'songpress' ) ) as $k => $l ) {
+			echo '<a class="button' . ( $k === $kind ? ' button-primary' : '' ) . '" href="' . esc_url( self::url( 'songpress-people', $k ? array( 'kind' => $k ) : array() ) ) . '">' . esc_html( $l ) . '</a> ';
+		}
+		echo '</p><table class="widefat striped" style="max-width:760px"><tbody>';
+		foreach ( $rows as $r ) {
+			echo '<tr><td style="width:44px">' . wp_kses_post( Songpress_Profiles::chip( $r->name, 32 ) ) . '</td><td><a href="' . esc_url( self::url( 'songpress-people', array( 'profile' => (int) $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( ucfirst( $r->kind ) ) . '</td></tr>';
+		}
+		if ( ! $rows ) {
+			echo '<tr><td>' . esc_html__( 'Nothing here yet. Importing your old catalog fills this in.', 'songpress' ) . '</td></tr>';
+		}
+		echo '</tbody></table>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	private static function profile_form( $p ) {
+		echo '<div class="wrap songpress-wrap"><h1>' . ( $p ? esc_html( $p->name ) : esc_html__( 'Add a person, band or publisher', 'songpress' ) ) . '</h1>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'songpress_profile_save' );
+		echo '<input type="hidden" name="action" value="songpress_profile_save"><input type="hidden" name="profile_id" value="' . (int) ( $p->id ?? 0 ) . '"><table class="form-table" role="presentation">';
+		$kind = $p->kind ?? 'person';
+		$ko   = '';
+		foreach ( array( 'person' => __( 'Person', 'songpress' ), 'band' => __( 'Band', 'songpress' ), 'publisher' => __( 'Publisher', 'songpress' ) ) as $k => $l ) {
+			$ko .= '<option value="' . esc_attr( $k ) . '"' . selected( $kind, $k, false ) . '>' . esc_html( $l ) . '</option>';
+		}
+		self::row( 'kind', __( 'Type', 'songpress' ), '<select name="kind">' . $ko . '</select>' );
+		self::row( 'name', __( 'Name', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $p->name ?? '' ) . '" required>' );
+		self::row( 'aliases', __( 'Also known as', 'songpress' ), '<input class="regular-text" name="aliases" value="' . esc_attr( $p->aliases ?? '' ) . '" placeholder="' . esc_attr__( 'Other spellings, separated by commas', 'songpress' ) . '">' );
+		self::row( 'photo', __( 'Photo', 'songpress' ), Songpress_Media::picker( 'photo', __( 'Choose a photo', 'songpress' ), 'image', (int) ( $p->photo_id ?? 0 ), (string) ( $p->photo_url ?? '' ) ) );
+		self::row( 'bio', __( 'Bio', 'songpress' ), '<textarea name="bio" rows="4" class="large-text">' . esc_textarea( $p->bio ?? '' ) . '</textarea>' );
+		self::row( 'email', __( 'Email', 'songpress' ), '<input type="email" class="regular-text" name="email" value="' . esc_attr( $p->email ?? '' ) . '"> ' . esc_html__( 'Phone', 'songpress' ) . ' <input name="phone" value="' . esc_attr( $p->phone ?? '' ) . '">' );
+		self::row( 'website', __( 'Website', 'songpress' ), '<input class="regular-text" name="website" value="' . esc_attr( $p->website ?? '' ) . '"> ' );
+		self::row( 'ipi', __( 'IPI and PRO', 'songpress' ), '<input name="ipi" size="14" value="' . esc_attr( $p->ipi ?? '' ) . '"> <input name="pro" size="10" value="' . esc_attr( $p->pro ?? '' ) . '">' );
+		echo '</table>';
+		Songpress_Media::picker_script();
+		submit_button( __( 'Save', 'songpress' ) );
+		echo '</form><p><a href="' . esc_url( self::url( 'songpress-people' ) ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></p></div>';
+	}
+
+	public static function handle_profile_save() {
+		check_admin_referer( 'songpress_profile_save' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		global $wpdb;
+		$in   = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- cleaned in Songpress_Profiles::upsert().
+		$id   = absint( $in['profile_id'] ?? 0 );
+		$kind = in_array( $in['kind'] ?? '', Songpress_Profiles::KINDS, true ) ? $in['kind'] : 'person';
+		$name = sanitize_text_field( $in['name'] ?? '' );
+		if ( '' === Songpress_Profiles::key( $name ) ) {
+			self::back( 'songpress-people', array() );
+		}
+		$t = Songpress_Install::table( 'profiles' );
+		// a form save replaces every field, so write directly; the photo keeps its old value unless changed or removed
+		$old   = $id ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE id = %d", $id ) ) : null;
+		$photo = absint( $in['photo_id'] ?? 0 );
+		$row   = array(
+			'kind'       => $kind,
+			'name'       => $name,
+			'name_key'   => Songpress_Profiles::key( $name ),
+			'aliases'    => sanitize_textarea_field( $in['aliases'] ?? '' ),
+			'photo_id'   => $photo ? $photo : ( ( '1' === ( $in['photo_clear'] ?? '0' ) || ! $old ) ? 0 : (int) $old->photo_id ),
+			'bio'        => sanitize_textarea_field( $in['bio'] ?? '' ),
+			'email'      => sanitize_email( $in['email'] ?? '' ),
+			'phone'      => sanitize_text_field( $in['phone'] ?? '' ),
+			'website'    => esc_url_raw( $in['website'] ?? '' ),
+			'ipi'        => sanitize_text_field( $in['ipi'] ?? '' ),
+			'pro'        => sanitize_text_field( $in['pro'] ?? '' ),
+			'updated_at' => current_time( 'mysql' ),
+		);
+		$row['photo_url'] = ( $old && ! $row['photo_id'] && '1' !== ( $in['photo_clear'] ?? '0' ) ) ? (string) $old->photo_url : '';
+		if ( $old ) {
+			$wpdb->update( $t, $row, array( 'id' => $id ) );
+		} else {
+			$wpdb->insert( $t, $row );
+		}
+		self::back( 'songpress-people', array( 'saved' => '1' ) );
 	}
 
 	/* ---------- members ---------- */

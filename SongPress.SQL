@@ -128,3 +128,24 @@ CREATE TABLE {prefix}songpress_artists (
   PRIMARY KEY  (id),
   UNIQUE KEY slug (slug)
 ) {charset};
+
+-- A face for a name: photo, bio and contact details for a person, a band or a publisher.
+-- Matched to credits by name (lowercased, spaces collapsed). Photos are Media Library attachments.
+CREATE TABLE {prefix}songpress_profiles (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  kind varchar(12) NOT NULL DEFAULT 'person',
+  name varchar(190) NOT NULL,
+  name_key varchar(190) NOT NULL,
+  aliases text,
+  photo_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  photo_url text,
+  bio text,
+  email varchar(190) NOT NULL DEFAULT '',
+  phone varchar(64) NOT NULL DEFAULT '',
+  website text,
+  ipi varchar(32) NOT NULL DEFAULT '',
+  pro varchar(64) NOT NULL DEFAULT '',
+  updated_at datetime DEFAULT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY kind_key (kind,name_key)
+) {charset};

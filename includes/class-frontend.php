@@ -91,6 +91,17 @@ class Songpress_Frontend {
 		}
 		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</p>';
 		$out .= '<h2>' . esc_html( $s->title ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
+		$seen = array();
+		$out .= '<p class="songpress-faces">';
+		foreach ( Songpress_Songs::credits( $id ) as $c ) {
+			$k = Songpress_Profiles::key( $c->name );
+			if ( '' === $k || isset( $seen[ $k ] ) || ! in_array( $c->role, array( 'writer', 'performer', 'producer' ), true ) ) {
+				continue;
+			}
+			$seen[ $k ] = 1;
+			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28 ) . esc_html( $c->name ) . '</span>';
+		}
+		$out .= '</p>';
 		if ( 'none' !== $kind ) {
 			$out .= '<p class="songpress-chartlabel">' . esc_html( $labels[ $kind ] ) . '</p>' . ( 'chordpro' === $kind ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
 		}

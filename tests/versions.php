@@ -13,6 +13,9 @@ function wp_generate_password( $n ) { return substr( str_repeat( md5( uniqid( ''
 function wp_get_attachment_url( $id ) { return 'https://site.test/uploads/audio-' . (int) $id . '.mp3'; }
 function wp_get_attachment_image_url( $id, $size = 'medium' ) { return 'https://site.test/uploads/art-' . (int) $id . '-' . $size . '.jpg'; }
 function attachment_url_to_postid( $u ) { return preg_match( '#/uploads/(?:art|audio)-(\d+)\.#', $u, $m ) ? (int) $m[1] : 0; }
+function esc_attr( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
+function esc_html( $s ) { return htmlspecialchars( (string) $s ); }
+function esc_url( $s ) { return (string) $s; }
 function get_current_user_id() { return 7; }
 function wp_json_encode( $v ) { return json_encode( $v ); }
 function wp_unslash( $s ) { return $s; }
@@ -21,6 +24,7 @@ $GLOBALS['opts'] = array();
 function get_option( $k, $d = false ) { return $GLOBALS['opts'][ $k ] ?? $d; }
 function update_option( $k, $v ) { $GLOBALS['opts'][ $k ] = $v; return true; }
 function sanitize_title( $s ) { return trim( preg_replace( '/[^a-z0-9]+/', '-', strtolower( $s ) ), '-' ); }
+function home_url( $p = '' ) { return 'https://site.test' . $p; }
 function get_bloginfo( $k = '' ) { return 'Test Site'; }
 
 class FakeWpdb {
@@ -34,6 +38,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_history (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, user_id INT, action TEXT, detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_artists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT UNIQUE, settings TEXT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, name TEXT, name_key TEXT, aliases TEXT, photo_id INT DEFAULT 0, photo_url TEXT, bio TEXT, email TEXT, phone TEXT, website TEXT, ipi TEXT, pro TEXT, updated_at TEXT, UNIQUE(kind,name_key))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -55,6 +60,7 @@ require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-artists.php';
+require __DIR__ . '/../includes/class-profiles.php';
 require __DIR__ . '/../includes/class-media.php';
 require __DIR__ . '/../includes/class-songs.php';
 
@@ -208,6 +214,32 @@ check( 'song keeps its artist', (int) Songpress_Songs::get( $sid )->artist_id, (
 $q = Songpress_Songs::query( array( 'artist_id' => $a2 ) );
 check( 'artist filter', count( $q['rows'] ?? $q ), 1 );
 check( 'artist with songs cannot be deleted', Songpress_Artists::delete( $a2 ), false );
+
+// profiles: photos come across from the old database as Media Library links
+$old = tempnam( sys_get_temp_dir(), 'sp' );
+$o   = new PDO( 'sqlite:' . $old );
+$o->exec( "CREATE TABLE people (id INTEGER PRIMARY KEY, name TEXT, name_key TEXT, aliases TEXT, photo TEXT, bio TEXT, email TEXT, phone TEXT, ipi TEXT, pro TEXT)" );
+$o->exec( "INSERT INTO people (name,aliases,photo,bio,email) VALUES ('Ann  Smith','Annie S','https://site.test/uploads/art-41.jpg','Singer','a@x.com'),('No Photo','','','','')" );
+$o->exec( "CREATE TABLE bands (id INTEGER PRIMARY KEY, name TEXT, name_key TEXT, icon_url TEXT, notes TEXT)" );
+$o->exec( "INSERT INTO bands (name,icon_url) VALUES ('The Lamps','https://elsewhere.test/lamps.png')" );
+$o->exec( "CREATE TABLE publishers (id INTEGER PRIMARY KEY, name TEXT, photo TEXT, phone TEXT, email TEXT, website TEXT)" );
+$o->exec( "INSERT INTO publishers (name,photo,website) VALUES ('Pub Co','/wp-content/uploads/art-9.jpg','https://pub.test')" );
+$r = Songpress_Profiles::import_sqlite( $old );
+check( 'profiles imported', $r, array( 'people' => 2, 'bands' => 1, 'publishers' => 1 ) );
+$ann = Songpress_Profiles::find( 'ann smith' );
+check( 'name matched ignoring spacing and case', $ann->name, 'Ann Smith' );
+check( 'alias matches too', Songpress_Profiles::find( 'ANNIE S' )->id, $ann->id );
+check( 'photo link became a media id', (int) $ann->photo_id, 41 );
+check( 'photo url resolves from the media id', Songpress_Profiles::photo_url( $ann ), 'https://site.test/uploads/art-41-thumbnail.jpg' );
+check( 'outside photo kept as a link', Songpress_Profiles::find( 'the lamps' )->photo_url, 'https://elsewhere.test/lamps.png' );
+check( 'root-relative photo made absolute and matched', (int) Songpress_Profiles::find( 'pub co' )->photo_id, 9 );
+Songpress_Profiles::upsert( 'person', 'Ann Smith', array( 'bio' => 'Edited by hand' ) );
+Songpress_Profiles::import_sqlite( $old );
+global $wpdb;
+check( 'rerun keeps hand edits', $wpdb->get_var( 'SELECT bio FROM wp_songpress_profiles WHERE name_key = \'ann smith\'' ), 'Edited by hand' );
+check( 'rerun adds no duplicates', (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_profiles' ), 4 );
+check( 'chip falls back to initials', false !== strpos( Songpress_Profiles::chip( 'Zed Nobody' ), '>ZN<' ), true );
+unlink( $old );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
