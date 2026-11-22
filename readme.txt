@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.61.0 =
+* Settings: a tool to load a whole old database (a SQLite file or an .sql dump). Every table and row is stored in SongPress's own database, even where no screen uses it yet. Works in short steps that continue by itself, and skips rows already stored.
+
 = 0.60.0 =
 * Upload / Download: one catalog upload does it all. After the songs are in, the same file also brings the photos and bios, statements, notes, ratings, art, agreements and registrations. The separate photos and catalog options are gone.
 

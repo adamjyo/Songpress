@@ -1321,6 +1321,7 @@ class Songpress_Admin {
 		submit_button();
 		echo '</form>';
 
+		echo Songpress_Legacy::box( Songpress_Media::$front ? Songpress_Screens::url( 'settings' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
 		echo '<h2>' . esc_html__( 'Front-end pages', 'songpress' ) . '</h2><table class="widefat striped" style="max-width:640px"><tbody>';
 		foreach ( Songpress_Install::pages() as $opt => $def ) {
 			$pid = (int) get_option( $opt );

@@ -203,6 +203,17 @@ CREATE TABLE {prefix}songpress_payments (
   UNIQUE KEY pay_key (pay_year,pay_quarter,kind,party_key)
 ) {charset};
 
+-- Everything from an old SQL or SQLite file, row by row as JSON, so nothing is lost even where SongPress has no screen for it yet.
+CREATE TABLE {prefix}songpress_legacy_rows (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  source_table varchar(64) NOT NULL,
+  row_key char(32) NOT NULL,
+  row_data longtext NOT NULL,
+  imported_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY source_row (source_table,row_key)
+) {charset};
+
 -- Streams per day and service (estimates), and streams and income per month, store and title.
 CREATE TABLE {prefix}songpress_streams (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

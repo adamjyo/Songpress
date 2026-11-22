@@ -48,6 +48,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_payments (id INTEGER PRIMARY KEY AUTOINCREMENT, pay_year INT, pay_quarter INT, kind TEXT, party TEXT, party_key TEXT, amount REAL, paid INT, paid_on TEXT, notes TEXT, updated_at TEXT, UNIQUE(pay_year,pay_quarter,kind,party_key))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_streams (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, service TEXT, streams INT, UNIQUE(day,service))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, row_key TEXT UNIQUE, month TEXT, store TEXT, title TEXT, isrc TEXT, song_id INT, units INT, earnings REAL)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_legacy_rows (id INTEGER PRIMARY KEY AUTOINCREMENT, source_table TEXT, row_key TEXT, row_data TEXT, imported_at TEXT, UNIQUE(source_table,row_key))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, song_key TEXT DEFAULT \'\', tempo TEXT DEFAULT \'\', authors TEXT DEFAULT \'\', latitude TEXT DEFAULT \'\', longitude TEXT DEFAULT \'\', source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
@@ -108,6 +109,7 @@ require __DIR__ . '/../includes/class-chordpro.php';
 require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
+require __DIR__ . '/../includes/class-legacy.php';
 require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
@@ -804,6 +806,24 @@ foreach ( array( 'writer' => 'B', 'artist' => 'Lanterns', 'title' => 'Harbor', '
 	$r = Songpress_Songs::query( array( 'search' => $term, 'archived' => 'any' ) );
 	check( 'search by ' . $what, in_array( (int) $v0, array_map( function ( $x ) { return (int) $x->id; }, $r['rows'] ), true ), 'nothing' !== $what );
 }
+
+// the whole-database loader keeps every table and row, also the ones nothing uses
+$lp = new PDO( 'sqlite::memory:' ); $lp->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
+$lp->exec( 'CREATE TABLE odd_one (id INTEGER PRIMARY KEY, name TEXT, blob_col BLOB)' );
+$lp->exec( "INSERT INTO odd_one (name, blob_col) VALUES ('a', x'ff00fe'), ('b', NULL), ('caf\xc3\xa9', NULL)" );
+$lp->exec( 'CREATE TABLE kv (k TEXT PRIMARY KEY, v TEXT) WITHOUT ROWID' );
+$lp->exec( "INSERT INTO kv VALUES ('x','1'), ('y','2')" );
+$lp->exec( 'CREATE TABLE empty_one (a)' );
+Songpress_Legacy::$verb = 'INSERT OR IGNORE';
+$lt = Songpress_Legacy::table_list( $lp );
+check( 'loader lists every table with its row count', array( $lt['odd_one']['total'], $lt['kv']['total'], $lt['empty_one']['total'] ), array( 3, 2, 0 ) );
+check( 'loader finishes', Songpress_Legacy::run_step( $lp, $lt, 30 ), true );
+check( 'loader stores every row', Songpress_Legacy::stored(), array( 'kv' => 2, 'odd_one' => 3 ) );
+$lt2 = Songpress_Legacy::table_list( $lp );
+Songpress_Legacy::run_step( $lp, $lt2, 30 );
+check( 'loading the same file again adds nothing', Songpress_Legacy::stored(), array( 'kv' => 2, 'odd_one' => 3 ) );
+$lj = $GLOBALS['wpdb']->get_var( "SELECT row_data FROM wp_songpress_legacy_rows WHERE source_table = 'odd_one' AND row_data LIKE '%base64:%'" );
+check( 'binary values are kept as base64', json_decode( $lj, true )['blob_col'], 'base64:' . base64_encode( "\xff\x00\xfe" ) );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";

@@ -129,7 +129,7 @@ class Songpress_Install {
 	}
 
 	public static function table_names() {
-		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history', 'artists', 'profiles', 'earnings', 'person_earnings', 'payments', 'streams', 'stats', 'expenses', 'journal', 'ratings', 'art', 'agreements', 'signers', 'registrations', 'sessions', 'session_people', 'session_chat', 'activity', 'audit', 'note_versions', 'pitches', 'pitch_kits' );
+		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history', 'artists', 'profiles', 'earnings', 'person_earnings', 'payments', 'streams', 'stats', 'legacy_rows', 'expenses', 'journal', 'ratings', 'art', 'agreements', 'signers', 'registrations', 'sessions', 'session_people', 'session_chat', 'activity', 'audit', 'note_versions', 'pitches', 'pitch_kits' );
 	}
 
 	/** Where the schema lives. Edit SongPress.SQL, not this file, to change the database. */
