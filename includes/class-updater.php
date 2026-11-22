@@ -10,6 +10,7 @@ defined( 'ABSPATH' ) || exit;
 class Songpress_Updater {
 	const DEFAULT_REPO = 'adamjyo/Songpress';
 	const CACHE        = 'songpress_github_release';
+	const BRANCH       = 'main';
 
 	public static function init() {
 		if ( defined( 'SONGPRESS_NO_GITHUB_UPDATES' ) && SONGPRESS_NO_GITHUB_UPDATES ) {
@@ -49,6 +50,39 @@ class Songpress_Updater {
 		return (string) ( $release['zipball_url'] ?? '' );
 	}
 
+	/** The Version line from a plugin file's header. Pure. */
+	public static function parse_version( $php ) {
+		return preg_match( '/^[ \t\/*#@]*Version:\s*([0-9][0-9A-Za-z.\-+]*)/mi', (string) $php, $m ) ? $m[1] : '';
+	}
+
+	/** The newer of the latest release and the version written on the main branch. Pure. */
+	public static function pick( $release, $branch ) {
+		if ( $release && $branch ) {
+			return version_compare( $branch['version'], $release['version'], '>' ) ? $branch : $release;
+		}
+		return $release ? $release : $branch;
+	}
+
+	/** The version in songpress.php on the main branch, so a push with a higher version number is an update without anyone publishing a release. */
+	private static function from_branch( $headers ) {
+		$repo = self::repo();
+		$res  = wp_remote_get( 'https://raw.githubusercontent.com/' . $repo . '/' . self::BRANCH . '/songpress.php', array( 'timeout' => 8, 'headers' => $headers ) );
+		if ( is_wp_error( $res ) || 200 !== (int) wp_remote_retrieve_response_code( $res ) ) {
+			return null;
+		}
+		$v = self::parse_version( wp_remote_retrieve_body( $res ) );
+		if ( '' === $v ) {
+			return null;
+		}
+		return array(
+			'version' => $v,
+			'package' => 'https://github.com/' . $repo . '/archive/refs/heads/' . self::BRANCH . '.zip',
+			'url'     => 'https://github.com/' . $repo . '/commits/' . self::BRANCH,
+			'notes'   => '',
+			'date'    => '',
+		);
+	}
+
 	/** The latest published release, cached for 12 hours. Drafts and pre-releases are ignored. */
 	public static function latest( $force = false ) {
 		$cached = get_transient( self::CACHE );
@@ -62,19 +96,23 @@ class Songpress_Updater {
 		$res  = wp_remote_get( 'https://api.github.com/repos/' . self::repo() . '/releases/latest', array( 'timeout' => 8, 'headers' => $headers ) );
 		$code = is_wp_error( $res ) ? 0 : (int) wp_remote_retrieve_response_code( $res );
 		$body = 200 === $code ? json_decode( wp_remote_retrieve_body( $res ), true ) : null;
-		if ( ! is_array( $body ) || empty( $body['tag_name'] ) || ! empty( $body['draft'] ) || ! empty( $body['prerelease'] ) ) {
+		$release = null;
+		if ( is_array( $body ) && ! empty( $body['tag_name'] ) && empty( $body['draft'] ) && empty( $body['prerelease'] ) ) {
+			$release = array(
+				'version' => ltrim( $body['tag_name'], 'vV' ),
+				'package' => self::package_url( $body ),
+				'url'     => (string) ( $body['html_url'] ?? '' ),
+				'notes'   => (string) ( $body['body'] ?? '' ),
+				'date'    => (string) ( $body['published_at'] ?? '' ),
+			);
+		}
+		$best = self::pick( $release, self::from_branch( $headers ) );
+		if ( ! $best ) {
 			set_transient( self::CACHE, array(), HOUR_IN_SECONDS ); // nothing usable: try again in an hour
 			return null;
 		}
-		$release = array(
-			'version' => ltrim( $body['tag_name'], 'vV' ),
-			'package' => self::package_url( $body ),
-			'url'     => (string) ( $body['html_url'] ?? '' ),
-			'notes'   => (string) ( $body['body'] ?? '' ),
-			'date'    => (string) ( $body['published_at'] ?? '' ),
-		);
-		set_transient( self::CACHE, $release, 12 * HOUR_IN_SECONDS );
-		return $release;
+		set_transient( self::CACHE, $best, 12 * HOUR_IN_SECONDS );
+		return $best;
 	}
 
 	public static function inject( $transient ) {

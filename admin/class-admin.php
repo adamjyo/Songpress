@@ -1338,7 +1338,7 @@ class Songpress_Admin {
 		if ( ! Songpress_Updater::enabled() ) {
 			echo '<p style="margin:0">' . esc_html__( 'GitHub updates are off. Turn them on below, save, then check.', 'songpress' ) . '</p>';
 		} elseif ( ! $rel ) {
-			echo '<p style="margin:0">' . esc_html( sprintf( /* translators: %s: owner/repository */ __( 'No release found yet at github.com/%s. Click "Check GitHub now" once a release is published.', 'songpress' ), Songpress_Updater::repo() ) ) . '</p>';
+			echo '<p style="margin:0">' . esc_html( sprintf( /* translators: %s: owner/repository */ __( 'Could not read a version from github.com/%s. Check the repository name below, then click "Check GitHub now".', 'songpress' ), Songpress_Updater::repo() ) ) . '</p>';
 		} elseif ( Songpress_Updater::is_newer( $rel['version'], $cur ) ) {
 			echo '<p style="margin:0 0 6px"><strong>' . esc_html__( 'Latest on GitHub:', 'songpress' ) . '</strong> ' . esc_html( $rel['version'] ) . ' &mdash; <span style="color:#b32d2e">' . esc_html__( 'update available', 'songpress' ) . '</span></p>';
 			$file = plugin_basename( SONGPRESS_FILE );
