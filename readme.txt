@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.21.0
+Stable tag: 0.22.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,7 +30,7 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
-= 0.21.0 =
+= 0.22.0 =
 * Backups (Managers): every SongPress table is saved to one compressed file in a private folder. One is taken for you before the risky things (loading the old catalog, uploading a statement, tidying or renaming logins, importing notes, deleting a session, agreement or artwork, starting fresh), at most every ten minutes, and you can "Back up now" by hand. Download any of them, or restore one; restoring first saves how things are now so it can be undone. The newest 15 are kept. The activity log and song history are never rewound.
 * Health (Managers): checks that the plugin and database are up to date, every table exists, the server has what SongPress needs (zip, SQLite driver, compression, memory, upload size, a writable private folder), the pages exist, GitHub updates work, and when the last backup was. Fatal errors from the plugin are noted (last ten) with where they happened.
 

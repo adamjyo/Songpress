@@ -863,7 +863,7 @@ class Songpress_Admin {
 		wp_nonce_field( 'songpress_artist_save' );
 		echo '<input type="hidden" name="action" value="songpress_artist_save"><input type="hidden" name="artist_id" value="' . (int) ( $a->id ?? 0 ) . '">';
 		echo '<details open><summary>' . esc_html__( 'Name', 'songpress' ) . '</summary><table class="form-table" role="presentation">';
-		self::row( 'name', __( 'Band, artist or label', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $a->name ?? '' ) . '" required>' );
+		self::row( 'name', __( 'Band, artist or label', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $a->name ?? '' ) . '" required' . Songpress_Names::attrs( 'artist', (int) ( $a->id ?? 0 ) ) . '>' . Songpress_Names::script() );
 		echo '</table></details>';
 		echo '<details open><summary>' . esc_html__( 'Usual writer and publisher', 'songpress' ) . '</summary><p class="sp-help">' . esc_html__( 'A new song for this artist starts with these filled in, so you do not retype them. Change them on any song.', 'songpress' ) . '</p><table class="form-table" role="presentation">';
 		self::row( 'writer_name', __( 'Writer', 'songpress' ), '<input name="writer_name" value="' . esc_attr( $s( 'writer_name' ) ) . '"> IPI <input name="writer_ipi" size="12" value="' . esc_attr( $s( 'writer_ipi' ) ) . '"> ' . esc_html__( 'Share %', 'songpress' ) . ' <input name="writer_share" size="5" value="' . esc_attr( $s( 'writer_share' ) ) . '">' );
@@ -976,7 +976,7 @@ class Songpress_Admin {
 		$kind  = $p->kind ?? ( isset( $_GET['kind'] ) && in_array( $_GET['kind'], Songpress_Profiles::KINDS, true ) ? sanitize_key( $_GET['kind'] ) : 'person' );
 		$names = self::kind_names();
 		echo '<input type="hidden" name="kind" value="' . esc_attr( $kind ) . '">';
-		self::row( 'name', __( 'Name', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $p->name ?? '' ) . '" required>' );
+		self::row( 'name', __( 'Name', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $p->name ?? '' ) . '" required' . ( 'person' !== $kind ? Songpress_Names::attrs( $kind, (int) ( $p->id ?? 0 ) ) : '' ) . '>' . ( 'person' !== $kind ? Songpress_Names::script() : '' ) );
 		self::row( 'aliases', __( 'Also known as', 'songpress' ), '<input class="regular-text" name="aliases" value="' . esc_attr( $p->aliases ?? '' ) . '" placeholder="' . esc_attr__( 'Other spellings, separated by commas', 'songpress' ) . '">' );
 		self::row( 'photo', __( 'Photo', 'songpress' ), Songpress_Media::picker( 'photo', __( 'Choose a photo', 'songpress' ), 'image', (int) ( $p->photo_id ?? 0 ), (string) ( $p->photo_url ?? '' ) ) );
 		self::row( 'bio', __( 'Bio', 'songpress' ), '<textarea name="bio" rows="4" class="large-text">' . esc_textarea( $p->bio ?? '' ) . '</textarea>' );

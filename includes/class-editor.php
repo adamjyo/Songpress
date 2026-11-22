@@ -87,7 +87,7 @@ class Songpress_Editor {
 			$artist_html = Songpress_Caps::can( 'create' ) ? '<label class="spe-field"><span>' . esc_html__( 'Artist', 'songpress' ) . '</span><select name="artist_id">' . $ao . '</select></label>' : $artist_html;
 		}
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3><div class="spe-grid">';
-		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required></label>';
+		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . $artist_html;
 		$o .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"', 'adv' );
 		$o .= '<datalist id="spe-genres">';

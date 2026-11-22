@@ -91,6 +91,9 @@ if ( ! function_exists( 'wp_mkdir_p' ) ) { function wp_mkdir_p( $d ) { return is
 if ( ! function_exists( 'wp_normalize_path' ) ) { function wp_normalize_path( $p ) { return str_replace( '\\', '/', (string) $p ); } }
 if ( ! function_exists( 'wp_strip_all_tags' ) ) { function wp_strip_all_tags( $s ) { return strip_tags( (string) $s ); } }
 require_once __DIR__ . '/../includes/class-import.php';
+if ( ! function_exists( 'remove_accents' ) ) { function remove_accents( $s ) { return strtr( (string) $s, array( 'é' => 'e', 'è' => 'e', 'á' => 'a', 'ñ' => 'n', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o' ) ); } }
+if ( ! class_exists( 'Songpress_Editor', false ) ) { class Songpress_Editor { public static function edit_url( $id ) { return 'https://site.test/edit/' . (int) $id; } } }
+require __DIR__ . '/../includes/class-names.php';
 require __DIR__ . '/../includes/class-backup.php';
 require __DIR__ . '/../includes/class-health.php';
 if ( ! defined( 'SONGPRESS_TESTING' ) ) { define( 'SONGPRESS_TESTING', 1 ); }
@@ -681,6 +684,24 @@ $bad = Songpress_Backup::dir() . '/backup-20200101-000000-old.json.gz';
 file_put_contents( $bad, gzencode( json_encode( array( 'v' => 1, 'db' => '1', 'tables' => array( 'songs' => array( 'cols' => array(), 'rows' => array() ) ) ) ) ) );
 check( 'a backup from another database version is refused', array( Songpress_Backup::restore( 'backup-20200101-000000-old.json.gz' )[0], (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs' ) ), array( false, $songs_before ) );
 check( 'a missing backup is refused', Songpress_Backup::restore( 'backup-20200101-000001-none.json.gz' )[0], false );
+
+// Name check
+check( 'names: normalize drops case, the, accents and punctuation', array( Songpress_Names::normalize( 'The Café-Band!' ), Songpress_Names::normalize( '  A  Song ' ) ), array( 'cafeband', 'song' ) );
+check( 'names: same, close, different', array( Songpress_Names::compare( 'The Redbeards', 'redbeards' ), Songpress_Names::compare( 'Redbeards', 'Redbeerds' ), Songpress_Names::compare( 'Redbeards', 'Bluebeards' ), Songpress_Names::compare( 'Echo', 'Ecko' ) ), array( 'same', 'close', '', '' ) );
+check( 'names: blank never matches', Songpress_Names::compare( '', '' ), '' );
+Songpress_Profiles::upsert( 'band', 'The Zephyr Hounds', array() );
+Songpress_Profiles::upsert( 'publisher', 'Zephyr Hounds Music', array() );
+$nm = Songpress_Names::matches( 'band', 'zephyr hounds' );
+check( 'band check finds the same band, not the publisher', array( count( $nm ), $nm[0]['name'], $nm[0]['level'], $nm[0]['where'] ), array( 1, 'The Zephyr Hounds', 'same', 'band' ) );
+$nm2 = Songpress_Names::matches( 'band', 'The Zephyr Houndz' );
+check( 'band check finds a near miss', array( count( $nm2 ), $nm2[0]['level'] ), array( 1, 'close' ) );
+$ex = (int) $wpdb->get_var( "SELECT id FROM wp_songpress_profiles WHERE name = 'The Zephyr Hounds'" );
+check( 'editing a band does not match itself', Songpress_Names::matches( 'band', 'The Zephyr Hounds', $ex ), array() );
+$sm = Songpress_Names::matches( 'song', 'harbor lights' );
+check( 'song check finds an existing title', array( count( $sm ) >= 1, $sm[0]['level'] ), array( true, 'same' ) );
+$fam = (int) $wpdb->get_var( "SELECT family_id FROM wp_songpress_songs WHERE title = 'Harbor Lights' AND version_no = 0 LIMIT 1" );
+check( 'editing a song does not match its own family', count( array_filter( Songpress_Names::matches( 'song', 'Harbor Lights', $fam ), function ( $m ) { return 'same' === $m['level'] && false !== strpos( $m['where'], '0001' ); } ) ), 0 );
+check( 'too short a name matches nothing', Songpress_Names::matches( 'song', '' ), array() );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
