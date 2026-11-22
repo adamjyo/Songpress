@@ -99,7 +99,7 @@ class Songpress_Editor {
 				$by_role[ $role ] = $rows;
 			}
 		}
-		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Type a username or email in Account to let that person see this song on their own profile. Add as many people as the song has.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version. Type a username or email in Account to let that person see this song on their own profile.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Type a username or email in Account to let that person see this song on their own profile. Add as many people as the song has.', 'songpress' ) ) . '</p>';
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true, true );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, false );
 		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, false );

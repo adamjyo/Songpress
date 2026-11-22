@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.44.0
+Stable tag: 0.44.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.44.1 =
+* The original work's People card now says its people are shared by every version.
 
 = 0.44.0 =
 * The original work (NNNN) now holds only the shared details: title, other titles, written on, copyright date, lyrics, chords, ChordPro, story, themes, writers, publishers, labels and ISWC/CCLI/MLC codes. Its editor no longer shows release, audio, art, style, prompts, notes, performers, producers or links.
