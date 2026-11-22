@@ -644,3 +644,13 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-dialog h3{margin:0 0 8px;font-size:18px}
 .spe-dialog input{margin:8px 0}
 .spe-dlgbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+/* phones: keep the Share button on the title row, and keep the cover art box a sensible size */
+@media (max-width:759px){
+ .spe-top{flex-wrap:nowrap;gap:8px}
+ .spe-top h2{flex:1;min-width:0;overflow-wrap:anywhere}
+ .spe-top .spe-sharebtn{flex:none;min-height:0;padding:6px 12px;margin-left:0}
+ .spe-hero .spe-prev.spe-dz{max-width:240px}
+}
+@media (max-width:759px){.spe-top h2{font-size:22px}}
+/* phones: writer rows get the name its own room, with IPI on a second line */
+@media (max-width:640px){.spe-group.spe-two .spe-credit{grid-template-columns:minmax(0,1fr) 78px 28px;grid-template-areas:"who share x" "ipi ipi ipi";padding:8px}}

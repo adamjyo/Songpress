@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.53.1 =
+* Phones: the Share button stays on the title row, the cover art box is a sensible size, and writer rows give the name its own room with IPI on a second line.
+
 = 0.53.0 =
 * A Share button replaces "View song" at the top right of the work editor. It opens a popup with the work's public link: copy it, or send it with your device's share sheet where one exists. The link shows the song only, never splits, codes, notes or money.
 
