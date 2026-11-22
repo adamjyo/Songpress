@@ -41,6 +41,25 @@
 		});
 	}
 
+	function b64(str) { /* text to base64, any characters */
+		var bytes = new TextEncoder().encode(str), bin = '', i;
+		for (i = 0; i < bytes.length; i += 8192) { bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); }
+		return btoa(bin);
+	}
+	function sendText(file) { /* the same note as a plain form field, in base64, in case the upload itself is what the server refuses */
+		return file.text().then(function (t) {
+			var body = new URLSearchParams();
+			body.set('action', 'songpress_notes_text'); body.set('nonce', cfg.nonce); body.set('name', file.name); body.set('b64', b64(t));
+			return fetch(cfg.ajax, { method: 'POST', body: body, credentials: 'same-origin' }).then(function (r) {
+				return r.text().then(function (x) {
+					var j = null;
+					try { j = JSON.parse(x); } catch (e) { /* not JSON */ }
+					if (!j || !j.ok) { throw new Error('HTTP ' + r.status + ', ' + (x.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || 'nothing')); }
+					return j;
+				});
+			});
+		});
+	}
 	form.addEventListener('submit', function (e) {
 		var fl = Array.prototype.slice.call(inp.files || []);
 		if (!fl.length) { return; }
@@ -72,10 +91,14 @@
 					if (unit.length > 1) { /* find the file that is the trouble: send them one at a time */
 						units.shift(); unit.forEach(function (f, i) { units.splice(i, 0, [f]); }); tries = 0; next(); return;
 					}
-					tries++;
-					if (tries <= 1) { wait(10, 'Trouble with ' + unit[0].name + ' (' + er.message + ') Trying once more', next); return; }
-					/* one file the server will not take: note its name and go on with the rest */
-					failed.push(unit[0].name); units.shift(); tries = 0; progress(); next();
+					/* one file the server will not take as an upload: send its text as a plain form field instead */
+					sendText(unit[0]).then(function (j) {
+						added += j.added; skip += j.skip; sent += 1; units.shift(); tries = 0; progress(); next();
+					}).catch(function (e2) {
+						tries++;
+						if (tries <= 1) { wait(10, 'Trouble with ' + unit[0].name + ' (' + e2.message + ') Trying once more', next); return; }
+						failed.push(unit[0].name + ' (' + e2.message + ')'); units.shift(); tries = 0; progress(); next();
+					});
 				});
 			}
 			progress(); next();

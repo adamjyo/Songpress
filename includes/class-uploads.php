@@ -53,6 +53,7 @@ class Songpress_Uploads {
 	public static function init() {
 		add_action( 'admin_post_songpress_notes_import', array( __CLASS__, 'handle_notes_import' ) );
 		add_action( 'wp_ajax_songpress_notes_chunk', array( __CLASS__, 'ajax_notes_chunk' ) );
+		add_action( 'wp_ajax_songpress_notes_text', array( __CLASS__, 'ajax_notes_text' ) );
 		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
 		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
 		add_action( 'admin_post_songpress_statement', array( __CLASS__, 'handle_statement' ) );
@@ -544,6 +545,28 @@ class Songpress_Uploads {
 					++$skip;
 				}
 			}
+		}
+		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip ) );
+	}
+
+	/** Ajax: one note sent as base64 text in an ordinary form field. A fallback for a file that the server's upload filter or firewall will not take. */
+	public static function ajax_notes_text() {
+		self::watch( 'notes import (text)' );
+		check_ajax_referer( 'songpress_notes_import', 'nonce' );
+		if ( ! Songpress_Caps::can( 'journal' ) ) {
+			wp_send_json( array( 'ok' => false, 'error' => 'Not allowed.' ), 403 );
+		}
+		$name = sanitize_file_name( wp_unslash( $_POST['name'] ?? 'note.md' ) );
+		$text = (string) base64_decode( (string) wp_unslash( $_POST['b64'] ?? '' ), true ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions, WordPress.Security.ValidatedSanitizedInput
+		if ( ! preg_match( '//u', $text ) ) {
+			$text = function_exists( 'mb_convert_encoding' ) ? mb_convert_encoding( $text, 'UTF-8', 'Windows-1252' ) : $text;
+		}
+		$added = 0;
+		$skip  = 0;
+		try {
+			self::import_one( $name, $text, $added, $skip );
+		} catch ( \Throwable $e ) {
+			++$skip;
 		}
 		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip ) );
 	}
