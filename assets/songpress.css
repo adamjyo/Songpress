@@ -677,6 +677,10 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-cardline{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
 .songpress-cardartist{color:var(--sp-mute);font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .songpress-cardstyle{margin-left:auto;flex:none;max-width:45%;color:var(--sp-mute);font-size:12px;letter-spacing:.04em;text-transform:uppercase;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.songpress-card .songpress-play{flex:none;order:2}
+.songpress-list li.songpress-card{position:relative}
+.songpress-card .songpress-play{flex:none;position:relative;z-index:2}
+.songpress-card .songpress-play-off{pointer-events:none}
+.songpress-cardlink::after{content:"";position:absolute;inset:0;z-index:1;border-radius:14px}
 .songpress-list:has(.songpress-card){border:0;padding:0;margin-top:4px}
 .songpress-cardtext .songpress-title.songpress-notitle{color:var(--sp-mute);font-weight:500;font-style:italic}
+.songpress-card .songpress-play .songpress-playicon{opacity:1}

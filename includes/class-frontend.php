@@ -257,7 +257,7 @@ class Songpress_Frontend {
 			if ( ! $desktop ) { // phones: a card with the cover art on the right; number, release title and artist on the left, style at the far right
 				$rel   = 0 === (int) $s->version_no ? $s->title : $s->release_title; // only an original work shows the work name; a version shows its release title
 				$none  = ( 0 !== (int) $s->version_no && '' === trim( (string) $rel ) );
-				$out  .= '<li class="songpress-card"><a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $none ? __( 'No release title', 'songpress' ) : $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->style ) ? '<span class="songpress-cardstyle">' . esc_html( $s->style ) . '</span>' : '' ) . '</span></span></a>' . $art . '</li>';
+				$out  .= '<li class="songpress-card">' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $none ? __( 'No release title', 'songpress' ) : $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->style ) ? '<span class="songpress-cardstyle">' . esc_html( $s->style ) . '</span>' : '' ) . '</span></span></a></li>';
 				continue;
 			}
 			$out .= '<li class="songpress-row">' . $art . '<a class="songpress-rowlink" href="' . $link . '">'
