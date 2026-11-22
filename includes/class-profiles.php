@@ -6,6 +6,8 @@ class Songpress_Profiles {
 
 	const KINDS = array( 'person', 'band', 'publisher' );
 
+	private static $cache = null;
+
 	public static function key( $name ) {
 		return strtolower( trim( preg_replace( '/\s+/', ' ', (string) $name ) ) );
 	}
@@ -53,6 +55,7 @@ class Songpress_Profiles {
 			}
 		}
 		$in['updated_at'] = current_time( 'mysql' );
+		self::$cache      = null;
 		if ( $row ) {
 			// when importing, keep what the user already filled in
 			if ( ! empty( $f['keep'] ) ) {
@@ -69,34 +72,45 @@ class Songpress_Profiles {
 		return (int) $wpdb->insert_id;
 	}
 
-	/** Every profile, keyed by name_key and every alias, as one map for fast lookup on a page. */
+	/** Which kind of profile a credit role or field points at. A band is never looked up as a person, or the reverse. */
+	public static function kind_for_role( $role ) {
+		if ( 'publisher' === $role ) {
+			return 'publisher';
+		}
+		if ( 'band' === $role || 'artist' === $role ) {
+			return 'band';
+		}
+		return 'person'; // writer, performer, producer
+	}
+
+	/** Every profile, keyed by kind and name (and each alias). Names are only ever matched inside their own kind. */
 	public static function map() {
 		global $wpdb;
-		static $map = null;
-		if ( null !== $map ) {
-			return $map;
+		if ( null !== self::$cache ) {
+			return self::$cache;
 		}
 		$map = array();
 		$t   = Songpress_Install::table( 'profiles' );
-		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$t} ORDER BY kind = 'person' DESC, id" ) as $r ) { // people win when a name is also a band
-			$map[ $r->name_key ] = $r;
+		foreach ( (array) $wpdb->get_results( "SELECT * FROM {$t} ORDER BY id" ) as $r ) {
+			$map[ $r->kind . '|' . $r->name_key ] = $r;
 			foreach ( preg_split( '/[,|\n]+/', (string) $r->aliases ) as $a ) {
 				$k = self::key( $a );
-				if ( '' !== $k && ! isset( $map[ $k ] ) ) {
-					$map[ $k ] = $r;
+				if ( '' !== $k && ! isset( $map[ $r->kind . '|' . $k ] ) ) {
+					$map[ $r->kind . '|' . $k ] = $r;
 				}
 			}
 		}
+		self::$cache = $map;
 		return $map;
 	}
 
 	public static function reset_cache() {
-		// the map is rebuilt per request, so nothing to clear outside tests
+		self::$cache = null;
 	}
 
-	public static function find( $name ) {
+	public static function find( $name, $kind = 'person' ) {
 		$m = self::map();
-		$k = self::key( $name );
+		$k = $kind . '|' . self::key( $name );
 		return isset( $m[ $k ] ) ? $m[ $k ] : null;
 	}
 
@@ -114,9 +128,9 @@ class Songpress_Profiles {
 	}
 
 	/** A small round photo, or initials when there is no photo. */
-	public static function chip( $name, $px = 28 ) {
+	public static function chip( $name, $px = 28, $kind = 'person' ) {
 		$name = (string) $name;
-		$p    = self::find( $name );
+		$p    = self::find( $name, $kind );
 		$src  = self::photo_url( $p );
 		$st   = 'width:' . (int) $px . 'px;height:' . (int) $px . 'px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px';
 		if ( '' !== $src ) {

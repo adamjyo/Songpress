@@ -91,6 +91,9 @@ class Songpress_Frontend {
 		}
 		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</p>';
 		$out .= '<h2>' . esc_html( $s->title ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
+		if ( '' !== trim( (string) $s->artist ) ) {
+			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
+		}
 		$seen = array();
 		$out .= '<p class="songpress-faces">';
 		foreach ( Songpress_Songs::credits( $id ) as $c ) {
@@ -99,7 +102,7 @@ class Songpress_Frontend {
 				continue;
 			}
 			$seen[ $k ] = 1;
-			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28 ) . esc_html( $c->name ) . '</span>';
+			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28, 'person' ) . esc_html( $c->name ) . '</span>';
 		}
 		$out .= '</p>';
 		if ( 'none' !== $kind ) {

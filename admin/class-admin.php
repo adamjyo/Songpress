@@ -365,7 +365,7 @@ class Songpress_Admin {
 
 	private static function credit_row( $role, $i, $c, $with_user, $with_share ) {
 		$n = 'credits[' . $role . '][' . $i . ']';
-		$h = '<tr><td>' . ( '' !== trim( (string) ( $c->name ?? '' ) ) ? Songpress_Profiles::chip( $c->name, 22 ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $c->name ?? '' ) . '"></td>';
+		$h = '<tr><td>' . ( '' !== trim( (string) ( $c->name ?? '' ) ) ? Songpress_Profiles::chip( $c->name, 22, Songpress_Profiles::kind_for_role( $role ) ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $c->name ?? '' ) . '"></td>';
 		$h .= '<td><input name="' . esc_attr( $n ) . '[ipi]" size="12" value="' . esc_attr( $c->ipi ?? '' ) . '"></td>';
 		if ( $with_share ) {
 			$share = ( isset( $c->share ) && null !== $c->share ) ? rtrim( rtrim( (string) $c->share, '0' ), '.' ) : '';
@@ -918,7 +918,7 @@ class Songpress_Admin {
 		}
 		echo '</p><table class="widefat striped" style="max-width:760px"><tbody>';
 		foreach ( $rows as $r ) {
-			echo '<tr><td style="width:44px">' . wp_kses_post( Songpress_Profiles::chip( $r->name, 32 ) ) . '</td><td><a href="' . esc_url( self::url( 'songpress-people', array( 'profile' => (int) $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( ucfirst( $r->kind ) ) . '</td></tr>';
+			echo '<tr><td style="width:44px">' . wp_kses_post( Songpress_Profiles::chip( $r->name, 32, $r->kind ) ) . '</td><td><a href="' . esc_url( self::url( 'songpress-people', array( 'profile' => (int) $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( ucfirst( $r->kind ) ) . '</td></tr>';
 		}
 		if ( ! $rows ) {
 			echo '<tr><td>' . esc_html__( 'Nothing here yet. Importing your old catalog fills this in.', 'songpress' ) . '</td></tr>';

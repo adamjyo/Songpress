@@ -226,19 +226,31 @@ $o->exec( "CREATE TABLE publishers (id INTEGER PRIMARY KEY, name TEXT, photo TEX
 $o->exec( "INSERT INTO publishers (name,photo,website) VALUES ('Pub Co','/wp-content/uploads/art-9.jpg','https://pub.test')" );
 $r = Songpress_Profiles::import_sqlite( $old );
 check( 'profiles imported', $r, array( 'people' => 2, 'bands' => 1, 'publishers' => 1 ) );
-$ann = Songpress_Profiles::find( 'ann smith' );
+$ann = Songpress_Profiles::find( 'ann smith', 'person' );
 check( 'name matched ignoring spacing and case', $ann->name, 'Ann Smith' );
-check( 'alias matches too', Songpress_Profiles::find( 'ANNIE S' )->id, $ann->id );
+check( 'alias matches too', Songpress_Profiles::find( 'ANNIE S', 'person' )->id, $ann->id );
 check( 'photo link became a media id', (int) $ann->photo_id, 41 );
 check( 'photo url resolves from the media id', Songpress_Profiles::photo_url( $ann ), 'https://site.test/uploads/art-41-thumbnail.jpg' );
-check( 'outside photo kept as a link', Songpress_Profiles::find( 'the lamps' )->photo_url, 'https://elsewhere.test/lamps.png' );
-check( 'root-relative photo made absolute and matched', (int) Songpress_Profiles::find( 'pub co' )->photo_id, 9 );
+check( 'outside photo kept as a link', Songpress_Profiles::find( 'the lamps', 'band' )->photo_url, 'https://elsewhere.test/lamps.png' );
+check( 'root-relative photo made absolute and matched', (int) Songpress_Profiles::find( 'pub co', 'publisher' )->photo_id, 9 );
 Songpress_Profiles::upsert( 'person', 'Ann Smith', array( 'bio' => 'Edited by hand' ) );
 Songpress_Profiles::import_sqlite( $old );
 global $wpdb;
 check( 'rerun keeps hand edits', $wpdb->get_var( 'SELECT bio FROM wp_songpress_profiles WHERE name_key = \'ann smith\'' ), 'Edited by hand' );
 check( 'rerun adds no duplicates', (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_profiles' ), 4 );
+Songpress_Profiles::reset_cache();
 check( 'chip falls back to initials', false !== strpos( Songpress_Profiles::chip( 'Zed Nobody' ), '>ZN<' ), true );
+// a band and a person with the same name stay separate
+$p1 = Songpress_Profiles::upsert( 'person', 'Echo', array( 'bio' => 'the person', 'photo_url' => 'https://site.test/uploads/art-71.jpg' ) );
+$p2 = Songpress_Profiles::upsert( 'band', 'Echo', array( 'bio' => 'the band', 'photo_url' => 'https://site.test/uploads/art-72.jpg' ) );
+check( 'same name makes two profiles', $p1 !== $p2, true );
+check( 'person lookup gets the person', Songpress_Profiles::find( 'Echo', 'person' )->bio, 'the person' );
+check( 'band lookup gets the band', Songpress_Profiles::find( 'echo', 'band' )->bio, 'the band' );
+check( 'publisher lookup does not fall back to either', Songpress_Profiles::find( 'Echo', 'publisher' ), null );
+check( 'a person-only name is not found as a band', Songpress_Profiles::find( 'Ann Smith', 'band' ), null );
+check( 'band chip uses the band photo', false !== strpos( Songpress_Profiles::chip( 'Echo', 28, 'band' ), 'art-72' ), true );
+check( 'person chip uses the person photo', false !== strpos( Songpress_Profiles::chip( 'Echo', 28, 'person' ), 'art-71' ), true );
+check( 'roles map to kinds', array( Songpress_Profiles::kind_for_role( 'writer' ), Songpress_Profiles::kind_for_role( 'performer' ), Songpress_Profiles::kind_for_role( 'publisher' ), Songpress_Profiles::kind_for_role( 'artist' ) ), array( 'person', 'person', 'publisher', 'band' ) );
 unlink( $old );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
