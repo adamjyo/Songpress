@@ -101,7 +101,7 @@ class Songpress_Editor {
 			}
 		}
 		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Add as many people as the song has.', 'songpress' ) ) . '</p>';
-		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true, true );
+		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 4, true, true, true );
 		if ( ! $root ) {
 			$o .= self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
 			$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false );
@@ -256,32 +256,36 @@ class Songpress_Editor {
 		return $o;
 	}
 
-	/** The publishing numbers, always listed, empty or not. Codes not shown here (and second values of a shown one) are kept as hidden fields so saving never loses them. */
+	/** The publishing numbers, always listed, empty or not. A second value of the same kind gets its own field labelled "Alt". */
 	private static function code_fields( $existing, $root ) {
-		$shown = array( 'iswc' => 'ISWC', 'ascap' => 'ASCAP', 'bmi' => 'BMI', 'mlc' => 'MLC', 'ccli' => 'CCLI', 'distrokid' => 'DistroKid' );
+		$shown = array( 'iswc' => 'ISWC', 'ascap' => 'ASCAP', 'bmi' => 'BMI', 'mlc' => 'MLC', 'ccli' => 'CCLI', 'distrokid' => 'DistroKid', 'copyright' => __( 'Copyright no.', 'songpress' ), 'work_id' => __( 'Work ID', 'songpress' ), 'upc' => 'UPC' );
 		if ( ! $root ) {
 			$shown['isrc'] = __( 'ISRC (this version)', 'songpress' );
 		}
-		$have = array();
-		$keep = array();
+		$by = array();
 		foreach ( $existing as $c ) {
-			$k = strtolower( (string) $c->kind );
-			if ( isset( $shown[ $k ] ) && ! isset( $have[ $k ] ) ) {
-				$have[ $k ] = (string) $c->value;
-			} else {
-				$keep[] = $c;
-			}
+			$by[ strtolower( (string) $c->kind ) ][] = (string) $c->value;
 		}
-		$i = 0;
-		$o = '<div class="spe-codes">';
+		$fields = array();
 		foreach ( $shown as $k => $label ) {
-			$o .= '<label class="spe-field"><span>' . esc_html( $label ) . '</span><input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $k ) . '"><input name="codes[' . $i . '][value]" value="' . esc_attr( $have[ $k ] ?? '' ) . '"></label>';
+			$vals = $by[ $k ] ?? array( '' );
+			foreach ( $vals as $n => $v ) {
+				$fields[] = array( $k, 0 === $n ? $label : $label . ' Alt' . ( $n > 1 ? ' ' . $n : '' ), $v );
+			}
+			unset( $by[ $k ] );
+		}
+		$o = '<div class="spe-codes">';
+		$i = 0;
+		foreach ( $fields as $f ) {
+			$o .= '<label class="spe-field"><span>' . esc_html( $f[1] ) . '</span><input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $f[0] ) . '"><input name="codes[' . $i . '][value]" value="' . esc_attr( $f[2] ) . '"></label>';
 			++$i;
 		}
 		$o .= '</div>';
-		foreach ( $keep as $c ) {
-			$o .= '<input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $c->kind ) . '"><input type="hidden" name="codes[' . $i . '][value]" value="' . esc_attr( $c->value ) . '">';
-			++$i;
+		foreach ( $by as $k => $vals ) { // a kind this form has no field for (an old import, or an ISRC on the original): kept, not shown
+			foreach ( $vals as $v ) {
+				$o .= '<input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $k ) . '"><input type="hidden" name="codes[' . $i . '][value]" value="' . esc_attr( $v ) . '">';
+				++$i;
+			}
 		}
 		return $o;
 	}

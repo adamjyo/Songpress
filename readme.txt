@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.46.1
+Stable tag: 0.46.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.46.2 =
+* Publishing numbers now also list Copyright no., Work ID and UPC. A second number of the same kind gets its own field labelled "Alt" (Alt 2 for a third). Writers start with four rows and sit closer together.
 
 = 0.46.1 =
 * Publishing numbers are always listed, empty or not: ISWC, ASCAP, BMI, MLC, CCLI and DistroKid (plus the ISRC on versions). No more "Add a code". Any other code already saved is kept.
