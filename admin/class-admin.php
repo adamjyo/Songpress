@@ -1387,9 +1387,9 @@ class Songpress_Admin {
 		self::back( 'songpress-settings', array( 'checked' => 1 ) );
 	}
 
-	/** Any page (published, draft, private or trashed) other than $except that holds this address. */
+	/** Any page or Media Library item (published, draft, private, trashed or an attachment) other than $except that holds this address. WordPress shares one set of addresses between pages and media. */
 	private static function page_with_slug( $slug, $except ) {
-		$found = get_posts( array( 'post_type' => 'page', 'name' => $slug, 'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' ), 'exclude' => array( (int) $except ), 'numberposts' => 1 ) );
+		$found = get_posts( array( 'post_type' => array( 'page', 'attachment' ), 'name' => $slug, 'post_status' => 'any', 'exclude' => array( (int) $except ), 'numberposts' => 1 ) );
 		return $found ? $found[0] : null;
 	}
 
@@ -1405,14 +1405,19 @@ class Songpress_Admin {
 		if ( $pid && Songpress_Install::page_ok( $pid ) ) {
 			$slug  = $defs[ $opt ]['slug'];
 			$other = self::page_with_slug( $slug, $pid );
-			if ( $other && 'trash' === $other->post_status ) {
-				wp_update_post( array( 'ID' => (int) $other->ID, 'post_name' => $slug . '-old' ) ); // a trashed page still holds the address; free it without deleting anything
+			if ( $other && ( 'trash' === $other->post_status || 'attachment' === $other->post_type ) ) {
+				wp_update_post( array( 'ID' => (int) $other->ID, 'post_name' => $slug . '-old' ) ); // a trashed page or a media file still holds the address; free it without deleting anything
 				$other = null;
 			}
 			if ( $other ) {
 				self::back( 'songpress-settings', array( 'err' => rawurlencode( sprintf( /* translators: 1: address, 2: page title, 3: page status */ __( '/%1$s is already used by the page "%2$s" (%3$s). Rename or trash that page, then try again.', 'songpress' ), $slug, $other->post_title, $other->post_status ) ) ) );
 			}
 			wp_update_post( array( 'ID' => $pid, 'post_name' => $slug, 'post_status' => 'publish' ) );
+			delete_post_meta( $pid, '_wp_old_slug' ); // otherwise WordPress keeps sending the old address to the new one
+			$now = get_post( $pid );
+			if ( $now && $now->post_name !== $slug ) {
+				self::back( 'songpress-settings', array( 'err' => rawurlencode( sprintf( /* translators: 1: wanted address, 2: address WordPress used instead */ __( 'WordPress would not give this page /%1$s and used /%2$s. Something else on the site holds /%1$s.', 'songpress' ), $slug, $now->post_name ) ) ) );
+			}
 		}
 		self::back( 'songpress-settings', array( 'saved' => 1 ) );
 	}
