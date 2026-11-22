@@ -55,7 +55,7 @@ class Songpress_Frontend {
 		$status = isset( $_GET['sp_status'] ) ? sanitize_key( wp_unslash( $_GET['sp_status'] ) ) : '';
 		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
-		$out    = '<div class="songpress sp-app">' . self::head( __( 'Songs', 'songpress' ) );
+		$out    = '<div class="songpress sp-app">' . self::tabs( 'catalog', 'top' ) . self::head( __( 'Songs', 'songpress' ) );
 		$out   .= '<form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '">' . ( '' !== $status ? '<input type="hidden" name="sp_status" value="' . esc_attr( $status ) . '">' : '' ) . '</form>';
 		$out   .= '<div class="songpress-chips"><a class="' . ( '' === $status ? 'on' : '' ) . '" href="' . esc_url( remove_query_arg( 'sp_status' ) ) . '">' . esc_html__( 'All', 'songpress' ) . '</a>';
 		foreach ( Songpress_Songs::STATUSES as $k => $label ) {
@@ -81,13 +81,13 @@ class Songpress_Frontend {
 	}
 
 	/** Songs / Profile tabs along the bottom, linking to the two pages SongPress made. */
-	private static function tabs( $on ) {
+	private static function tabs( $on, $pos = 'bottom' ) {
 		$c = (int) get_option( 'songpress_page_catalog' );
 		$p = (int) get_option( 'songpress_page_profile' );
 		if ( ! $c || ! $p || ! Songpress_Install::page_ok( $c ) || ! Songpress_Install::page_ok( $p ) ) {
 			return '';
 		}
-		return '<nav class="songpress-tabs" aria-label="SongPress"><a class="' . ( 'catalog' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $c ) ) . '">' . esc_html__( 'Songs', 'songpress' ) . '</a><a class="' . ( 'profile' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html__( 'Profile', 'songpress' ) . '</a></nav>';
+		return '<nav class="songpress-tabs songpress-tabs-' . $pos . '" aria-label="SongPress"><a class="' . ( 'catalog' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $c ) ) . '">' . esc_html__( 'Songs', 'songpress' ) . '</a><a class="' . ( 'profile' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html__( 'Profile', 'songpress' ) . '</a></nav>';
 	}
 
 	private static function song_view( $id, $uid ) {
@@ -98,7 +98,7 @@ class Songpress_Frontend {
 		if ( ! $s ) {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
-		return '<div class="songpress sp-app">' . self::song_body( $s, $uid, '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
+		return '<div class="songpress sp-app">' . self::tabs( 'catalog', 'top' ) . self::song_body( $s, $uid, '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The song itself: cover, audio, title, writers, chart. Shared by the logged-in view and the public share page. */
@@ -210,7 +210,7 @@ class Songpress_Frontend {
 		}
 		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
 		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
-		$out  = '<div class="songpress songpress-profile sp-app"><div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
+		$out  = '<div class="songpress songpress-profile sp-app">' . self::tabs( 'profile', 'top' ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Songs', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
 		$out .= '<p class="songpress-sub">' . esc_html__( 'Earnings and streams will appear here when that feature is added.', 'songpress' ) . '</p>';
