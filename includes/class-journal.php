@@ -301,6 +301,38 @@ class Songpress_Journal {
 		);
 	}
 
+	private static function len( $s ) {
+		return function_exists( 'mb_strlen' ) ? mb_strlen( (string) $s ) : strlen( (string) $s );
+	}
+
+	/** What moved between two copies of a note: changed fields as old and new, and how many characters of text came and went. Empty when nothing changed. */
+	public static function changes( $a, $b ) {
+		$out = array();
+		foreach ( array( 'title' => 'title', 'log_date' => 'date', 'kind' => 'kind', 'place' => 'place', 'authors' => 'authors', 'song_key' => 'key', 'tempo' => 'tempo' ) as $col => $name ) {
+			$x = (string) ( $a->$col ?? '' );
+			$y = (string) ( $b->$col ?? '' );
+			if ( $x !== $y ) {
+				$out[ $name ] = array( function_exists( 'mb_substr' ) ? mb_substr( $x, 0, 40 ) : substr( $x, 0, 40 ), function_exists( 'mb_substr' ) ? mb_substr( $y, 0, 40 ) : substr( $y, 0, 40 ) );
+			}
+		}
+		$o = (string) ( $a->notes ?? '' );
+		$n = (string) ( $b->notes ?? '' );
+		if ( $o !== $n ) {
+			$p = 0;
+			$m = min( strlen( $o ), strlen( $n ) );
+			while ( $p < $m && $o[ $p ] === $n[ $p ] ) {
+				$p++;
+			}
+			$q = 0;
+			while ( $q < $m - $p && $o[ strlen( $o ) - 1 - $q ] === $n[ strlen( $n ) - 1 - $q ] ) {
+				$q++;
+			}
+			$out['added']   = self::len( substr( $n, $p, strlen( $n ) - $p - $q ) );
+			$out['removed'] = self::len( substr( $o, $p, strlen( $o ) - $p - $q ) );
+		}
+		return $out;
+	}
+
 	/** A note for the list: no body, just what the list needs (a short preview and the #tags), so the page stays small. The full text is fetched when a note is opened. */
 	public static function shape_slim( $e ) {
 		$a    = self::shape( $e );
@@ -332,12 +364,20 @@ class Songpress_Journal {
 		$op = (string) ( $in['op'] ?? '' );
 		$id = absint( $in['entry_id'] ?? 0 );
 		if ( 'save' === $op ) {
+			$before = $id ? self::row( $id ) : null;
 			list( $nid, $err ) = self::persist( $in );
 			if ( '' !== $err ) {
 				return array( 'ok' => false, 'error' => $err );
 			}
 			$nrow = self::row( $nid );
-			Songpress_Audit::log( 'notes', ( absint( $in['entry_id'] ?? 0 ) ? 'Edited' : 'Added' ) . ' a note', $nrow->title, array( 'entry_id' => $nid ) );
+			if ( ! $before ) {
+				Songpress_Audit::log( 'notes', 'Added a note', $nrow->title, array( 'entry_id' => $nid, 'added' => self::len( $nrow->notes ) ) );
+			} else {
+				$ch = self::changes( $before, $nrow );
+				if ( $ch ) {
+					Songpress_Audit::log_change( 'notes', array( 'Edited a note', 'Added a note' ), (string) $nrow->title, 'entry_id', $nid, $ch );
+				}
+			}
 			return array( 'ok' => true, 'note' => self::shape( $nrow ) );
 		}
 		if ( 'flag' === $op && $id ) {

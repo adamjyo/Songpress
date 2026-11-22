@@ -74,6 +74,41 @@ class Songpress_Audit {
 		) );
 	}
 
+	/**
+	 * Log a change to one thing, folding quick repeats into the one entry (a note that saves as you type would otherwise fill the log).
+	 * $changes holds only what moved: field => array( old, new ), or 'added' / 'removed' character counts that are summed. A repeat within $window seconds by the same person
+	 * keeps the first old value, takes the newest new value, adds up the counts and counts the saves.
+	 */
+	public static function log_change( $area, array $actions, $subject, $key, $id, array $changes, $window = 900 ) {
+		global $wpdb;
+		if ( ! $wpdb || ! $changes ) {
+			return;
+		}
+		$t    = Songpress_Install::table( 'audit' );
+		$uid  = (int) get_current_user_id();
+		$like = $wpdb->esc_like( '{"' . $key . '":' . (int) $id . ',' ) . '%';
+		$ph   = implode( ',', array_fill( 0, count( $actions ), '%s' ) );
+		$last = $wpdb->get_row( $wpdb->prepare( "SELECT id, action, detail, created_at FROM {$t} WHERE user_id = %d AND area = %s AND action IN ({$ph}) AND detail LIKE %s ORDER BY id DESC LIMIT 1", array_merge( array( $uid, $area ), $actions, array( $like ) ) ) ); // phpcs:ignore WordPress.DB
+		$now  = time();
+		if ( $last && ( $now - (int) strtotime( $last->created_at . ' UTC' ) ) <= $window ) {
+			$d = json_decode( (string) $last->detail, true );
+			$d = is_array( $d ) ? $d : array( $key => (int) $id );
+			foreach ( $changes as $k => $v ) {
+				if ( 'added' === $k || 'removed' === $k ) {
+					$d[ $k ] = (int) ( $d[ $k ] ?? 0 ) + (int) $v;
+				} elseif ( isset( $d[ $k ] ) && is_array( $d[ $k ] ) && is_array( $v ) ) {
+					$d[ $k ] = array( $d[ $k ][0], $v[1] );
+				} else {
+					$d[ $k ] = $v;
+				}
+			}
+			$d['saves'] = (int) ( $d['saves'] ?? 1 ) + 1;
+			$wpdb->update( $t, array( 'detail' => wp_json_encode( $d ), 'subject' => mb_substr( (string) $subject, 0, 255 ), 'created_at' => current_time( 'mysql', true ) ), array( 'id' => (int) $last->id ) );
+			return;
+		}
+		self::log( $area, $actions[0], $subject, array( $key => (int) $id ) + $changes );
+	}
+
 	/** Pure: turn a request into array( area, action ) for a SongPress admin-post action, or null if it is not one. */
 	public static function classify( $action ) {
 		$action = (string) $action;

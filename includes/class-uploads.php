@@ -632,6 +632,9 @@ class Songpress_Uploads {
 				}
 			}
 		}
+		if ( $added ) {
+			Songpress_Audit::log_change( 'notes', array( 'Imported notes' ), '', 'import', 1, array( 'added' => $added ), 1800 );
+		}
 		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip, 'zip' => $zip ) );
 	}
 
