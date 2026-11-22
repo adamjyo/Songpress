@@ -340,6 +340,14 @@ class Songpress_Journal {
 			}
 			return array( 'ok' => true, 'versions' => $out );
 		}
+		if ( 'media' === $op ) {
+			$mq  = new WP_Query( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'post_mime_type' => 'audio', 's' => sanitize_text_field( (string) ( $in['q'] ?? '' ) ), 'posts_per_page' => 12, 'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true ) );
+			$out = array();
+			foreach ( $mq->posts as $p ) {
+				$out[] = array( 'title' => get_the_title( $p ), 'url' => (string) wp_get_attachment_url( $p->ID ) );
+			}
+			return array( 'ok' => true, 'items' => $out );
+		}
 		if ( 'songs' === $op ) {
 			$out = array();
 			foreach ( self::mentioned( (string) ( $in['text'] ?? '' ) ) as $m ) {
@@ -436,7 +444,7 @@ class Songpress_Journal {
 		}
 		$o .= '<input class="spn-search" id="spn-search" type="search" placeholder="' . esc_attr__( 'Search', 'songpress' ) . '"></div><div class="spn-list" id="spn-list"></div></div>';
 		$o .= '<div class="spn-main"><button type="button" class="spn-tgl spn-tgl-list" data-act="list" title="' . esc_attr__( 'Show or hide the list', 'songpress' ) . '">◧</button><button type="button" class="spn-tgl spn-tgl-info" data-act="info" title="' . esc_attr__( 'Show or hide the details', 'songpress' ) . '">◨</button>';
-		$o .= '<div class="spn-editor" id="spn-editor"><input class="spn-title" id="spn-title" placeholder="' . esc_attr__( 'Title', 'songpress' ) . '"><div class="spn-card"><textarea class="spn-body" id="spn-body" placeholder="' . esc_attr__( 'Write here. ^0378 links a song, #tag adds a tag.', 'songpress' ) . '"></textarea><div class="spn-prev" id="spn-prev" hidden></div>';
+		$o .= '<div class="spn-editor" id="spn-editor"><input class="spn-title" id="spn-title" placeholder="' . esc_attr__( 'Title', 'songpress' ) . '"><div class="spn-card"><textarea class="spn-body" id="spn-body" placeholder="' . esc_attr__( 'Write here. ^0378 links a song, #tag adds a tag.', 'songpress' ) . '"></textarea><div class="spn-prev" id="spn-prev" hidden></div><div class="spn-auds" id="spn-auds"></div><div class="spn-audbox" id="spn-audbox" hidden><button type="button" class="spn-audx" id="spn-audx" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button><div class="spn-drop" id="spn-drop" tabindex="0" role="button">' . esc_html__( 'Drop audio here to add it to WordPress media, or click to search or upload', 'songpress' ) . '</div><div class="spn-audpick" id="spn-audpick" hidden><input type="search" id="spn-audq" placeholder="' . esc_attr__( 'Search WordPress media', 'songpress' ) . '"><div id="spn-audres" class="spn-audres"></div><button type="button" id="spn-audup" class="spn-audupb">' . esc_html__( 'Upload from this computer…', 'songpress' ) . '</button></div></div>';
 		$o .= '<div class="spn-bar" id="spn-bar">';
 		foreach ( array( array( 'b', 'B', 'Bold' ), array( 'i', 'I', 'Italic' ), array( 'h', 'H', 'Heading' ), array( 'ul', '•', 'List' ), array( 'a', '🔗', 'Link' ), array( 'cp', '♫', 'ChordPro block' ), array( 'img', '▣', 'Image' ), array( 'aud', '♪', 'Audio' ), array( 'eye', '👁', 'Preview' ), '-', array( 'pin', '📌', 'Pin' ), array( 'arch', '🗄', 'Archive' ), array( 'del', '🗑', 'Delete' ) ) as $b ) {
 			$o .= is_array( $b ) ? '<button type="button" data-t="' . esc_attr( $b[0] ) . '" title="' . esc_attr( $b[2] ) . '" aria-label="' . esc_attr( $b[2] ) . '">' . esc_html( $b[1] ) . '</button>' : '<i class="spn-sep"></i>';
@@ -519,7 +527,7 @@ function fill(n){
  sizeBody();showPrev=false;$('spn-prev').hidden=true;$('spn-body').hidden=false;
  songs();renderList();chips();showPos();$('spn-hist').hidden=true}
 function blank(){return {id:0,date:D.today,kind:'day',title:'',notes:'',place:'',key:'',tempo:'',authors:'',lat:'',lng:'',created:'',pinned:0,archived:0}}
-function sizeBody(){var t=$('spn-body');t.style.height='auto';t.style.height=Math.max(t.scrollHeight,300)+'px'}
+function sizeBody(){var t=$('spn-body');t.style.height='auto';t.style.height=Math.max(t.scrollHeight,300)+'px';if(typeof auds==='function')auds()}
 function post(f){
  var fd=new FormData();fd.append('action','songpress_journal_ajax');fd.append('_wpnonce',D.nonce);
  Object.keys(f).forEach(function(k){fd.append(k,f[k])});
@@ -561,7 +569,8 @@ function md(t){
  if(inList)out.push('</ul>');if(inCode)out.push('</pre>');
  return out.join('\n')}
 function inl(s){
- return s.replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img src="$2" alt="$1">')
+ return s.replace(/\[♪\s*([^\]]*)\]\((https?:[^)\s]+)\)/g,'<span class="spn-au"><span>♪ $1</span><audio controls preload="none" src="$2"></audio></span>')
+  .replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img src="$2" alt="$1">')
   .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
   .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*]+)\*/g,'$1<i>$2</i>')
   .replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,'$1<span class="spn-hash">#$2</span>')
@@ -584,8 +593,22 @@ $('spn-hist-show').addEventListener('click',function(e){e.preventDefault();var h
   h.innerHTML=r.versions.map(function(v,i){return '<div class="spn-ver"><span>'+esc(longDate(v.at)+' '+v.at.slice(11))+'<small>'+esc((v.title||v.notes).replace(/\s+/g,' ').slice(0,60))+'</small></span><button type="button" data-v="'+i+'">Restore</button></div>'}).join('');
   h.onclick=function(ev){var b=ev.target.closest('[data-v]');if(!b)return;var v=r.versions[+b.getAttribute('data-v')];$('spn-title').value=v.title;$('spn-body').value=v.notes;sizeBody();touch();setStatus('Restored. The version you replaced is kept too.')}})});
 function upload(file,kind){if(!D.canup){setStatus('You cannot upload files');return}setStatus('Uploading…');var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',D.upnon);fd.append('file',file);
- fetch(D.aj,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){setStatus((j.data&&j.data.message)||'Upload failed');return}setStatus('');var nm=file.name.replace(/\.[^.]+$/,'');wrap(kind==='img'?'![':'[♪ ',']('+j.data.url+')',nm)}).catch(function(){setStatus('Upload failed')})}
+ fetch(D.aj,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){setStatus((j.data&&j.data.message)||'Upload failed');return}setStatus('');var nm=file.name.replace(/\.[^.]+$/,'');if(kind==='img')wrap('![',']('+j.data.url+')',nm);else addAud(nm,j.data.url)}).catch(function(){setStatus('Upload failed')})}
 function pickFile(kind,accept){var i=document.createElement('input');i.type='file';i.accept=accept;i.onchange=function(){if(i.files[0])upload(i.files[0],kind)};i.click()}
+function audLinks(t){var r=/\[♪\s*([^\]]*)\]\((https?:[^)\s]+)\)/g,m,o=[];while((m=r.exec(t)))o.push([m[1],m[2]]);return o}
+function auds(){var a=audLinks($('spn-body').value),h=$('spn-auds');if(!a.length){h.innerHTML='';return}var key=a.map(function(x){return x[1]}).join('|');if(h.getAttribute('data-k')===key)return;h.setAttribute('data-k',key);h.innerHTML=a.map(function(x){return '<div class="spn-au"><span>♪ '+esc(x[0]||'Audio')+'</span><audio controls preload="none" src="'+esc(x[1])+'"></audio></div>'}).join('')}
+function addAud(name,url){wrap('[♪ ',']('+url+')',name||'Audio');$('spn-audbox').hidden=true;auds()}
+var audT=null;
+function audSearch(){var qv=$('spn-audq').value;post({op:'media',q:qv}).then(function(r){var h=$('spn-audres');if(!r.items||!r.items.length){h.innerHTML='<em>No audio found in WordPress media.</em>';return}h.innerHTML=r.items.map(function(x,i){return '<button type="button" data-i="'+i+'">♪ '+esc(x.title||'Audio')+'</button>'}).join('');h.onclick=function(ev){var b=ev.target.closest('[data-i]');if(!b)return;var x=r.items[+b.getAttribute('data-i')];addAud(x.title,x.url)}})}
+function audFiles(fl){Array.prototype.forEach.call(fl,function(f){if(/^audio\//.test(f.type)||/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(f.name))upload(f,'aud');else setStatus('That is not an audio file')})}
+$('spn-drop').addEventListener('click',function(){$('spn-audpick').hidden=false;$('spn-audq').focus();audSearch()});
+$('spn-drop').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();this.click()}});
+['dragenter','dragover'].forEach(function(n){$('spn-drop').addEventListener(n,function(e){e.preventDefault();this.classList.add('over')})});
+['dragleave','drop'].forEach(function(n){$('spn-drop').addEventListener(n,function(e){e.preventDefault();this.classList.remove('over');if(n==='drop'&&e.dataTransfer)audFiles(e.dataTransfer.files)})});
+$('spn-audq').addEventListener('input',function(){clearTimeout(audT);audT=setTimeout(audSearch,250)});
+$('spn-audup').addEventListener('click',function(){pickFile('aud','audio/*')});
+$('spn-audx').addEventListener('click',function(){$('spn-audbox').hidden=true});
+$('spn-body').addEventListener('input',auds);
 function mdFile(n){return '# '+head(n)+'\n\n'+(n.notes||'')+'\n'}
 function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
 function pick(id){var n=notes.find(function(x){return x.id===id});if(!n)return;(dirty?save(true):Promise.resolve()).then(function(){fill(n);if(window.innerWidth<=800)root.classList.remove('m-list')})}
@@ -619,7 +642,7 @@ $('spn-bar').addEventListener('click',function(e){
  else if(t==='a'){u=window.prompt('Link address (https://…)');if(u)wrap('[',']('+u+')','link')}
  else if(t==='cp')wrap('\n```chordpro\n','\n```\n','[C]Words with [G]chords');
  else if(t==='img'){if(e.shiftKey||!D.canup){u=window.prompt('Image address');if(u)wrap('![',']('+u+')','image')}else pickFile('img','image/*')}
- else if(t==='aud'){if(e.shiftKey||!D.canup){u=window.prompt('Audio address');if(u)wrap('[♪ ',']('+u+')','audio')}else pickFile('aud','audio/*')}
+ else if(t==='aud'){if(e.shiftKey||!D.canup){u=window.prompt('Audio address');if(u)wrap('[♪ ',']('+u+')','audio')}else{var bx=$('spn-audbox');bx.hidden=!bx.hidden;if(!bx.hidden){$('spn-audpick').hidden=true}}}
  else if(t==='eye'){showPrev=!showPrev;$('spn-prev').hidden=!showPrev;$('spn-body').hidden=showPrev;if(showPrev)$('spn-prev').innerHTML=md($('spn-body').value);b.classList.toggle('on',showPrev)}
  else if(t==='pin'||t==='arch'){
   if(!cur||!cur.id){setStatus('Save the note first');return}
