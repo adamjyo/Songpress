@@ -729,7 +729,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-toast.out{opacity:0;transform:translateX(-50%) translateY(-12px)}
 @keyframes spToastIn{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%)}}
 .songpress-searchbar .songpress-len{flex:none;margin:0}
-.spn-auds{display:flex;flex-direction:column;gap:6px;margin:10px 0 0}
+.spn-auds{display:flex;flex-direction:column;gap:6px;margin:0 0 12px}.spn-auds:empty{display:none}
 .spn-au{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border:1px solid #34302b;border-radius:10px;background:#1c1916;font:13px system-ui,sans-serif;color:#d9d2c8}
 .spn-au audio{height:32px;max-width:100%}
 .spn-audbox{position:absolute;z-index:7;box-shadow:0 10px 30px rgba(0,0,0,.5);margin:0;padding:12px;border:1px solid #34302b;border-radius:12px;background:#17140f}
