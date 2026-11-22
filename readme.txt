@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.0
+Stable tag: 0.63.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.1 =
+* Works list: bulk edit is off until you press Bulk edit (remembered), and its Delete selected button stays hidden until you tick Show delete.
 
 = 0.63.0 =
 * Works list: tick works (or the box at the top for all) and a bar appears to set their Status, Genre, Style, Band or Themes in one go, or delete them (Managers). Works you cannot edit are skipped, and so are fields that do not apply to an original work.

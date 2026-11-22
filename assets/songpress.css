@@ -718,3 +718,9 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-bulkbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;margin:0 0 10px;background:var(--sp-card);border:1px solid var(--sp-line);border-radius:12px}
 .songpress-bulkbar[hidden],.songpress-bulkbar [hidden]{display:none}
 .songpress-bulkbar select,.songpress-bulkbar input[type=text]{min-height:34px}
+
+.songpress-bulktoggle{margin:0 0 8px;padding:6px 12px;border-radius:999px;border:1px solid var(--sp-line);background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer}
+.songpress-bulktoggle[aria-pressed=true]{border-color:var(--sp-accent,#e8a33d);color:var(--sp-accent,#e8a33d)}
+#songpress-bulk:not(.sp-bulk-on) .songpress-pick,#songpress-bulk:not(.sp-bulk-on) .songpress-pickall{display:none}
+.songpress-bulkshowdel{font-size:13px;opacity:.8;margin-left:auto}
+.songpress-bulkdel[hidden]{display:none}

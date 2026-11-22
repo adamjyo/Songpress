@@ -329,6 +329,7 @@ class Songpress_Frontend {
 	/** The form around the list and its bar of bulk actions, which shows when something is ticked. */
 	private static function bulk_open() {
 		$o  = '<form method="post" id="songpress-bulk" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_bulk', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_bulk"><input type="hidden" name="sp_return" value="' . esc_url( Songpress_Editor::list_url() ) . '">';
+		$o .= '<button type="button" class="songpress-bulktoggle" aria-pressed="false">' . esc_html__( 'Bulk edit', 'songpress' ) . '</button>';
 		$o .= '<div class="songpress-bulkbar" hidden><b class="songpress-bulkcount"></b> ';
 		$o .= '<select name="field" class="songpress-bulkfield"><option value="status">' . esc_html__( 'Status', 'songpress' ) . '</option><option value="genre">' . esc_html__( 'Genre', 'songpress' ) . '</option><option value="style">' . esc_html__( 'Style', 'songpress' ) . '</option><option value="artist">' . esc_html__( 'Band', 'songpress' ) . '</option><option value="themes">' . esc_html__( 'Themes', 'songpress' ) . '</option></select> ';
 		$o .= '<select name="value_status" class="songpress-bulkstatus">';
@@ -341,7 +342,8 @@ class Songpress_Frontend {
 		}
 		$o .= '</datalist> <button type="submit" name="do" value="set" class="spe-save">' . esc_html__( 'Apply to selected', 'songpress' ) . '</button>';
 		if ( Songpress_Caps::can( 'delete' ) ) {
-			$o .= ' <button type="submit" name="do" value="delete" class="spe-btn danger" data-confirm="' . esc_attr__( 'Delete the selected works for good? An original work takes its versions with it. This cannot be undone.', 'songpress' ) . '">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
+			$o .= ' <label class="songpress-bulkshowdel"><input type="checkbox" class="songpress-bulkdelon"> ' . esc_html__( 'Show delete', 'songpress' ) . '</label>';
+			$o .= ' <button type="submit" name="do" value="delete" hidden class="spe-btn danger songpress-bulkdel" data-confirm="' . esc_attr__( 'Delete the selected works for good? An original work takes its versions with it. This cannot be undone.', 'songpress' ) . '">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
 		}
 		$o .= '</div><script>(function(){var f=document.getElementById("songpress-bulk");if(!f)return;var bar=f.querySelector(".songpress-bulkbar"),all=f.querySelector(".songpress-pickall"),fld=f.querySelector(".songpress-bulkfield"),st=f.querySelector(".songpress-bulkstatus"),tx=f.querySelector(".songpress-bulktext"),n=f.querySelector(".songpress-bulkcount");'
 			. 'function boxes(){return f.querySelectorAll(".songpress-pick");}'
@@ -349,7 +351,13 @@ class Songpress_Frontend {
 			. 'function mode(){var s=fld.value==="status";st.hidden=!s;st.disabled=!s;tx.hidden=s;tx.disabled=s;tx.setAttribute("list",fld.value==="genre"?"songpress-bulkgenres":"");}'
 			. 'f.addEventListener("change",function(e){if(e.target===all){boxes().forEach(function(b){b.checked=all.checked;});}if(e.target===fld){mode();}sync();});'
 			. 'f.addEventListener("click",function(e){var b=e.target.closest("[data-confirm]");if(b&&!window.confirm(b.getAttribute("data-confirm"))){e.preventDefault();}});'
-			. 'mode();sync();})();</script>';
+			. 'var K="songpress_bulk_on",D="songpress_bulk_del",tg=f.querySelector(".songpress-bulktoggle"),dc=f.querySelector(".songpress-bulkdelon"),db=f.querySelector(".songpress-bulkdel");'
+			. 'function rd(k){try{return localStorage.getItem(k)==="1";}catch(x){return false;}}function wr(k,v){try{localStorage.setItem(k,v?"1":"0");}catch(x){}}'
+			. 'function on(v){f.classList.toggle("sp-bulk-on",v);tg.setAttribute("aria-pressed",v?"true":"false");if(!v){boxes().forEach(function(b){b.checked=false;});if(all){all.checked=false;}}sync();}'
+			. 'function dl(v){if(dc){dc.checked=v;}if(db){db.hidden=!v;db.disabled=!v;}}'
+			. 'tg.addEventListener("click",function(){var v=!f.classList.contains("sp-bulk-on");wr(K,v);on(v);});'
+			. 'if(dc){dc.addEventListener("change",function(){wr(D,dc.checked);dl(dc.checked);});}'
+			. 'mode();on(rd(K));dl(rd(D));})();</script>';
 		return $o;
 	}
 
