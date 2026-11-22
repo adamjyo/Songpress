@@ -506,3 +506,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
  body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 32px)}
  .sp-main{margin-left:232px}
 }
+
+/* rail: the selected link is shown by accent-coloured text, not a box */
+.sp-side a.on{background:transparent;color:#f5a524;font-weight:600}
+.sp-side a.on svg{color:#f5a524}
