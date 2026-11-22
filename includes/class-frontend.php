@@ -196,7 +196,7 @@ class Songpress_Frontend {
 			return Songpress_Editor::render( absint( $_GET['sp_song'] ) ); // people who can edit a song open it in the editor
 		}
 		if ( isset( $_GET['sp_song'] ) ) {
-			return self::song_view( absint( $_GET['sp_song'] ), $uid ) . wp_kses_post( songpress_public_donate_link() );
+			return self::song_view( absint( $_GET['sp_song'] ), $uid ); // nothing under the chart
 		}
 		$q      = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : '';
 		$status = isset( $_GET['sp_status'] ) ? sanitize_key( wp_unslash( $_GET['sp_status'] ) ) : '';
