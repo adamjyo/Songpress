@@ -498,3 +498,11 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-side .sp-grow{flex:1 1 auto;min-height:12px}
 body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 32px)}
 @media (max-width:782px){body.admin-bar .sp-side{top:46px;height:calc(100dvh - 46px)}}
+
+/* rail: the whole left column, full height, flush with the window edge */
+@media (min-width:760px){
+ .sp-shell{display:block;min-height:100vh}
+ .sp-side{position:fixed;left:0;top:0;bottom:0;width:232px;height:auto;border-radius:0;box-shadow:none;z-index:5}
+ body.admin-bar .sp-side{top:32px;height:auto}
+ .sp-main{margin-left:232px}
+}
