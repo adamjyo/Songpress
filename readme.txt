@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.23.0
+Stable tag: 0.24.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.24.0 =
+* Art studio: Fill (bucket), Gradient, Rectangle, Ellipse (filled or outline), Select (drag a box; Delete clears it and later strokes stay inside it) and Pick colour join the Brush and Eraser. All work on drawing or picture layers and can be undone.
 
 = 0.23.0 =
 * Art studio: Brush and Eraser (size, flow, colour, undo, pen pressure) draw on a picture layer or on a new "+ Drawing" layer; drawings are saved to your Media Library when you save the project. "Make a picture with AI" sends your description (prefilled from the song's art prompt) to xAI with the key you paste in (stored on the site, never shown again), shows four pictures, and the one you click is added to the Media Library and the art.
