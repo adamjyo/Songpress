@@ -41,7 +41,7 @@ class Songpress_Audit {
 			'songs'         => __( 'Songs', 'songpress' ),
 			'notes'         => __( 'Notes', 'songpress' ),
 			'people'        => __( 'People', 'songpress' ),
-			'money'         => __( 'Money', 'songpress' ),
+			'money'         => __( 'Stats', 'songpress' ),
 			'sessions'      => __( 'Sessions', 'songpress' ),
 			'art'           => __( 'Art', 'songpress' ),
 			'agreements'    => __( 'Agreements', 'songpress' ),

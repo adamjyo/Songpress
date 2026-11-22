@@ -602,7 +602,7 @@ class Songpress_Money {
 		$earned = self::earned_total();
 		$spent  = self::expense_total();
 		$paid   = self::paid_total();
-		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Money', 'songpress' ) . '</h2></div>' . self::notes();
+		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Stats', 'songpress' ) . '</h2></div>' . self::notes();
 		if ( ! $qs ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'No earnings loaded yet. Load your old catalog file at the bottom of this page.', 'songpress' ) . '</p>';
 		}
