@@ -42,6 +42,21 @@ class Songpress_Songs {
 		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$t} WHERE song_id = %d AND user_id = %d LIMIT 1", $song_id, $user_id ) );
 	}
 
+	/** A version with no title of its own shows its original work's title. */
+	public static function display_title( $s ) {
+		if ( '' !== trim( (string) $s->title ) ) {
+			return $s->title;
+		}
+		global $wpdb;
+		static $memo = array();
+		$fid = (int) $s->family_id;
+		if ( ! isset( $memo[ $fid ] ) ) {
+			$tbl         = Songpress_Install::table( 'songs' );
+			$memo[ $fid ] = (string) $wpdb->get_var( $wpdb->prepare( "SELECT title FROM {$tbl} WHERE family_id = %d AND title <> '' ORDER BY version_no ASC LIMIT 1", $fid ) );
+		}
+		return $memo[ $fid ];
+	}
+
 	public static function get( $id ) {
 		global $wpdb;
 		$t = Songpress_Install::table( 'songs' );

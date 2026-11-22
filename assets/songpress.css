@@ -92,7 +92,7 @@
 .sp-navgap{height:14px}
 .sp-grow{flex:1}
 .sp-main{min-width:0;padding:28px 36px}
-.sp-main .sp-app{max-width:1180px;margin:0;padding:0;background:transparent;border-radius:0;overflow:visible}
+.sp-main .sp-app{max-width:none;margin:0;padding:0;background:transparent;border-radius:0;overflow:visible}
 .sp-main .songpress-head img,.sp-main .songpress-tabs{display:none!important}
 .sp-main .songpress-head{grid-template-columns:minmax(0,1fr)}
 .sp-main .songpress-head h2{font-size:28px;letter-spacing:-.01em}
@@ -157,7 +157,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-rowlink .songpress-icons:not(.songpress-writers){grid-area:band}
 .songpress-icons .sp-face{margin:0!important}
 @container (min-width:620px){
- a.songpress-rowlink{grid-template-columns:56px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;grid-template-areas:none}
+ a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;grid-template-areas:none}
  .songpress-rowlink>*{grid-area:auto!important}
  .songpress-rowlink .songpress-sub{text-align:left}
 }
@@ -173,5 +173,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-app .songpress-colhead a{color:var(--sp-mute);white-space:nowrap}
 .sp-app .songpress-colhead a:hover,.sp-app .songpress-colhead a.on{color:var(--sp-accent)}
 @container (min-width:620px){
- .songpress-ch-main{display:grid;grid-template-columns:56px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;gap:0 12px;align-items:center}
+ .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;gap:0 12px;align-items:center}
 }
+
+.songpress-serial{white-space:nowrap}

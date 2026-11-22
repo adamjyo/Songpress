@@ -197,7 +197,7 @@ class Songpress_Frontend {
 			$band = '' !== trim( (string) $s->artist ) ? '<span class="songpress-icon songpress-bandicon" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . '</span>' : '';
 			$out .= '<li class="songpress-row">' . $art . '<a class="songpress-rowlink" href="' . $link . '">'
 				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
-				. '<span class="songpress-title">' . esc_html( $s->title ) . '</span>'
+				. '<span class="songpress-title">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</span>'
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'
@@ -248,7 +248,7 @@ class Songpress_Frontend {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
 		}
 		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</p>';
-		$out .= '<h2>' . esc_html( $s->title ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
+		$out .= '<h2>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
 		if ( '' !== trim( (string) $s->artist ) ) {
 			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
 		}
