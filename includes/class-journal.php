@@ -103,7 +103,7 @@ class Songpress_Journal {
 					$sid = self::sole_song( (string) ( $r['notes'] ?? '' ), $byser );
 				}
 				$rows[] = array( $key, substr( $r['log_date'], 0, 10 ), self::kind( (string) ( $r['kind'] ?? '' ) ), mb_substr( $title, 0, 255 ), (string) ( $r['notes'] ?? '' ), mb_substr( (string) ( $r['place'] ?? '' ), 0, 191 ), $sid, (int) ! empty( $r['pinned'] ), (int) ! empty( $r['archived'] ),
-					mb_substr( trim( (string) ( $r['song_key'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['song_tempo'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['authors'] ?? '' ) ), 0, 255 ), mb_substr( trim( (string) ( $r['latitude'] ?? '' ) ), 0, 24 ), mb_substr( trim( (string) ( $r['longitude'] ?? '' ) ), 0, 24 ) );
+					mb_substr( trim( (string) ( $r['song_key'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['song_tempo'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['authors'] ?? '' ) ), 0, 255 ), mb_substr( trim( (string) ( $r['latitude'] ?? '' ) ), 0, 24 ), mb_substr( trim( (string) ( $r['longitude'] ?? '' ) ), 0, 24 ), preg_match( '/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', (string) ( $r['created_at'] ?? '' ) ) ? str_replace( 'T', ' ', substr( $r['created_at'], 0, 19 ) ) : current_time( 'mysql' ) );
 			}
 			// only entries not already here, so a second load never doubles or overwrites edits
 			$have = array_flip( $wpdb->get_col( "SELECT source_key FROM {$j} WHERE source_key IS NOT NULL" ) ); // phpcs:ignore WordPress.DB
@@ -117,7 +117,7 @@ class Songpress_Journal {
 					}
 					continue;
 				}
-				$wpdb->insert( $j, array( 'source_key' => $r[0], 'log_date' => $r[1], 'kind' => $r[2], 'title' => $r[3], 'notes' => $r[4], 'place' => $r[5], 'song_id' => $r[6], 'pinned' => $r[7], 'archived' => $r[8], 'song_key' => $r[9], 'tempo' => $r[10], 'authors' => $r[11], 'latitude' => $r[12], 'longitude' => $r[13], 'user_id' => 0, 'created_at' => current_time( 'mysql' ) ) );
+				$wpdb->insert( $j, array( 'source_key' => $r[0], 'log_date' => $r[1], 'kind' => $r[2], 'title' => $r[3], 'notes' => $r[4], 'place' => $r[5], 'song_id' => $r[6], 'pinned' => $r[7], 'archived' => $r[8], 'song_key' => $r[9], 'tempo' => $r[10], 'authors' => $r[11], 'latitude' => $r[12], 'longitude' => $r[13], 'user_id' => 0, 'created_at' => $r[14] ) );
 				$out['journal']++;
 			}
 		}
@@ -227,10 +227,14 @@ class Songpress_Journal {
 			}
 			$row['song_id'] = self::sole_song( $notes, array_filter( $byser ) );
 		}
+		$cr = isset( $in['created_at'] ) && preg_match( '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/', (string) $in['created_at'], $cm ) ? $cm[1] . ' ' . $cm[2] . ':00' : '';
 		if ( $id ) {
+			if ( '' !== $cr ) {
+				$row['created_at'] = $cr;
+			}
 			$wpdb->update( self::t(), $row, array( 'id' => $id ) );
 		} else {
-			$wpdb->insert( self::t(), array_merge( $row, array( 'user_id' => get_current_user_id(), 'created_at' => current_time( 'mysql' ) ) ) );
+			$wpdb->insert( self::t(), array_merge( $row, array( 'user_id' => get_current_user_id(), 'created_at' => '' !== $cr ? $cr : current_time( 'mysql' ) ) ) );
 		}
 		self::go( array( 'j_ok' => $id ? __( 'Entry saved.', 'songpress' ) : __( 'Entry added.', 'songpress' ) ) );
 	}
@@ -253,7 +257,7 @@ class Songpress_Journal {
 	}
 
 	private static function fields( $e = null ) {
-		$o  = '<div class="spe-grid"><label class="spe-field"><span>' . esc_html__( 'Date', 'songpress' ) . '</span><input type="date" name="log_date" value="' . esc_attr( $e ? $e->log_date : gmdate( 'Y-m-d' ) ) . '"></label>';
+		$o  = '<div class="spe-grid"><label class="spe-field"><span>' . esc_html__( 'Created', 'songpress' ) . '</span><input type="datetime-local" name="created_at" value="' . esc_attr( $e && $e->created_at ? str_replace( ' ', 'T', substr( $e->created_at, 0, 16 ) ) : str_replace( ' ', 'T', substr( current_time( 'mysql' ), 0, 16 ) ) ) . '"></label><label class="spe-field"><span>' . esc_html__( 'Date', 'songpress' ) . '</span><input type="date" name="log_date" value="' . esc_attr( $e ? $e->log_date : gmdate( 'Y-m-d' ) ) . '"></label>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select name="kind">';
 		foreach ( self::KINDS as $k => $label ) {
 			$o .= '<option value="' . esc_attr( $k ) . '"' . selected( $e ? $e->kind : 'day', $k, false ) . '>' . esc_html( $label ) . '</option>';
@@ -286,7 +290,7 @@ class Songpress_Journal {
 		foreach ( array( 'list' => __( 'Notes', 'songpress' ), 'days' => __( 'Days', 'songpress' ), 'map' => __( 'Map', 'songpress' ) ) as $vk => $vl ) {
 			$o .= '<a class="spe-btn' . ( $view === $vk ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'notes', 'jview' => $vk ), $base ) ) . '">' . esc_html( $vl ) . '</a> ';
 		}
-		$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ) ) . '">' . esc_html__( 'Import notes (.bear, .md, .txt)', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .md', 'songpress' ) . '</a></p>';
+		$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ) ) . '">' . esc_html__( 'Import notes (.bear, .md, .txt)', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .md', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_bear' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .bear', 'songpress' ) . '</a></p>';
 		if ( 'days' === $view ) {
 			return $o . self::days_html() . '</div>';
 		}
@@ -488,6 +492,11 @@ class Songpress_Journal {
 			}
 		}
 		return $o . "---\n" . (string) $e->notes . "\n";
+	}
+
+	/** A note in the Bear layout: "# Title", authors, "key | tempo | date", then the note. Always has the authors line so it reads back. Pure. */
+	public static function note_to_bear( $e ) {
+		return '# ' . str_replace( "\n", ' ', (string) $e->title ) . "\n" . str_replace( "\n", ' ', (string) $e->authors ) . "\n" . $e->song_key . ' | ' . $e->tempo . ' | ' . $e->log_date . "\n\n" . (string) $e->notes . "\n";
 	}
 
 	/** Add one parsed note. A note with the same source key is not added twice. Returns true when it was added. */

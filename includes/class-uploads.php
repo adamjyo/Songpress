@@ -41,6 +41,7 @@ class Songpress_Uploads {
 		'streams'       => array( 'Daily streams', 'money', 'SELECT day, service, streams FROM {streams} ORDER BY day DESC, service' ),
 		'stats'         => array( 'DistroKid store figures by month', 'money', 'SELECT month, store, title, isrc, units, earnings FROM {stats} ORDER BY month DESC, store' ),
 		'notes_md'      => array( 'Notes as Markdown files (.md, zipped)', 'journal', '' ),
+		'notes_bear'    => array( 'Notes as Bear files (.bear, zipped)', 'journal', '' ),
 		'journal'       => array( 'Notes', 'journal', 'SELECT log_date, kind, title, notes, place, song_key, tempo, authors, latitude, longitude, pinned, archived FROM {journal} ORDER BY log_date DESC' ),
 		'ratings'       => array( 'Song ratings', 'journal', 'SELECT s.serial, s.title, r.voter, r.stars, r.created_at FROM {ratings} r LEFT JOIN {songs} s ON s.id = r.song_id ORDER BY s.serial' ),
 		'registrations' => array( 'Registrations', 'registrations', 'SELECT f.family_no, r.society, r.in_progress, r.started_on, r.reference, r.note, r.updated_at FROM {registrations} r LEFT JOIN {families} f ON f.id = r.family_id ORDER BY f.family_no, r.society' ),
@@ -324,8 +325,8 @@ class Songpress_Uploads {
 		if ( ! isset( self::DOWNLOADS[ $key ] ) || ! Songpress_Caps::can( self::DOWNLOADS[ $key ][1] ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
-		if ( 'notes_md' === $key ) {
-			self::notes_md();
+		if ( 'notes_md' === $key || 'notes_bear' === $key ) {
+			self::notes_files( 'notes_bear' === $key ? 'bear' : 'md' );
 		}
 		if ( 'catalog' === $key ) {
 			wp_safe_redirect( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ) );
@@ -349,7 +350,7 @@ class Songpress_Uploads {
 	}
 
 	/** Every note as a .md file in a zip (or one .md file when this server has no zip support). */
-	private static function notes_md() {
+	private static function notes_files( $ext ) {
 		global $wpdb;
 		$rows = $wpdb->get_results( 'SELECT * FROM ' . Songpress_Install::table( 'journal' ) . ' ORDER BY log_date, id' ); // phpcs:ignore WordPress.DB
 		nocache_headers();
@@ -366,20 +367,20 @@ class Songpress_Uploads {
 						$name = $base . ' ' . $i;
 					}
 					$used[ $name ] = true;
-					$zip->addFromString( $name . '.md', Songpress_Journal::note_to_md( $e ) );
+					$zip->addFromString( $name . '.' . $ext, 'bear' === $ext ? Songpress_Journal::note_to_bear( $e ) : Songpress_Journal::note_to_md( $e ) );
 				}
 				$zip->close();
 				header( 'Content-Type: application/zip' );
-				header( 'Content-Disposition: attachment; filename="songpress-notes-' . gmdate( 'Y-m-d' ) . '.zip"' );
+				header( 'Content-Disposition: attachment; filename="songpress-notes-' . $ext . '-' . gmdate( 'Y-m-d' ) . '.zip"' );
 				readfile( $tmp ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 				unlink( $tmp ); // phpcs:ignore WordPress.WP.AlternativeFunctions
 				exit;
 			}
 		}
-		header( 'Content-Type: text/markdown; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="songpress-notes-' . gmdate( 'Y-m-d' ) . '.md"' );
+		header( 'Content-Type: text/plain; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="songpress-notes-' . gmdate( 'Y-m-d' ) . '.' . $ext . '"' );
 		foreach ( $rows as $e ) {
-			echo Songpress_Journal::note_to_md( $e ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- a text download.
+			echo ( 'bear' === $ext ? Songpress_Journal::note_to_bear( $e ) : Songpress_Journal::note_to_md( $e ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- a text download.
 		}
 		exit;
 	}

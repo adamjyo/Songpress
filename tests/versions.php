@@ -451,7 +451,7 @@ check( 'applying again replaces, never doubles', (int) $GLOBALS['wpdb']->get_var
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
-	if ( in_array( $k, array( 'catalog', 'notes_md' ), true ) ) { continue; }
+	if ( in_array( $k, array( 'catalog', 'notes_md', 'notes_bear' ), true ) ) { continue; }
 	if ( false === $GLOBALS['wpdb']->get_results( Songpress_Uploads::sql( $k ), ARRAY_A ) ) { ++$bad; }
 }
 check( 'every download query runs', $bad, 0 );
@@ -547,6 +547,13 @@ check( 'bear note stored with key, tempo, authors', array( $row->log_date, $row-
 $md = Songpress_Journal::note_to_md( $row );
 $back = Songpress_Journal::parse_note_file( 'a.md', $md );
 check( 'md export round-trips', array( $back['title'], $back['date'], $back['song_key'], $back['tempo'], $back['authors'] ), array( 'Wine and Bread', '2007-08-04', 'G', '90bpm', 'Adam Page' ) );
+
+$bear = Songpress_Journal::note_to_bear( $row );
+$bb = Songpress_Journal::parse_note_file( 'a.bear', $bear );
+check( 'bear export round-trips', array( $bb['title'], $bb['authors'], $bb['song_key'], $bb['tempo'], $bb['date'] ), array( 'Wine and Bread', 'Adam Page', 'G', '90bpm', '2007-08-04' ) );
+$nb = $row; $nb->authors = ''; $nb->song_key = ''; $nb->tempo = '';
+$bb2 = Songpress_Journal::parse_note_file( 'b.bear', Songpress_Journal::note_to_bear( $nb ) );
+check( 'bear export without authors still reads back as bear', array( $bb2['title'], $bb2['date'], trim( $bb2['notes'] ) ), array( 'Wine and Bread', '2007-08-04', trim( $row->notes ) ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

@@ -30,6 +30,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.14.0 =
+* Notes: the "Created" date and time of a note can be changed when you edit it (the "Date" field is still the day the note is about). Notes loaded from the old catalog now keep their original creation time.
+* Notes export as .bear: "Notes as Bear files" (and "Export all as .bear" on the Notes page) saves each note in the Bear layout (title, authors, "key | tempo | date", then the note), zipped. They import straight back.
+
 = 0.13.0 =
 * Notes import: on Upload / Download, "Notes" takes one or more .bear, .md or .txt files, a zip of them, or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line; .md files can carry front matter (title, date, kind, pinned, key, tempo, authors, place). Files already loaded are skipped, and a note naming one song with ^0378 is linked to it.
 * Notes export: "Notes as Markdown files" downloads every note as a .md file in a zip (front matter keeps the key, tempo, authors and place, so they import straight back). Both are linked from the top of the Notes page.
