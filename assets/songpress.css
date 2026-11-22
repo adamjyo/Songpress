@@ -711,3 +711,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-mydk{font-variant-numeric:tabular-nums;font-weight:600}
 .songpress-qlabs small{display:block;opacity:.7}
 .songpress-profile>.songpress-note{padding:0;margin:8px 0}
+.songpress-tabs[hidden]{display:none}
