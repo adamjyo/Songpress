@@ -411,13 +411,24 @@ class Songpress_Journal {
 			return $o . '</p>' . ( 'days' === $view ? self::days_html() : self::map_html() ) . '</div>';
 		}
 		global $wpdb;
-		$rows  = $wpdb->get_results( 'SELECT * FROM ' . self::t() . ' ORDER BY pinned DESC, log_date DESC, id DESC LIMIT 3000' ); // phpcs:ignore WordPress.DB
-		$notes = array();
-		foreach ( (array) $rows as $e ) {
-			$notes[] = self::shape( $e );
+		// Read the notes in small slices and encode each at once, so thousands of notes never sit in memory three times over.
+		$fl    = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
+		$parts = array();
+		for ( $off = 0; $off < 3000; $off += 250 ) {
+			$rows = $wpdb->get_results( 'SELECT * FROM ' . self::t() . ' ORDER BY pinned DESC, log_date DESC, id DESC LIMIT 250 OFFSET ' . (int) $off ); // phpcs:ignore WordPress.DB
+			if ( empty( $rows ) ) {
+				break;
+			}
+			foreach ( $rows as $e ) {
+				$parts[] = wp_json_encode( self::shape( $e ), $fl );
+			}
+			$n = count( $rows );
+			unset( $rows );
+			if ( $n < 250 ) {
+				break;
+			}
 		}
 		$data = array(
-			'notes' => $notes,
 			'today' => gmdate( 'Y-m-d' ),
 			'ajax'  => admin_url( 'admin-post.php' ),
 			'nonce' => wp_create_nonce( 'songpress_journal_ajax' ),
@@ -435,7 +446,8 @@ class Songpress_Journal {
 				'tool'   => class_exists( 'Songpress_ChordTool' ) ? Songpress_ChordTool::url() : '',
 			),
 		);
-		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE );
+		$json = '{"notes":[' . implode( ',', $parts ) . '],' . substr( wp_json_encode( $data, $fl ), 1 );
+		unset( $parts );
 		$o    = '<div class="songpress sp-app spn-wrap"><div class="spn" id="spn">';
 		$o   .= '<div class="spn-tags" id="spn-tags"></div>';
 		$o   .= '<div class="spn-side"><div class="spn-top">';
