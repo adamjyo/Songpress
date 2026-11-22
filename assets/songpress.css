@@ -654,3 +654,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 @media (max-width:759px){.spe-top h2{font-size:22px}}
 /* phones: writer rows get the name its own room, with IPI on a second line */
 @media (max-width:640px){.spe-group.spe-two .spe-credit{grid-template-columns:minmax(0,1fr) 78px 28px;grid-template-areas:"who share x" "ipi ipi ipi";padding:8px}}
+/* phones: the person's picture and name at the top open the profile */
+.songpress-userbar{display:flex;align-items:center;margin:0 0 14px}
+.songpress-userlink{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--sp-text);text-decoration:none;font-weight:600;font-size:17px}
+.songpress-userpic{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:var(--sp-chip)}
+.songpress-userpic-ini{display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:var(--sp-text)}

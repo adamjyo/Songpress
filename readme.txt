@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.54.0 =
+* Phones: the top of the page is the person's picture and name, and tapping it opens the profile (which has a "Works" link back). Under it comes the search box and the works list, with no column headings, no "Works" title and no Works/Profile tabs along the bottom.
+
 = 0.53.1 =
 * Phones: the Share button stays on the title row, the cover art box is a sensible size, and writer rows give the name its own room with IPI on a second line.
 
