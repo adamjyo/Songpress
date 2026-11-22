@@ -277,7 +277,7 @@ class Songpress_Songs {
 
 	public static function replace_credits( $song_id, array $rows ) {
 		global $wpdb;
-		if ( self::$auto_users && class_exists( 'Songpress_People' ) ) {
+		if ( self::$auto_users && class_exists( 'Songpress_People' ) && Songpress_People::ready() ) {
 			$rows = Songpress_People::link_rows( $rows );
 		}
 		$t      = Songpress_Install::table( 'credits' );

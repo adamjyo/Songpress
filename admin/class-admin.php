@@ -13,6 +13,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_export', array( __CLASS__, 'handle_export' ) );
 		add_action( 'wp_ajax_songpress_upload', array( 'Songpress_Media', 'ajax_upload' ) );
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
+		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
 		add_action( 'admin_post_songpress_share', array( __CLASS__, 'handle_share' ) );
@@ -266,6 +267,15 @@ class Songpress_Admin {
 			self::history_panel( $id );
 		}
 		echo wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	public static function handle_start_fresh() {
+		check_admin_referer( 'songpress_start_fresh' );
+		if ( ! Songpress_Caps::can( 'import' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		update_option( 'songpress_accounts_ready', '1' );
+		self::back( 'songpress-import' );
 	}
 
 	/** One block of people (writers, performers or producers) that starts with $min rows and grows one at a time. */
@@ -580,6 +590,10 @@ class Songpress_Admin {
 		if ( isset( $_GET['done'] ) ) {
 			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html( sprintf( /* translators: 1: imported 2: skipped */ __( 'Imported %1$d songs, skipped %2$d already there. Run it again to continue if there are more.', 'songpress' ), absint( $_GET['done'] ), absint( $_GET['skipped'] ?? 0 ) ) ) );
 		}
+		if ( isset( $_GET['accounts'] ) ) {
+			/* translators: 1: accounts created 2: writers still without one */
+			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Created %1$d new writer accounts (Viewer class, no email yet). %2$d writers still need one: open SongPress > Link writers to finish.', 'songpress' ), absint( $_GET['accounts'] ), absint( $_GET['left'] ?? 0 ) ) ) . '</p></div>';
+		}
 		if ( isset( $_GET['err'] ) ) {
 			echo '<div class="notice notice-error"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['err'] ) ) ) . '</p></div>';
 		}
@@ -595,6 +609,15 @@ class Songpress_Admin {
 			wp_nonce_field( 'songpress_import_run' );
 			echo '<input type="hidden" name="action" value="songpress_import_run">';
 			submit_button( __( 'Import now (up to 500 songs at a time)', 'songpress' ), 'primary', 'submit', false );
+			echo '</form>';
+		}
+		if ( ! Songpress_People::ready() ) {
+			echo '<h2 style="margin-top:24px">' . esc_html__( 'Starting from nothing?', 'songpress' ) . '</h2>';
+			echo '<p class="sp-help">' . esc_html__( 'Writer accounts are made after your first import. If you have nothing to import, start fresh and each writer you add will get an account.', 'songpress' ) . '</p>';
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( 'songpress_start_fresh' );
+			echo '<input type="hidden" name="action" value="songpress_start_fresh">';
+			submit_button( __( 'Start fresh, without importing', 'songpress' ), 'secondary', 'submit', false );
 			echo '</form>';
 		}
 		echo wp_kses_post( songpress_donate_link() ) . '</div>';
@@ -694,11 +717,16 @@ class Songpress_Admin {
 		}
 		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$out = Songpress_Import::run( $tmp['path'], 500 );
+		$people = null;
 		if ( $out['imported'] < 500 ) { // nothing left to import: remove the private copy
 			@unlink( $tmp['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
 			delete_transient( 'songpress_import_' . get_current_user_id() );
+			// The first import is done: from now on writers get accounts, and the imported writers get theirs now.
+			update_option( 'songpress_accounts_ready', '1' );
+			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			$people = Songpress_People::backfill_all( 20 );
 		}
-		self::back( 'songpress-import', array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
+		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
 	}
 
 	/* ---------- members ---------- */
@@ -872,22 +900,12 @@ class Songpress_Admin {
 		return $wpdb->get_results( $wpdb->prepare( "SELECT name, COUNT(*) AS n FROM {$c} WHERE role = 'writer' AND user_id IS NULL AND name <> '' GROUP BY name ORDER BY n DESC, name LIMIT %d", $limit ) );
 	}
 
-	/** A suggestion only: a user whose username, display name or email equals the writer's name. Never applied on its own. */
-	private static function suggest_account( $name ) {
-		$by_login = get_user_by( 'login', $name );
-		if ( $by_login ) {
-			return $by_login;
-		}
-		$found = get_users( array( 'search' => $name, 'search_columns' => array( 'display_name', 'user_nicename' ), 'number' => 2 ) );
-		return 1 === count( $found ) ? $found[0] : null;
-	}
-
 	public static function page_link_writers() {
 		if ( ! Songpress_Caps::can( 'link' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
 		}
 		echo '<div class="wrap songpress-wrap"><h1>' . esc_html__( 'Link writers to accounts', 'songpress' ) . '</h1>';
-		echo '<p class="sp-help">' . esc_html__( 'A linked writer can see the songs they are credited on, and nothing else. Nothing is linked until you tick the box on its row. A suggestion is only a guess from the name, so check each one.', 'songpress' ) . '</p>';
+		echo '<p class="sp-help">' . esc_html__( 'A linked writer can see the songs they are credited on, and nothing else. Nothing is linked until you tick the box on its row. Type the account yourself: nothing is matched by name.', 'songpress' ) . '</p>';
 		if ( isset( $_GET['linked'] ) ) {
 			/* translators: %d: number of credits linked */
 			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Linked %d credits.', 'songpress' ), absint( $_GET['linked'] ) ) ) . '</p></div>';
@@ -899,7 +917,7 @@ class Songpress_Admin {
 			/* translators: 1: accounts created, 2: credits linked, 3: writers still without an account */
 			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Created %1$d accounts and linked %2$d credits. %3$d writers still have no account.', 'songpress' ), absint( $_GET['made'] ), absint( $_GET['credits'] ?? 0 ), absint( $_GET['left'] ?? 0 ) ) ) . '</p></div>';
 		}
-		$todo = Songpress_Caps::can( 'members' ) ? count( Songpress_People::unlinked_names() ) : 0;
+		$todo = ( Songpress_Caps::can( 'members' ) && Songpress_People::ready() ) ? count( Songpress_People::unlinked_names() ) : 0;
 		echo '<h2>' . esc_html__( 'Give every writer an account', 'songpress' ) . '</h2>';
 		echo '<p class="sp-help">' . esc_html__( 'Each writer gets a login named firstname.lastname with the Viewer class. These accounts have no email and a random password, so nobody can sign in until you add their email (SongPress > Members) and they use "Lost your password?". The same name always gets the same account. New writers added to a song get one automatically.', 'songpress' ) . '</p>';
 		if ( $todo ) {
@@ -909,10 +927,12 @@ class Songpress_Admin {
 			/* translators: %d: number of writers */
 			submit_button( sprintf( _n( 'Create an account for %d writer (up to 100 at a time)', 'Create accounts for %d writers (up to 100 at a time)', $todo, 'songpress' ), $todo ), 'primary', 'submit', false );
 			echo '</form>';
+		} elseif ( ! Songpress_People::ready() ) {
+			echo '<p>' . esc_html__( 'Accounts are made after your first import. Import your old catalog, or choose "Start fresh" on the Import screen.', 'songpress' ) . '</p>';
 		} else {
 			echo '<p>' . esc_html__( 'Every writer already has an account.', 'songpress' ) . '</p>';
 		}
-		echo '<h2 style="margin-top:24px">' . esc_html__( 'Link to an existing account instead', 'songpress' ) . '</h2>';
+		echo '<h2 style="margin-top:24px">' . esc_html__( 'Link a writer to an account that already exists', 'songpress' ) . '</h2>';
 		$rows = self::unlinked_writers();
 		if ( ! $rows ) {
 			echo '<p>' . esc_html__( 'Every writer is linked, or there are no writers yet.', 'songpress' ) . '</p></div>';
@@ -923,7 +943,7 @@ class Songpress_Admin {
 		echo '<input type="hidden" name="action" value="songpress_link_writers">';
 		echo '<table class="widefat striped"><thead><tr><th style="width:60px">' . esc_html__( 'Link', 'songpress' ) . '</th><th>' . esc_html__( 'Writer', 'songpress' ) . '</th><th>' . esc_html__( 'Credits', 'songpress' ) . '</th><th>' . esc_html__( 'Account (username or email)', 'songpress' ) . '</th></tr></thead><tbody>';
 		foreach ( $rows as $i => $r ) {
-			$s = self::suggest_account( $r->name );
+			$s = null; // existing accounts are never guessed from a name
 			echo '<tr><td><input type="checkbox" name="link[' . (int) $i . '][on]" value="1" aria-label="' . esc_attr__( 'Link this writer', 'songpress' ) . '"></td>';
 			echo '<td>' . esc_html( $r->name ) . '<input type="hidden" name="link[' . (int) $i . '][name]" value="' . esc_attr( $r->name ) . '"></td><td>' . (int) $r->n . '</td>';
 			echo '<td><input name="link[' . (int) $i . '][account]" size="26" value="' . esc_attr( $s ? $s->user_login : '' ) . '" placeholder="' . esc_attr__( 'username or email', 'songpress' ) . '">' . ( $s ? ' <span class="sp-help">' . esc_html__( 'suggested', 'songpress' ) . '</span>' : '' ) . '</td></tr>';

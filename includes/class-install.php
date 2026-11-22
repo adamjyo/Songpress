@@ -14,6 +14,7 @@ class Songpress_Install {
 			Songpress_Caps::migrate_class_names();
 		add_option( 'songpress_delete_on_uninstall', '0' );
 		add_option( 'songpress_public_donate', '0' );
+		add_option( 'songpress_accounts_ready', '0' ); // writer accounts are only made after the first import (or "start fresh")
 		add_option( 'songpress_donate_prompt', 'pending' ); // asked once, on the first visit to a SongPress screen
 		update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
 		self::create_pages();
