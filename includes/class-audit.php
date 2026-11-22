@@ -18,6 +18,7 @@ class Songpress_Audit {
 		'songpress_download'          => array( 'uploads', 'Downloaded a file' ),
 		'songpress_journal_save'      => array( 'notes', 'Saved a note' ),
 		'songpress_journal_flag'      => array( 'notes', 'Pinned or archived a note' ),
+		'songpress_health_clear'      => array( 'other', 'Cleared the error list' ),
 		'songpress_lists_save'        => array( 'other', 'Changed the lists' ),
 		'songpress_registration_undated' => array( 'registrations', 'Set a start date on undated registrations' ),
 		'songpress_member_add'        => array( 'people', 'Added a person' ),

@@ -81,6 +81,18 @@ require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-audit.php';
 require __DIR__ . '/../includes/class-lists.php';
+if ( ! defined( 'SONGPRESS_VERSION' ) ) { define( 'SONGPRESS_VERSION', '9.9.9' ); }
+if ( ! defined( 'SONGPRESS_DB_VERSION' ) ) { define( 'SONGPRESS_DB_VERSION', '18' ); }
+if ( ! defined( 'SONGPRESS_DIR' ) ) { define( 'SONGPRESS_DIR', dirname( __DIR__ ) . '/' ); }
+$GLOBALS['sp_tmp'] = sys_get_temp_dir() . '/sp-test-' . getmypid();
+if ( ! function_exists( 'wp_upload_dir' ) ) { function wp_upload_dir() { return array( 'basedir' => $GLOBALS['sp_tmp'], 'error' => false ); } }
+if ( ! function_exists( 'trailingslashit' ) ) { function trailingslashit( $s ) { return rtrim( $s, '/' ) . '/'; } }
+if ( ! function_exists( 'wp_mkdir_p' ) ) { function wp_mkdir_p( $d ) { return is_dir( $d ) || mkdir( $d, 0777, true ); } }
+if ( ! function_exists( 'wp_normalize_path' ) ) { function wp_normalize_path( $p ) { return str_replace( '\\', '/', (string) $p ); } }
+if ( ! function_exists( 'wp_strip_all_tags' ) ) { function wp_strip_all_tags( $s ) { return strip_tags( (string) $s ); } }
+require_once __DIR__ . '/../includes/class-import.php';
+require __DIR__ . '/../includes/class-backup.php';
+require __DIR__ . '/../includes/class-health.php';
 if ( ! defined( 'SONGPRESS_TESTING' ) ) { define( 'SONGPRESS_TESTING', 1 ); }
 require_once __DIR__ . '/../includes/class-import-analyzer.php';
 require __DIR__ . '/../includes/class-artists.php';
@@ -647,5 +659,29 @@ check( 'textbundle text reads back', array( $tbr['title'], $tbr['authors'], $tbr
 $un = clone $row; $un->title = ''; $un->kind = 'day';
 check( 'untitled note is named after its date', strtok( Songpress_Journal::note_to_textbundle( $un )['text'], "\n" ), '# Day 2007-08-04' );
 
+// Backups and health
+check( 'risky actions', array( Songpress_Backup::is_risky( 'songpress_statement' ), Songpress_Backup::is_risky( 'songpress_money_import' ), Songpress_Backup::is_risky( 'songpress_journal_save' ) ), array( true, true, false ) );
+check( 'backup names are checked', array( Songpress_Backup::valid_name( 'backup-20261122-010203-before-x.json.gz' ), Songpress_Backup::valid_name( '../etc/passwd' ), Songpress_Backup::valid_name( 'backup-1.json.gz' ) ), array( true, false, false ) );
+check( 'prune keeps the newest', Songpress_Backup::to_prune( array( 'backup-20260101-000000.json.gz', 'backup-20260301-000000.json.gz', 'backup-20260201-000000.json.gz' ), 2 ), array( 'backup-20260101-000000.json.gz' ) );
+check( 'health sizes', array( Songpress_Health::bytes( '128M' ), Songpress_Health::bytes( '2G' ), Songpress_Health::bytes( '512k' ), Songpress_Health::bytes( '' ) ), array( 134217728, 2147483648, 524288, 0 ) );
+check( 'health only keeps our own fatal errors', array( Songpress_Health::is_ours( array( 'type' => E_ERROR, 'file' => SONGPRESS_DIR . 'includes/x.php' ), SONGPRESS_DIR ), Songpress_Health::is_ours( array( 'type' => E_WARNING, 'file' => SONGPRESS_DIR . 'includes/x.php' ), SONGPRESS_DIR ), Songpress_Health::is_ours( array( 'type' => E_ERROR, 'file' => '/other/plugin.php' ), SONGPRESS_DIR ), Songpress_Health::is_ours( null, SONGPRESS_DIR ) ), array( true, false, false, false ) );
+$songs_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs' );
+$cred_before  = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_credits' );
+$null_before  = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs WHERE share_token IS NULL' );
+$bf = Songpress_Backup::snapshot( 'Test snapshot' );
+check( 'a snapshot is written and listed', array( '' !== $bf, Songpress_Backup::all()[0]['file'] === $bf, Songpress_Backup::all()[0]['counts']['songs'] ), array( true, true, $songs_before ) );
+$wpdb->query( 'DELETE FROM wp_songpress_songs' );
+$wpdb->query( 'DELETE FROM wp_songpress_credits' );
+$audit_before = (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_audit' );
+$rr = Songpress_Backup::restore( $bf );
+check( 'restore puts the songs and credits back', array( $rr[0], (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs' ), (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_credits' ) ), array( true, $songs_before, $cred_before ) );
+check( 'restore keeps NULL as NULL', (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs WHERE share_token IS NULL' ), $null_before );
+check( 'restore saved how things were first, and the log grew', array( count( Songpress_Backup::all() ) >= 2, (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_audit' ) > $audit_before ), array( true, true ) );
+$bad = Songpress_Backup::dir() . '/backup-20200101-000000-old.json.gz';
+file_put_contents( $bad, gzencode( json_encode( array( 'v' => 1, 'db' => '1', 'tables' => array( 'songs' => array( 'cols' => array(), 'rows' => array() ) ) ) ) ) );
+check( 'a backup from another database version is refused', array( Songpress_Backup::restore( 'backup-20200101-000000-old.json.gz' )[0], (int) $wpdb->get_var( 'SELECT COUNT(*) FROM wp_songpress_songs' ) ), array( false, $songs_before ) );
+check( 'a missing backup is refused', Songpress_Backup::restore( 'backup-20200101-000001-none.json.gz' )[0], false );
+
+exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.20.0
+Stable tag: 0.21.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.21.0 =
+* Backups (Managers): every SongPress table is saved to one compressed file in a private folder. One is taken for you before the risky things (loading the old catalog, uploading a statement, tidying or renaming logins, importing notes, deleting a session, agreement or artwork, starting fresh), at most every ten minutes, and you can "Back up now" by hand. Download any of them, or restore one; restoring first saves how things are now so it can be undone. The newest 15 are kept. The activity log and song history are never rewound.
+* Health (Managers): checks that the plugin and database are up to date, every table exists, the server has what SongPress needs (zip, SQLite driver, compression, memory, upload size, a writable private folder), the pages exist, GitHub updates work, and when the last backup was. Fatal errors from the plugin are noted (last ten) with where they happened.
 
 = 0.20.0 =
 * Notes export for Bear: "Notes as Bear TextBundles" (Upload / Download, and "All for Bear (.textbundle)" on the Notes page) saves each note as a .textbundle folder in a zip, ready for Bear's File > Import. Each file carries the note's created time so Bear's "keep original creation and modification date" import option can use it. Importing that zip back into SongPress works too.
