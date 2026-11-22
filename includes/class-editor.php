@@ -452,6 +452,16 @@ class Songpress_Editor {
 			}
 			$o .= self::post_form( 'songpress_archive', 'songpress_archive', $id, array( 'do' => $archived ? 'restore' : 'archive' ), $archived ? __( 'Restore this song', 'songpress' ) : __( 'Archive this song', 'songpress' ), $archived ? 'spe-btn' : 'spe-btn danger' );
 		}
+		if ( Songpress_Caps::can( 'delete' ) ) {
+			$many = count( Songpress_Songs::delete_ids( $id ) );
+			$o   .= '<h4>' . esc_html__( 'Delete', 'songpress' ) . '</h4><p class="spe-help">' . esc_html( 0 === (int) $song->version_no && $many > 1
+				? sprintf( /* translators: %d: number of songs */ __( 'Deleting this original work also deletes its %d versions. This cannot be undone.', 'songpress' ), $many - 1 )
+				: __( 'This removes the song, its credits, codes, links, history and earnings. This cannot be undone.', 'songpress' ) ) . '</p>';
+			$o   .= '<form method="post" class="spe-inline" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_delete', '_wpnonce', true, false )
+				. '<input type="hidden" name="action" value="songpress_delete"><input type="hidden" name="song_id" value="' . (int) $id . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">'
+				. '<label><input type="checkbox" name="confirm" value="1" required> ' . esc_html__( 'Yes, delete it for good', 'songpress' ) . '</label> '
+				. '<button type="submit" class="spe-btn danger">' . esc_html__( 'Delete this work', 'songpress' ) . '</button></form>';
+		}
 		$hist = Songpress_History::for_song( $id );
 		if ( $hist ) {
 			$o .= '<h4>' . esc_html__( 'History', 'songpress' ) . '</h4><ul class="spe-history">';

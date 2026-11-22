@@ -206,6 +206,12 @@ class Songpress_Frontend {
 		$dir    = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc';
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
 		$out    = '<div class="songpress sp-app">' . ( $desktop ? self::tabs( 'catalog', 'top' ) . self::head( __( 'Works', 'songpress' ) ) : self::userbar( 'catalog' ) );
+		if ( $desktop && isset( $_GET['sp_deleted'] ) ) {
+			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Deleted %d song.', 'Deleted %d songs.', absint( $_GET['sp_deleted'] ), 'songpress' ), absint( $_GET['sp_deleted'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		if ( $desktop && isset( $_GET['sp_err'] ) ) {
+			$out .= '<p class="songpress-note">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
 		if ( $desktop ) {
 			$ov = '';
 			foreach ( array( 'registrations' => __( 'All registrations', 'songpress' ), 'agreements' => __( 'All agreements', 'songpress' ) ) as $slug => $label ) {

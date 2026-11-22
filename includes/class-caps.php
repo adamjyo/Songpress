@@ -14,13 +14,13 @@ class Songpress_Caps {
 	const META = 'songpress_class';
 
 	const CLASSES = array(
-		'manager' => array( 'Manager', 'Everything: add, edit, archive, share and export any song, money and stats, import, settings and members. WordPress administrators are always Managers.' ),
+		'manager' => array( 'Manager', 'Everything: add, edit, archive, delete, share and export any song, money and stats, import, settings and members. WordPress administrators are always Managers.' ),
 		'writer'  => array( 'Writer', 'Sees every song. Edits and shares only the songs they are credited on, and can upload files for them.' ),
 		'viewer'  => array( 'Viewer', 'Sees every song. Changes nothing.' ),
 	);
 
 	const PERMS = array(
-		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists', 'money', 'journal', 'art', 'agreements', 'registrations', 'sessions', 'activity', 'pitch' ),
+		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'delete', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists', 'money', 'journal', 'art', 'agreements', 'registrations', 'sessions', 'activity', 'pitch' ),
 		'writer'  => array( 'view_all', 'view_own', 'edit_own', 'share_own', 'upload', 'sessions' ),
 		'viewer'  => array( 'view_all', 'view_own' ),
 	);

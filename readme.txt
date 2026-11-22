@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.62.0 =
+* Works can be deleted. In a work's editor, under Versions, Managers get a Delete section with a confirm box. Deleting an original work also deletes its versions; deleting a version removes only that version. Earnings already paid stay on the books.
+
 = 0.61.4 =
 * Updates: nothing is remembered. Every look at GitHub is a fresh one, and opening Plugins or Updates always makes one.
 

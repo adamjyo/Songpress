@@ -836,6 +836,16 @@ $rp = new PDO( 'sqlite:' . $rb );
 check( 'rebuild gives back the tables and rows', array( $rbc['odd_one'], $rbc['kv'], (int) $rp->query( 'SELECT COUNT(*) FROM kv' )->fetchColumn() ), array( 3, 2, 2 ) );
 check( 'rebuild restores binary values', bin2hex( (string) $rp->query( "SELECT blob_col FROM odd_one WHERE name = 'a'" )->fetchColumn() ), 'ff00fe' );
 
+// deleting a work: a version goes alone; an original takes its versions along
+$dw = Songpress_Songs::create( array( 'title' => 'Doomed Work' ), 1 );
+Songpress_Songs::replace_credits( $dw, array( array( 'role' => 'writer', 'name' => 'Gone Writer', 'share' => '100' ) ) );
+$dv = Songpress_Songs::create_version( $dw, 1 );
+check( 'delete lists a version alone', Songpress_Songs::delete_ids( $dv ), array( (int) $dv ) );
+check( 'delete lists an original with its versions', count( Songpress_Songs::delete_ids( $dw ) ), 2 );
+check( 'deleting a version removes one song', Songpress_Songs::delete( $dv ), 1 );
+check( 'the original is still there', (bool) Songpress_Songs::get( $dw ), true );
+check( 'deleting the original removes the rest and its credits', array( Songpress_Songs::delete( $dw ), Songpress_Songs::get( $dw ), count( Songpress_Songs::credits( $dw ) ) ), array( 1, null, 0 ) );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

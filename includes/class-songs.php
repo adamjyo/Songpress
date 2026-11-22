@@ -457,6 +457,52 @@ class Songpress_Songs {
 		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE share_token = %s", $token ) ) ?: null;
 	}
 
+	/** Songs a delete would remove: the song itself, or for an original work the whole family. Pure of WordPress apart from the lookup. */
+	public static function delete_ids( $id ) {
+		global $wpdb;
+		$song = self::get( (int) $id );
+		if ( ! $song ) {
+			return array();
+		}
+		$t = Songpress_Install::table( 'songs' );
+		if ( 0 === (int) $song->version_no ) {
+			return array_map( 'intval', $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t} WHERE family_id = %d ORDER BY id", $song->family_id ) ) );
+		}
+		return array( (int) $song->id );
+	}
+
+	/**
+	 * Delete a work for good. An original work takes all of its versions with it; a version goes alone.
+	 * Its credits, codes, links, history, ratings and earnings go too. Money already paid out stays on the books, unlinked.
+	 * @return int how many songs were deleted
+	 */
+	public static function delete( $id ) {
+		global $wpdb;
+		$ids = self::delete_ids( $id );
+		if ( ! $ids ) {
+			return 0;
+		}
+		$song   = self::get( (int) $id );
+		$family = (int) $song->family_id;
+		$in     = implode( ',', array_map( 'intval', $ids ) );
+		foreach ( array( 'credits', 'identifiers', 'links', 'history', 'ratings', 'earnings' ) as $name ) {
+			$wpdb->query( 'DELETE FROM ' . Songpress_Install::table( $name ) . " WHERE song_id IN ({$in})" ); // phpcs:ignore WordPress.DB
+		}
+		foreach ( array( 'person_earnings', 'stats', 'journal', 'sessions', 'agreements', 'art' ) as $name ) {
+			$wpdb->query( 'UPDATE ' . Songpress_Install::table( $name ) . " SET song_id = 0 WHERE song_id IN ({$in})" ); // phpcs:ignore WordPress.DB
+		}
+		$wpdb->query( 'DELETE FROM ' . Songpress_Install::table( 'songs' ) . " WHERE id IN ({$in})" ); // phpcs:ignore WordPress.DB
+		$left = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE family_id = %d', $family ) ); // phpcs:ignore WordPress.DB
+		if ( 0 === $left ) {
+			$wpdb->delete( Songpress_Install::table( 'families' ), array( 'id' => $family ) );
+		}
+		self::reset_lists();
+		if ( class_exists( 'Songpress_Audit' ) ) {
+			Songpress_Audit::log( 'works', 'Deleted a work', trim( $song->serial . ' ' . $song->title ), array( 'songs' => count( $ids ) ) );
+		}
+		return count( $ids );
+	}
+
 	/** One-time: any work marked archived becomes active again. Returns how many were changed. */
 	public static function unarchive_all() {
 		global $wpdb;

@@ -22,6 +22,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
 		add_action( 'admin_post_songpress_archive', array( __CLASS__, 'handle_archive' ) );
+		add_action( 'admin_post_songpress_delete', array( __CLASS__, 'handle_delete' ) );
 		add_action( 'admin_post_songpress_link_writers', array( __CLASS__, 'handle_link_writers' ) );
 		add_action( 'admin_post_songpress_donate_answer', array( __CLASS__, 'handle_donate_answer' ) );
 		add_action( 'admin_footer', array( __CLASS__, 'donate_prompt' ) );
@@ -500,6 +501,18 @@ class Songpress_Admin {
 		}
 		Songpress_Songs::archive( $id );
 		self::back( 'songpress', array( 'archived' => 1 ) );
+	}
+
+	public static function handle_delete() {
+		check_admin_referer( 'songpress_delete' );
+		if ( ! Songpress_Caps::can( 'delete' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		if ( empty( $_POST['confirm'] ) ) {
+			self::back( 'songpress', array( 'err' => rawurlencode( __( 'Tick the box to confirm the delete.', 'songpress' ) ) ) );
+		}
+		$n = Songpress_Songs::delete( absint( $_POST['song_id'] ?? 0 ) );
+		self::back( 'songpress', array( 'deleted' => $n ) );
 	}
 
 	private static function versions( $family_id, $current ) {
