@@ -113,8 +113,8 @@ class Songpress_Songs {
 		}
 		if ( isset( $args['search'] ) && '' !== trim( $args['search'] ) ) {
 			$like    = '%' . $wpdb->esc_like( trim( $args['search'] ) ) . '%';
-			$where[] = '(s.title LIKE %s OR s.serial LIKE %s OR s.artist LIKE %s)';
-			array_push( $vals, $like, $like, $like );
+			$where[] = "(s.title LIKE %s OR s.serial LIKE %s OR s.artist LIKE %s OR s.id IN (SELECT lb.song_id FROM {$c} lb WHERE lb.role = 'label' AND lb.name LIKE %s))";
+			array_push( $vals, $like, $like, $like, $like );
 		}
 		$per    = max( 1, min( 100, (int) ( $args['per_page'] ?? 25 ) ) );
 		$offset = max( 0, ( (int) ( $args['page'] ?? 1 ) - 1 ) * $per );
@@ -128,6 +128,7 @@ class Songpress_Songs {
 			'genre'  => 's.genre',
 			'artist' => 's.artist',
 			'status' => 's.status',
+			'label'  => "(SELECT MIN(l.name) FROM {$c} l WHERE l.song_id = s.id AND l.role = 'label')",
 			'writer' => "(SELECT MIN(w.name) FROM {$c} w WHERE w.song_id = s.id AND w.role = 'writer')",
 		);
 		$order = isset( $args['order'], $cols[ $args['order'] ] ) ? $cols[ $args['order'] ] . " {$dir}, s.serial ASC" : 's.family_id DESC, s.version_no DESC';
@@ -353,7 +354,7 @@ class Songpress_Songs {
 	}
 
 	public static function export_header() {
-		return array( 'serial', 'title', 'catalog_owner', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'writers', 'publishers', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
+		return array( 'serial', 'title', 'catalog_owner', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'writers', 'publishers', 'labels', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
 	}
 
 	/** One CSV row. People are "Name 50%" joined by "; ". Cells that start with = + - @ get a leading apostrophe so a spreadsheet never runs them as formulas. */
@@ -373,7 +374,7 @@ class Songpress_Songs {
 		}
 		$art = ! empty( $s->artist_id ) ? Songpress_Artists::get( (int) $s->artist_id ) : null;
 		$row = array( $s->serial, $s->title, $art ? $art->name : '', $s->status, $s->archived_at ? 'yes' : '', $s->musical_key, $s->tempo, $s->genre, $s->artist, $s->album, $s->release_title, $s->release_date,
-			implode( '; ', $by['writer'] ), implode( '; ', $by['publisher'] ), implode( '; ', $by['performer'] ), implode( '; ', $by['producer'] ), implode( '; ', $codes ), implode( '; ', $links ), Songpress_Media::audio_url( $s ), $s->notes );
+			implode( '; ', $by['writer'] ), implode( '; ', $by['publisher'] ), implode( '; ', $by['label'] ), implode( '; ', $by['performer'] ), implode( '; ', $by['producer'] ), implode( '; ', $codes ), implode( '; ', $links ), Songpress_Media::audio_url( $s ), $s->notes );
 		return array_map( function ( $v ) {
 			$v = (string) $v;
 			return ( '' !== $v && false !== strpos( "=+-@\t\r", $v[0] ) ) ? "'" . $v : $v;

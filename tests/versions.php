@@ -583,5 +583,17 @@ check( 'audit: total grew by one', Songpress_Audit::rows( '', 0, '', 1 )['total'
 $an = Songpress_Audit::rows( 'notes', 0, '', 1 );
 check( 'audit: note actions from the Notes screen were recorded', $an['total'] >= 4, true );
 
+// Labels in the export, search and sort
+$lb = Songpress_Songs::create( array( 'title' => 'Label Test Song', 'status' => 'writing', 'lyrics' => 'la' ), 1 );
+Songpress_Songs::replace_credits( $lb, array( array( 'role' => 'writer', 'name' => 'Lab Writer', 'share' => '100' ), array( 'role' => 'label', 'name' => 'Zebra Sound Co', 'share' => '' ) ) );
+$lh = Songpress_Songs::export_header();
+$lr = Songpress_Songs::export_row( Songpress_Songs::get( $lb ) );
+check( 'export has a labels column after publishers', array( $lh[ array_search( 'labels', $lh ) - 1 ], $lr[ array_search( 'labels', $lh ) ] ), array( 'publishers', 'Zebra Sound Co' ) );
+check( 'export columns still match', count( $lr ), count( $lh ) );
+$ls = Songpress_Songs::query( array( 'search' => 'Zebra Sou', 'archived' => 'any' ) );
+check( 'search finds songs by label', array_map( function ( $r ) { return (int) $r->id; }, $ls['rows'] ), array( $lb ) );
+$lo = Songpress_Songs::query( array( 'order' => 'label', 'dir' => 'desc', 'archived' => 'any', 'per_page' => 100 ) );
+check( 'sort by label puts the labelled song first when descending', (int) $lo['rows'][0]->id, $lb );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

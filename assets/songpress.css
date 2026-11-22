@@ -147,17 +147,18 @@
 .songpress-playicon::before{content:"";border-style:solid;border-width:7px 0 7px 12px;border-color:transparent transparent transparent #fff;margin-left:3px}
 .songpress-play:hover .songpress-playicon,.songpress-play:focus-visible .songpress-playicon,.songpress-play.on .songpress-playicon{opacity:1}
 .songpress-play.on .songpress-playicon::before{border-width:0;width:12px;height:14px;margin:0;border-left:4px solid #fff;border-right:4px solid #fff;box-sizing:border-box;background:none}
-a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"title title title status" "serial meta icons band";column-gap:12px;row-gap:2px;align-items:center;color:var(--sp-text)}
+a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;grid-template-areas:"title title title title status" "serial meta icons band label";column-gap:12px;row-gap:2px;align-items:center;color:var(--sp-text)}
 .songpress-rowlink .songpress-title{grid-area:title;margin:0}
 .songpress-rowlink .songpress-sub{grid-area:status;margin:0;text-align:right}
 .songpress-rowlink .songpress-serial{grid-area:serial;font-size:13px}
 .songpress-rowlink .songpress-genre{grid-area:meta;color:var(--sp-mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .songpress-rowlink .songpress-icons{display:flex;align-items:center;gap:4px}
 .songpress-rowlink .songpress-writers{grid-area:icons}
-.songpress-rowlink .songpress-icons:not(.songpress-writers){grid-area:band}
+.songpress-rowlink .songpress-icons:not(.songpress-writers):not(.songpress-labels){grid-area:band}
+.songpress-rowlink .songpress-labels{grid-area:label}
 .songpress-icons .sp-face{margin:0!important}
 @container (min-width:620px){
- a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px;grid-template-areas:none}
+ a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 75px 100px;grid-template-areas:none}
  .songpress-rowlink>*{grid-area:auto!important}
  .songpress-rowlink .songpress-sub{text-align:left}
 }
@@ -173,7 +174,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-app .songpress-colhead a{color:var(--sp-mute);white-space:nowrap}
 .sp-app .songpress-colhead a:hover,.sp-app .songpress-colhead a.on{color:var(--sp-accent)}
 @container (min-width:620px){
- .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px;gap:0 12px;align-items:center}
+ .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 75px 100px;gap:0 12px;align-items:center}
 }
 
 .songpress-serial{white-space:nowrap}
@@ -189,7 +190,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-ch-play{width:var(--sp-pic,56px)}
 .songpress-colhead .songpress-ch-band{text-align:left}
 @container (min-width:620px){
- .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 100px}
+ .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px 75px 100px}
 }
 
 /* Song editor */
