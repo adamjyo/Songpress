@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.15
+Stable tag: 0.63.16
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.16 =
+* Notes: the Position line (here, clear and the coordinates) is hidden; the map stays.
 
 = 0.63.15 =
 * Notes: a small calendar above the search. Days that have notes carry a dot; click a day to show only that day's notes, click it again to clear.
