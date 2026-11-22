@@ -54,6 +54,22 @@ class Songpress_Media {
 		return '';
 	}
 
+	/** WordPress would save the picture embedded in an audio file as a second Media Library item. Leave it out: only the audio and its name are kept. Pure. */
+	public static function drop_embedded_art( $metadata ) {
+		if ( is_array( $metadata ) ) {
+			unset( $metadata['image'] );
+		}
+		return $metadata;
+	}
+
+	/** Like media_handle_upload( $field, 0 ), but an audio file's embedded cover picture is not turned into its own attachment. */
+	public static function upload_without_cover( $field ) {
+		add_filter( 'wp_read_audio_metadata', array( __CLASS__, 'drop_embedded_art' ), 99 );
+		$id = media_handle_upload( $field, 0 );
+		remove_filter( 'wp_read_audio_metadata', array( __CLASS__, 'drop_embedded_art' ), 99 );
+		return $id;
+	}
+
 	/** Ajax: a dropped file is saved into the Media Library like any upload, and its id comes back for the form. */
 	public static function ajax_upload() {
 		check_ajax_referer( 'songpress_upload', 'nonce' );
@@ -71,7 +87,7 @@ class Songpress_Media {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
-		$id = media_handle_upload( 'file', 0 );
+		$id = self::upload_without_cover( 'file' );
 		if ( is_wp_error( $id ) ) {
 			wp_send_json_error( array( 'message' => $id->get_error_message() ), 400 );
 		}

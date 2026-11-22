@@ -618,7 +618,7 @@ class Songpress_Pitch {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
-		$id = media_handle_upload( 'file', 0 );
+		$id = Songpress_Media::upload_without_cover( 'file' );
 		if ( is_wp_error( $id ) ) {
 			wp_send_json( array( 'ok' => false, 'error' => $id->get_error_message() ), 400 );
 		}

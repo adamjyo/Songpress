@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.61.1 =
+* Uploading audio no longer also saves the picture embedded in the file as a second Media Library item. Only the audio and its name are kept.
+
 = 0.61.0 =
 * Settings: a tool to load a whole old database (a SQLite file or an .sql dump). Every table and row is stored in SongPress's own database, even where no screen uses it yet. Works in short steps that continue by itself, and skips rows already stored.
 

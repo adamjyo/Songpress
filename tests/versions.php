@@ -825,6 +825,10 @@ check( 'loading the same file again adds nothing', Songpress_Legacy::stored(), a
 $lj = $GLOBALS['wpdb']->get_var( "SELECT row_data FROM wp_songpress_legacy_rows WHERE source_table = 'odd_one' AND row_data LIKE '%base64:%'" );
 check( 'binary values are kept as base64', json_decode( $lj, true )['blob_col'], 'base64:' . base64_encode( "\xff\x00\xfe" ) );
 
+// an audio upload keeps the audio and its tags, but not the picture embedded in it
+$am = Songpress_Media::drop_embedded_art( array( 'title' => 'Something More', 'artist' => 'x', 'image' => array( 'data' => 'JPEG', 'mime' => 'image/jpeg' ) ) );
+check( 'embedded cover picture is dropped', array( isset( $am['image'] ), $am['title'] ), array( false, 'Something More' ) );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
