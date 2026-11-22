@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.62.1 =
+* Delete: a deleted work's serial number is never given to a new work. Expenses, activity and pitches are kept but unlinked, its pitch kit and (for a whole work) its registrations go with it, and the audit log files it under Works. A version's button now says Delete this version.
+
 = 0.62.0 =
 * Works can be deleted. In a work's editor, under Versions, Managers get a Delete section with a confirm box. Deleting an original work also deletes its versions; deleting a version removes only that version. Earnings already paid stay on the books.
 

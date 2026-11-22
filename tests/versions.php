@@ -846,6 +846,13 @@ check( 'deleting a version removes one song', Songpress_Songs::delete( $dv ), 1 
 check( 'the original is still there', (bool) Songpress_Songs::get( $dw ), true );
 check( 'deleting the original removes the rest and its credits', array( Songpress_Songs::delete( $dw ), Songpress_Songs::get( $dw ), count( Songpress_Songs::credits( $dw ) ) ), array( 1, null, 0 ) );
 
+// a deleted work's serial number is never handed to a new work, even when it was the newest
+$last  = Songpress_Songs::create( array( 'title' => 'Newest Then Gone' ), 1 );
+$gone  = Songpress_Songs::get( $last )->serial;
+Songpress_Songs::delete( $last );
+$after = Songpress_Songs::get( Songpress_Songs::create( array( 'title' => 'After The Delete' ), 1 ) )->serial;
+check( 'a deleted serial is not reused', $after !== $gone && (int) $after > (int) $gone, true );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

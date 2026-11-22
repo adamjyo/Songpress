@@ -485,20 +485,22 @@ class Songpress_Songs {
 		$song   = self::get( (int) $id );
 		$family = (int) $song->family_id;
 		$in     = implode( ',', array_map( 'intval', $ids ) );
-		foreach ( array( 'credits', 'identifiers', 'links', 'history', 'ratings', 'earnings' ) as $name ) {
+		foreach ( array( 'credits', 'identifiers', 'links', 'history', 'ratings', 'earnings', 'pitch_kits' ) as $name ) {
 			$wpdb->query( 'DELETE FROM ' . Songpress_Install::table( $name ) . " WHERE song_id IN ({$in})" ); // phpcs:ignore WordPress.DB
 		}
-		foreach ( array( 'person_earnings', 'stats', 'journal', 'sessions', 'agreements', 'art' ) as $name ) {
+		foreach ( array( 'person_earnings', 'stats', 'journal', 'sessions', 'agreements', 'art', 'expenses', 'activity', 'pitches' ) as $name ) {
 			$wpdb->query( 'UPDATE ' . Songpress_Install::table( $name ) . " SET song_id = 0 WHERE song_id IN ({$in})" ); // phpcs:ignore WordPress.DB
 		}
 		$wpdb->query( 'DELETE FROM ' . Songpress_Install::table( 'songs' ) . " WHERE id IN ({$in})" ); // phpcs:ignore WordPress.DB
 		$left = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE family_id = %d', $family ) ); // phpcs:ignore WordPress.DB
+		// The family row stays even when no song is left, so its serial number is never given to a new work
+		// (it may already be registered with ASCAP, the MLC and others). Its registrations go with the last song.
 		if ( 0 === $left ) {
-			$wpdb->delete( Songpress_Install::table( 'families' ), array( 'id' => $family ) );
+			$wpdb->delete( Songpress_Install::table( 'registrations' ), array( 'family_id' => $family ) );
 		}
 		self::reset_lists();
 		if ( class_exists( 'Songpress_Audit' ) ) {
-			Songpress_Audit::log( 'works', 'Deleted a work', trim( $song->serial . ' ' . $song->title ), array( 'songs' => count( $ids ) ) );
+			Songpress_Audit::log( 'songs', 'Deleted a work', trim( $song->serial . ' ' . $song->title ), array( 'songs' => count( $ids ) ) );
 		}
 		return count( $ids );
 	}
