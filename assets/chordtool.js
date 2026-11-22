@@ -147,7 +147,7 @@
     var cs = chordsIn(t), h = '';
     cs.forEach(function (c) { var f = lookup(c); if (f) h += '<figure>' + diagram(c, f) + '</figure>'; });
     diag.innerHTML = $('ct-showdiag').checked ? h : '';
-    try { localStorage.setItem('songpress_chordtool', t); } catch (e) {}
+    if (document.body.getAttribute('data-embed') !== '1') { try { localStorage.setItem('songpress_chordtool', t); } catch (e) {} }
   }
 
   /* actions */
@@ -195,8 +195,24 @@
   ed.addEventListener('input', update);
 
   var SAMPLE = '{title: Harbor Lights}\n{artist: Example}\n{key: G}\n\n{start_of_verse}\n[G]Walking down to the [D]water at night\n[Em]Every window [C]glowing gold\n{end_of_verse}\n\n{start_of_chorus}\n[C]Harbor lights, [G]take me home\n[D]Harbor lights, [G]I am not alone\n{end_of_chorus}\n';
+  var embedded = document.body.getAttribute('data-embed') === '1';
   var saved = '';
-  try { saved = localStorage.getItem('songpress_chordtool') || ''; } catch (e) {}
-  ed.value = saved || SAMPLE;
+  if (!embedded) { try { saved = localStorage.getItem('songpress_chordtool') || ''; } catch (e) {} }
+  ed.value = embedded ? '' : (saved || SAMPLE);
   update();
+  if (embedded) {
+    /* inside the song editor: take the text it sends, give it back only on Use in song */
+    window.addEventListener('message', function (e) {
+      if (e.origin !== location.origin || !e.data || e.data.type !== 'ct-load') return;
+      ed.value = String(e.data.text || ''); update(); ed.focus();
+    });
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-ct]'); if (!b) return;
+      var a = b.getAttribute('data-ct'), p = window.parent;
+      if (a === 'usesong') p.postMessage({ type: 'ct-save', text: ed.value }, location.origin);
+      else if (a === 'cancelsong') p.postMessage({ type: 'ct-cancel' }, location.origin);
+      else if (a === 'direct') p.postMessage({ type: 'ct-direct' }, location.origin);
+    });
+    window.parent.postMessage({ type: 'ct-ready' }, location.origin);
+  }
 })();

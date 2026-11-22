@@ -81,6 +81,7 @@ require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-artists.php';
 require __DIR__ . '/../includes/class-profiles.php';
 require __DIR__ . '/../includes/class-media.php';
+require __DIR__ . '/../includes/class-chordpro.php';
 require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
@@ -518,6 +519,19 @@ $np2->exec( "INSERT INTO work_activity VALUES (1,2002,'1578-00','One Third','202
 $na = Songpress_Journal::import_pdo( $np2 );
 check( 'activity import and repeat', array( $na['activity'], Songpress_Journal::import_pdo( $np2 )['activity'] ), array( 2, 0 ) );
 check( 'activity serials normalized', $GLOBALS['wpdb']->get_col( "SELECT serial FROM wp_songpress_activity ORDER BY id" ), array( '1578', '1578-06' ) );
+
+// Lyric process: ChordPro, chords and lyrics, lyrics
+$cpx = "{title: T}\n{start_of_verse}\n[G]Walking down to the [D]water\n{end_of_verse}\n{start_of_chorus}\n[C]Harbor lights\n{end_of_chorus}";
+check( 'chordpro steps down to chords over words', Songpress_ChordPro::to_chords_lyrics( $cpx ), "T\n[Verse]\nG                   D\nWalking down to the water\n[Chorus]\nC\nHarbor lights" );
+check( 'chordpro steps down to plain lyrics', Songpress_ChordPro::to_lyrics( $cpx ), "Walking down to the water\n\nHarbor lights" );
+check( 'chords over words steps down to lyrics', Songpress_ChordPro::chords_lyrics_to_lyrics( "[Verse]\nG     D\nWalking down\n\nAm\nOh well" ), "Walking down\n\nOh well" );
+$lv = Songpress_Songs::lyric_levels( (object) array( 'chordpro' => $cpx, 'chords_lyrics' => '', 'lyrics' => '' ) );
+check( 'only ChordPro: lower levels fall back to it', array( $lv['chords_lyrics'][1], $lv['lyrics'][1], $lv['lyrics'][0] ), array( 'chordpro', 'chordpro', "Walking down to the water\n\nHarbor lights" ) );
+$lv2 = Songpress_Songs::lyric_levels( (object) array( 'chordpro' => '', 'chords_lyrics' => "G\nHello there", 'lyrics' => '' ) );
+check( 'chords and lyrics: lyrics fall back to it, ChordPro stays empty', array( $lv2['lyrics'][0], $lv2['lyrics'][1], $lv2['chordpro'][1] ), array( 'Hello there', 'chords_lyrics', '' ) );
+$lv3 = Songpress_Songs::lyric_levels( (object) array( 'chordpro' => $cpx, 'chords_lyrics' => '', 'lyrics' => 'my own words' ) );
+check( 'a level that was typed is kept', array( $lv3['lyrics'][0], $lv3['lyrics'][1] ), array( 'my own words', 'own' ) );
+check( 'nothing at all', Songpress_Songs::lyric_levels( (object) array( 'chordpro' => '', 'chords_lyrics' => '', 'lyrics' => '' ) )['lyrics'], array( '', '' ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

@@ -23,12 +23,16 @@ class Songpress_ChordTool {
 		}
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
-		$css = self::css();
+		$css   = self::css();
+		$embed = isset( $_GET['embed'] ); // phpcs:ignore WordPress.Security.NonceVerification
 		$b   = function ( $act, $label, $cls = '' ) {
 			return '<button type="button" class="ct-b ' . $cls . '" data-ct="' . esc_attr( $act ) . '">' . esc_html( $label ) . '</button>';
 		};
-		echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html__( 'ChordPro tool', 'songpress' ) . ' · ' . esc_html( get_bloginfo( 'name' ) ) . '</title><style id="ct-printcss">' . $css . '</style></head><body>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html__( 'ChordPro tool', 'songpress' ) . ' · ' . esc_html( get_bloginfo( 'name' ) ) . '</title><style id="ct-printcss">' . $css . '</style></head><body' . ( $embed ? ' class="ct-embed" data-embed="1"' : '' ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<header class="ct-top"><img src="' . esc_url( SONGPRESS_URL . 'assets/seal-amber.svg' ) . '" alt="" width="34" height="34"><h1>' . esc_html__( 'ChordPro tool', 'songpress' ) . '</h1><span class="ct-note">' . esc_html__( 'Works in your browser only. Nothing is saved on the server and it never touches the catalog.', 'songpress' ) . '</span></header>';
+		if ( $embed ) {
+			echo '<div class="ct-bar ct-usebar"><button type="button" class="ct-b ct-go" data-ct="usesong">' . esc_html__( 'Use in song', 'songpress' ) . '</button><button type="button" class="ct-b" data-ct="cancelsong">' . esc_html__( 'Cancel', 'songpress' ) . '</button><button type="button" class="ct-b" data-ct="direct">' . esc_html__( 'Type in the song form instead', 'songpress' ) . '</button><span class="ct-note">' . esc_html__( 'Your ChordPro text goes into the song when you press Use in song.', 'songpress' ) . '</span></div>';
+		}
 		echo '<div class="ct-bar">';
 		echo $b( 'down', '− Transpose' ) . $b( 'up', 'Transpose +' ) . '<label><input type="checkbox" id="ct-flats"> ' . esc_html__( 'flats', 'songpress' ) . '</label>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		echo '<span class="ct-sep"></span>' . $b( 'chord', '[ ] Chord' ) . $b( 'verse', 'Verse' ) . $b( 'chorus', 'Chorus' ) . $b( 'bridge', 'Bridge' ); // phpcs:ignore WordPress.Security.EscapeOutput
@@ -55,6 +59,7 @@ class Songpress_ChordTool {
 			. '.sec{margin:.6em 0;padding-left:.7em;border-left:3px solid #3a3342}.sec.chorus{border-left-color:#f5c04a;background:rgba(245,192,74,.05)}.sec h4{margin:.2em 0;font-size:.72em;letter-spacing:.08em;text-transform:uppercase;color:#9a93a6}.comment{margin:.5em 0;color:#9a93a6;font-style:italic}.tab{font:14px ui-monospace,Menlo,monospace;color:#ece7f0}'
 			. '.ct-diag{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.ct-diag figure{margin:0;background:#100e13;border:1px solid #2e2836;border-radius:8px;padding:4px}.ds{stroke:#6a6275;stroke-width:1}.ds.nut{stroke:#ece7f0;stroke-width:2}.dd{fill:#f5c04a}.do{fill:none;stroke:#ece7f0}.dx{fill:#9a93a6;font-size:9px}.dn{fill:#ece7f0;font-size:11px;font-weight:700}'
 			. '.ct-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:18px}.ct-modal[hidden]{display:none}.ct-modal>div{background:#1b1721;border:1px solid #3a3342;border-radius:12px;padding:14px;width:min(720px,100%)}.ct-modal textarea{width:100%;background:#100e13;color:#ece7f0;border:1px solid #3a3342;border-radius:8px;font:14px ui-monospace,Menlo,monospace;padding:10px}'
+			. '.ct-go{background:#f5c04a;color:#1b1406;border-color:#f5c04a;font-weight:700}.ct-embed .ct-top,.ct-embed .ct-foot{display:none}.ct-embed #ct-text{min-height:56vh}'
 			. '.ct-foot{text-align:center;padding:12px;font-size:13px}.ct-foot a{color:#f5c04a}'
 			. '@media print{body{background:#fff;color:#000}.ct-top,.ct-bar,.ct-edit,.ct-foot,.ct-modal{display:none!important}.ct-main{display:block;padding:0}.chart{background:#fff;color:#000;border:0}.chart h1,.cb i{color:#000}.sec.chorus{background:none;border-left-color:#000}.ct-diag figure{background:#fff;border-color:#999}.ds{stroke:#444}.dd{fill:#000}.dn,.dx{fill:#000}.do{stroke:#000}}';
 	}

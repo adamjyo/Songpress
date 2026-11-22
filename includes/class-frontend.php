@@ -317,7 +317,20 @@ class Songpress_Frontend {
 		}
 		$out .= '</p></div><div class="songpress-main">';
 		if ( 'none' !== $kind ) {
-			$out .= '<p class="songpress-chartlabel">' . esc_html( $labels[ $kind ] ) . '</p>' . ( 'chordpro' === $kind ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
+			// the lyric process: any level can be shown; a level nobody typed falls back to the highest one, stepped down
+			$lv   = Songpress_Songs::lyric_levels( $s );
+			$want = isset( $_GET['sp_level'] ) ? sanitize_key( wp_unslash( $_GET['sp_level'] ) ) : $kind; // phpcs:ignore WordPress.Security.NonceVerification
+			if ( ! isset( $lv[ $want ] ) || '' === $lv[ $want ][0] ) {
+				$want = $kind;
+			}
+			$text = $lv[ $want ][0];
+			$out .= '<p class="songpress-chartlabel">' . esc_html( $labels[ $want ] );
+			foreach ( $labels as $lk => $ll ) {
+				if ( 'none' !== $lk && $lk !== $want && '' !== $lv[ $lk ][0] ) {
+					$out .= ' &middot; <a href="' . esc_url( add_query_arg( 'sp_level', $lk ) ) . '">' . esc_html( $ll ) . '</a>';
+				}
+			}
+			$out .= '</p>' . ( 'chordpro' === $want ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
 		}
 		return $out . '</div></div></article>';
 	}

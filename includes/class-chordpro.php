@@ -110,4 +110,92 @@ class Songpress_ChordPro {
 		}
 		return '<div class="sp-cp-line">' . $html . '</div>';
 	}
+
+	/* ---------- stepping down: ChordPro, then chords and lyrics, then lyrics ---------- */
+
+	/** True for a line of nothing but chords, such as "G   D/F#  Em7". Pure. */
+	public static function is_chord_line( $line ) {
+		$t = preg_split( '/\s+/', trim( (string) $line ), -1, PREG_SPLIT_NO_EMPTY );
+		if ( ! $t ) {
+			return false;
+		}
+		foreach ( $t as $x ) {
+			if ( ! preg_match( '/^[A-G][#b]?(m|maj|min|dim|aug|sus|add|M)?\d*(sus\d|add\d|\+|°|ø)?(\/[A-G][#b]?)?$/', $x ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** ChordPro to chords over words: each chord sits on the line above, at the column of the word it falls on. Pure. */
+	public static function to_chords_lyrics( $text ) {
+		$out = array();
+		foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
+			if ( preg_match( '/^\s*#/', $line ) ) {
+				continue;
+			}
+			if ( preg_match( '/^\s*\{\s*([a-z_]+)\s*(?::\s*(.*?))?\s*\}\s*$/i', $line, $m ) ) {
+				$k = strtolower( $m[1] );
+				$a = $m[2] ?? '';
+				if ( 'title' === $k || 't' === $k ) {
+					$out[] = $a;
+				} elseif ( in_array( $k, array( 'comment', 'c', 'ci', 'comment_italic' ), true ) ) {
+					$out[] = '[' . $a . ']';
+				} elseif ( in_array( $k, array( 'start_of_chorus', 'soc' ), true ) ) {
+					$out[] = '[' . ( '' !== $a ? $a : 'Chorus' ) . ']';
+				} elseif ( in_array( $k, array( 'start_of_verse', 'sov' ), true ) ) {
+					$out[] = '[' . ( '' !== $a ? $a : 'Verse' ) . ']';
+				} elseif ( in_array( $k, array( 'start_of_bridge', 'sob' ), true ) ) {
+					$out[] = '[' . ( '' !== $a ? $a : 'Bridge' ) . ']';
+				}
+				continue;
+			}
+			$parts = preg_split( '/\[([^\]]*)\]/', $line, -1, PREG_SPLIT_DELIM_CAPTURE );
+			$words = $parts[0];
+			$chords = '';
+			for ( $i = 1; $i < count( $parts ); $i += 2 ) {
+				$chords = str_pad( $chords, strlen( $words ), ' ' ) . $parts[ $i ] . ' ';
+				$words .= $parts[ $i + 1 ] ?? '';
+			}
+			if ( '' !== trim( $chords ) ) {
+				$out[] = rtrim( $chords );
+			}
+			$out[] = $words;
+		}
+		return trim( implode( "\n", $out ) );
+	}
+
+	/** ChordPro to plain lyrics: no chords, no directives; sections become blank-line breaks. Pure. */
+	public static function to_lyrics( $text ) {
+		$out = array();
+		foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
+			if ( preg_match( '/^\s*#/', $line ) ) {
+				continue;
+			}
+			if ( preg_match( '/^\s*\{\s*([a-z_]+)\s*(?::\s*(.*?))?\s*\}\s*$/i', $line, $m ) ) {
+				if ( preg_match( '/^(start_of|end_of|so|eo)/i', $m[1] ) ) {
+					$out[] = '';
+				}
+				continue;
+			}
+			$out[] = rtrim( preg_replace( '/\[[^\]]*\]/', '', $line ) );
+		}
+		return trim( preg_replace( "/\n{3,}/", "\n\n", implode( "\n", $out ) ) );
+	}
+
+	/** Chords over words to plain lyrics: the chord lines and [Section] labels go. Pure. */
+	public static function chords_lyrics_to_lyrics( $text ) {
+		$out = array();
+		foreach ( preg_split( '/\r\n|\r|\n/', (string) $text ) as $line ) {
+			if ( self::is_chord_line( $line ) || preg_match( '/^\s*\[[^\]]*\]\s*$/', $line ) ) {
+				if ( preg_match( '/^\s*\[/', $line ) ) {
+					$out[] = '';
+				}
+				continue;
+			}
+			$out[] = rtrim( preg_replace( '/\[[^\]]*\]/', '', $line ) );
+		}
+		return trim( preg_replace( "/\n{3,}/", "\n\n", implode( "\n", $out ) ) );
+	}
 }
+

@@ -390,3 +390,5 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spss-form .spe-field textarea,.spss-say textarea{width:100%;box-sizing:border-box}.spss-chat{max-height:420px;overflow:auto;margin:8px 0;padding:8px 12px;border:1px solid #2e2836;border-radius:10px}.spss-msg{margin:0 0 12px}.spss-msg small{opacity:.6}.spss-say{display:flex;gap:8px;align-items:flex-end}.spss-say textarea{flex:1}.spss-del{margin-top:16px}
 
 .spj-tabs{margin:8px 0}.spj-tabs .on{background:#3a2f12;color:#f5c04a}.spj-day{margin:0 0 14px;padding:0 0 10px;border-bottom:1px solid #2e2836}.spj-day h4{margin:0 0 4px}.spj-day small{opacity:.6;font-weight:400}.spj-day p{margin:2px 0}
+
+.spe-cpm{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:2vh 2vw}.spe-cpm[hidden]{display:none}.spe-cpm-in{width:min(1280px,100%);height:94vh;border-radius:12px;overflow:hidden;border:1px solid #3a3342;background:#141118}.spe-cpm iframe{width:100%;height:100%;border:0;display:block}

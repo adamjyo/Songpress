@@ -30,6 +30,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.12.0 =
+* The lyric process: every work has three levels, ChordPro, then chords and lyrics, then lyrics. A level left blank falls back to the highest level that is filled in, stepped down (ChordPro becomes chords over the words, then plain lyrics). The song editor shows what each blank level is using, and a song page can switch between the levels.
+* Clicking into the ChordPro box in the song editor opens the ChordPro tool in a popup, loaded with that song's chart. "Use in song" puts the result back; "Type in the song form instead" lets you type directly. The tool still never touches the database.
+
 = 0.11.0 =
 * New ChordPro tool, a standalone page that anyone can open without logging in (yoursite/?sp_chordpro=1), linked from the rail and from the login screen. Write or paste ChordPro and see the chart with chords above the words. Transpose up or down (sharps or flats), turn chords-over-words text into ChordPro or back, insert verse/chorus/bridge sections, see guitar chord diagrams, set size and columns, open and save .pro, .txt and .html files, and print. It works in the browser only and never touches the catalog database. It also stands in for the desktop Songpress chord-sheet program as a web page, and the login screen points people looking for that program to it.
 

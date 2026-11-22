@@ -464,4 +464,34 @@ class Songpress_Songs {
 		}
 		return array( 'none', '' );
 	}
+
+	/**
+	 * The lyric process: ChordPro, then chords and lyrics, then lyrics. Each level shows what was typed into it; a blank
+	 * level falls back to the highest level that is present, stepped down (chords dropped as it goes).
+	 * Returns level => array( text, from ) where from is 'own', the level it was stepped down from, or '' when nothing exists. Pure.
+	 */
+	public static function lyric_levels( $song ) {
+		$cp = trim( (string) ( $song->chordpro ?? '' ) );
+		$cl = trim( (string) ( $song->chords_lyrics ?? '' ) );
+		$ly = trim( (string) ( $song->lyrics ?? '' ) );
+		$out = array(
+			'chordpro'      => array( (string) ( $song->chordpro ?? '' ), '' !== $cp ? 'own' : '' ),
+			'chords_lyrics' => array( '', '' ),
+			'lyrics'        => array( '', '' ),
+		);
+		if ( '' !== $cl ) {
+			$out['chords_lyrics'] = array( (string) $song->chords_lyrics, 'own' );
+		} elseif ( '' !== $cp ) {
+			$out['chords_lyrics'] = array( Songpress_ChordPro::to_chords_lyrics( $cp ), 'chordpro' );
+		}
+		if ( '' !== $ly ) {
+			$out['lyrics'] = array( (string) $song->lyrics, 'own' );
+		} elseif ( '' !== $cl ) {
+			$out['lyrics'] = array( Songpress_ChordPro::chords_lyrics_to_lyrics( $cl ), 'chords_lyrics' );
+		} elseif ( '' !== $cp ) {
+			$out['lyrics'] = array( Songpress_ChordPro::to_lyrics( $cp ), 'chordpro' );
+		}
+		return $out;
+	}
 }
+

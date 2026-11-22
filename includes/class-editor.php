@@ -129,10 +129,21 @@ class Songpress_Editor {
 		$o .= '</div></section>';
 
 		/* Lyrics and chords */
-		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Phones show the first one you fill in, in this order: ChordPro, then chords and lyrics, then lyrics only.', 'songpress' ) . '</p>';
-		$o .= '<label class="spe-field"><span>' . esc_html__( 'Lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="lyrics" rows="14">' . esc_textarea( self::f( $song, 'lyrics' ) ) . '</textarea></label>';
-		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'Chords and lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="chords_lyrics" rows="14">' . esc_textarea( self::f( $song, 'chords_lyrics' ) ) . '</textarea></label>';
-		$o .= '<label class="spe-field adv"><span>ChordPro</span><textarea class="spe-chart" name="chordpro" rows="14">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea></label></section>';
+		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Each work has three levels: ChordPro, then chords and lyrics, then lyrics. A level you leave blank falls back to the highest level that is filled in, with the chords taken off. Phones show the highest level.', 'songpress' ) . '</p>';
+		$lv  = $song ? Songpress_Songs::lyric_levels( $song ) : array();
+		$hint = function ( $level ) use ( $lv ) {
+			if ( empty( $lv[ $level ] ) || 'own' === $lv[ $level ][1] || '' === $lv[ $level ][1] ) {
+				return '';
+			}
+			$names = array( 'chordpro' => 'ChordPro', 'chords_lyrics' => __( 'Chords and lyrics', 'songpress' ) );
+			return '<small class="spe-help">' . esc_html( sprintf( /* translators: %s: the level used */ __( 'Blank: using %s, stepped down. What you see greyed is what is used.', 'songpress' ), $names[ $lv[ $level ][1] ] ) ) . '</small>';
+		};
+		$ph = function ( $level ) use ( $lv ) {
+			return ! empty( $lv[ $level ] ) && 'own' !== $lv[ $level ][1] && '' !== $lv[ $level ][0] ? ' placeholder="' . esc_attr( $lv[ $level ][0] ) . '"' : '';
+		};
+		$o .= '<label class="spe-field"><span>' . esc_html__( 'Lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="lyrics" rows="14"' . $ph( 'lyrics' ) . '>' . esc_textarea( self::f( $song, 'lyrics' ) ) . '</textarea>' . $hint( 'lyrics' ) . '</label>';
+		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'Chords and lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="chords_lyrics" rows="14"' . $ph( 'chords_lyrics' ) . '>' . esc_textarea( self::f( $song, 'chords_lyrics' ) ) . '</textarea>' . $hint( 'chords_lyrics' ) . '</label>';
+		$o .= '<label class="spe-field adv"><span>ChordPro</span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box to open the ChordPro tool. Use the button below to type here instead.', 'songpress' ) . '</small><button type="button" class="spe-btn" id="spe-cp-open">' . esc_html__( 'Open the ChordPro tool', 'songpress' ) . '</button></label>' . self::chordpro_popup() . '</section>';
 
 		/* Release */
 		$legacy = $song && 0 === $version && ( '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
@@ -187,6 +198,24 @@ class Songpress_Editor {
 		if ( isset( $_GET['sp_err'] ) ) {
 			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>';
 		}
+		return $o;
+	}
+
+	/** The popup that holds the ChordPro tool (same page as the public tool, in a frame). Text goes in and out by message; nothing is sent anywhere. */
+	private static function chordpro_popup() {
+		$o  = '<div id="spe-cp-modal" class="spe-cpm" hidden><div class="spe-cpm-in"><iframe id="spe-cp-frame" title="ChordPro tool"></iframe></div></div>';
+		$o .= '<script>(function(){var ed=document.getElementById("spe-chordpro");if(!ed)return;var box=document.getElementById("spe-cp-modal"),fr=document.getElementById("spe-cp-frame"),direct=false,ready=false,pending=null;'
+			. 'function send(){if(ready&&fr.contentWindow){fr.contentWindow.postMessage({type:"ct-load",text:ed.value},location.origin);}}'
+			. 'function open(){if(!box.hidden)return;box.hidden=false;ready=false;if(!fr.getAttribute("src")){fr.setAttribute("src",ed.getAttribute("data-tool"));}else{send();}}'
+			. 'function close(){box.hidden=true;ed.blur();}'
+			. 'ed.addEventListener("focus",function(){if(!direct)open();});ed.addEventListener("blur",function(){direct=false;});'
+			. 'document.getElementById("spe-cp-open").addEventListener("click",open);'
+			. 'window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data)return;var d=e.data;'
+			. 'if(d.type==="ct-ready"){ready=true;send();}'
+			. 'else if(d.type==="ct-save"){ed.value=String(d.text||"");ed.dispatchEvent(new Event("input",{bubbles:true}));close();}'
+			. 'else if(d.type==="ct-cancel"){close();}'
+			. 'else if(d.type==="ct-direct"){direct=true;box.hidden=true;ed.focus();}});'
+			. 'document.addEventListener("keydown",function(e){if(e.key==="Escape"&&!box.hidden)close();});})();</script>';
 		return $o;
 	}
 
