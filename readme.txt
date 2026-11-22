@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.51.0 =
+* Cover art and an audio player now sit at the top left, beside Basics, on every work, the original work included. On a phone they stack above Basics.
+
 = 0.50.0 =
 * The Share section is gone. Every song is shareable: each one has its public link from the moment it is made, and songs that had none get one on update. The link shows the song only, never splits, codes, notes or money.
 

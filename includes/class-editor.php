@@ -80,6 +80,12 @@ class Songpress_Editor {
 		}
 		// The original work holds only what every version shares. Everything else is entered on a version.
 		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
+		// Cover art and an audio player sit beside Basics on every work, the original included.
+		$media  = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
+		$media .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ) );
+		$media .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
+		$media .= '</div></section>';
+		$o .= '<div class="spe-hero">' . $media;
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3>' . ( $root ? '' : '<p class="spe-legend"><i></i>' . esc_html__( 'Tinted fields belong to this version only. Everything else is shared with every version of the song.', 'songpress' ) . '</p>' ) . '<div class="spe-grid">';
 		if ( $root || ! $song ) {
 			$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
@@ -99,7 +105,7 @@ class Songpress_Editor {
 		if ( ! $song ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'The serial number is assigned for you. The original work is just four digits, like 0012. Each version after it adds two more, like 0012-01.', 'songpress' ) . '</p>';
 		}
-		$o .= '</section>';
+		$o .= '</section></div>';
 
 		/* People */
 		$by_role = array( 'writer' => array(), 'publisher' => array(), 'label' => array(), 'performer' => array(), 'producer' => array() );
@@ -152,14 +158,6 @@ class Songpress_Editor {
 		$rel .= '</section>';
 
 		$o .= $rel;
-
-		/* Art and audio */
-		if ( ! $root ) {
-		$o .= '<section class="spe-panel simple spe-own" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Drag an image or an audio file anywhere onto this page, or use the buttons. Files are saved to the WordPress Media Library.', 'songpress' ) . '</p><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
-		$o .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ) );
-		$o .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
-		$o .= '</div></section>';
-		}
 
 		/* Lyrics and chords */
 		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Each work has three levels: ChordPro, then chords and lyrics, then lyrics. A level you leave blank falls back to the highest level that is filled in, with the chords taken off. Phones show the highest level.', 'songpress' ) . '</p>';
