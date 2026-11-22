@@ -5,7 +5,7 @@
 	form = form.form;
 	var inp = form.querySelector('input[type=file]'), box = document.getElementById('spu-nprog'), bar = document.getElementById('spu-nbar'),
 		tx = document.getElementById('spu-ntxt'), btn = form.querySelector('button'), cfg = JSON.parse(form.getAttribute('data-cfg') || '{}');
-	var TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000, GROUP = 200, REST = 30;
+	var TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000, GROUP = 200, REST = 2;
 
 	function strip(s) { /* embedded pictures make a note huge; they cannot be kept in a note anyway */
 		return s.replace(/\(data:[a-z]+\/[^;)]+;base64,[A-Za-z0-9+\/=\s]{200,}\)/g, '(picture removed)')
