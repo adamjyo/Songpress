@@ -111,8 +111,8 @@ class Songpress_Editor {
 		$o .= '</section>';
 
 		/* Publishing: the numbers, then who publishes and who releases it. Shared by every version except the ISRC. */
-		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any publishing numbers this song has (ISWC, ASCAP, BMI, MLC, CCLI, DistroKid and so on). There is no limit. The ISRC belongs on versions; everything else here is shared by every version.', 'songpress' ) . '</p>';
-		$o .= self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
+		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version, except the ISRC, which belongs to each version.', 'songpress' ) . '</p>';
+		$o .= self::code_fields( $song ? Songpress_Songs::identifiers( $id ) : array(), $root );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, true );
 		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, true );
 		$o .= '</section>';
@@ -253,6 +253,36 @@ class Songpress_Editor {
 		}
 		$o .= '</div><template>' . self::credit_row( $role, '__I__', null, $with_user, $with_share ) . '</template>';
 		$o .= '<button type="button" class="spe-add">+ ' . esc_html( $add_label ) . '</button></div>';
+		return $o;
+	}
+
+	/** The publishing numbers, always listed, empty or not. Codes not shown here (and second values of a shown one) are kept as hidden fields so saving never loses them. */
+	private static function code_fields( $existing, $root ) {
+		$shown = array( 'iswc' => 'ISWC', 'ascap' => 'ASCAP', 'bmi' => 'BMI', 'mlc' => 'MLC', 'ccli' => 'CCLI', 'distrokid' => 'DistroKid' );
+		if ( ! $root ) {
+			$shown['isrc'] = __( 'ISRC (this version)', 'songpress' );
+		}
+		$have = array();
+		$keep = array();
+		foreach ( $existing as $c ) {
+			$k = strtolower( (string) $c->kind );
+			if ( isset( $shown[ $k ] ) && ! isset( $have[ $k ] ) ) {
+				$have[ $k ] = (string) $c->value;
+			} else {
+				$keep[] = $c;
+			}
+		}
+		$i = 0;
+		$o = '<div class="spe-codes">';
+		foreach ( $shown as $k => $label ) {
+			$o .= '<label class="spe-field"><span>' . esc_html( $label ) . '</span><input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $k ) . '"><input name="codes[' . $i . '][value]" value="' . esc_attr( $have[ $k ] ?? '' ) . '"></label>';
+			++$i;
+		}
+		$o .= '</div>';
+		foreach ( $keep as $c ) {
+			$o .= '<input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $c->kind ) . '"><input type="hidden" name="codes[' . $i . '][value]" value="' . esc_attr( $c->value ) . '">';
+			++$i;
+		}
 		return $o;
 	}
 
