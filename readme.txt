@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.10
+Stable tag: 0.63.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.11 =
+* Notes: an audio link now takes two rows, not three or more. The long address is kept out of the text (it is saved with the note as before) and the pencil on the player changes it.
 
 = 0.63.10 =
 * Notes: the audio block shows the name above a slimmer player.
