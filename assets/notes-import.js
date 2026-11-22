@@ -5,7 +5,7 @@
 	form = form.form;
 	var inp = form.querySelector('input[type=file]'), box = document.getElementById('spu-nprog'), bar = document.getElementById('spu-nbar'),
 		tx = document.getElementById('spu-ntxt'), btn = form.querySelector('button'), cfg = JSON.parse(form.getAttribute('data-cfg') || '{}');
-	var TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000;
+	var TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000, GROUP = 200, REST = 30;
 
 	function strip(s) { /* embedded pictures make a note huge; they cannot be kept in a note anyway */
 		return s.replace(/\(data:[a-z]+\/[^;)]+;base64,[A-Za-z0-9+\/=\s]{200,}\)/g, '(picture removed)')
@@ -61,10 +61,10 @@
 				u.searchParams.set('m_ok', msg); u.searchParams.set('sp_page', 'uploads'); u.searchParams.set('type', 'notes_files');
 				location.href = u.toString();
 			}
-			function progress() { bar.style.width = Math.floor(100 * (sent + failed.length) / Math.max(1, fl.length)) + '%'; tx.textContent = 'Sent ' + sent + ' of ' + total + ' files · ' + added + ' notes added' + (failed.length ? ' · ' + failed.length + ' skipped' : ''); }
+			function progress() { bar.style.width = Math.floor(100 * (sent + failed.length) / Math.max(1, fl.length)) + '%'; tx.textContent = 'Batch ' + (Math.floor((sent + failed.length) / GROUP) + 1) + ' of ' + Math.ceil(total / GROUP) + ' · sent ' + sent + ' of ' + total + ' files · ' + added + ' notes added' + (failed.length ? ' · ' + failed.length + ' skipped' : ''); }
 			function next() {
 				if (!units.length) { finish(); return; }
-				if (sent - lastBreak >= 100) { lastBreak = sent; wait(10, 'Pausing so the server can catch up. ' + sent + ' of ' + total + ' files sent, ' + added + ' notes added', next); return; }
+				if (sent + failed.length - lastBreak >= GROUP) { lastBreak = sent + failed.length; wait(REST, 'Batch ' + Math.floor(lastBreak / GROUP) + ' of ' + Math.ceil(total / GROUP) + ' done: ' + sent + ' of ' + total + ' files sent, ' + added + ' notes added. Resting before the next ' + GROUP + '', next); return; }
 				var unit = units[0];
 				send(unit).then(function (j) {
 					tries = 0; added += j.added; skip += j.skip; sent += unit.length; units.shift(); progress(); next();
