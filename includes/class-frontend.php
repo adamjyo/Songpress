@@ -106,7 +106,7 @@ class Songpress_Frontend {
 		$id = (int) $s->id;
 		list( $kind, $text ) = Songpress_Songs::best_chart( $s );
 		$labels = array( 'chordpro' => 'ChordPro', 'chords_lyrics' => __( 'Chords and lyrics', 'songpress' ), 'lyrics' => __( 'Lyrics', 'songpress' ), 'none' => '' );
-		$out  = '<article class="songpress-song">' . $top;
+		$out  = '<article class="songpress-song">' . $top . '<div class="songpress-cols"><div class="songpress-side">';
 		$out .= '<div class="songpress-hero">' . self::art( $s, 'songpress-cover' );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
@@ -127,11 +127,11 @@ class Songpress_Frontend {
 			$seen[ $k ] = 1;
 			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28, 'person' ) . esc_html( $c->name ) . '</span>';
 		}
-		$out .= '</p>';
+		$out .= '</p></div><div class="songpress-main">';
 		if ( 'none' !== $kind ) {
 			$out .= '<p class="songpress-chartlabel">' . esc_html( $labels[ $kind ] ) . '</p>' . ( 'chordpro' === $kind ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
 		}
-		return $out . '</article>';
+		return $out . '</div></div></article>';
 	}
 
 	/** A song's public share link: /?sp_share=TOKEN. No login. Shows the song only: no splits, no codes, no notes, no money. */
@@ -210,7 +210,7 @@ class Songpress_Frontend {
 		}
 		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
 		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
-		$out  = '<div class="songpress-profile sp-app"><div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
+		$out  = '<div class="songpress songpress-profile sp-app"><div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Songs', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
 		$out .= '<p class="songpress-sub">' . esc_html__( 'Earnings and streams will appear here when that feature is added.', 'songpress' ) . '</p>';

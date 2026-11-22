@@ -32,7 +32,7 @@
 .songpress-back{display:inline-block;color:var(--sp-mute);margin-bottom:12px}
 .songpress-hero{position:relative;margin:0 -16px 14px}
 .songpress-cover{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
-.songpress-noart.songpress-cover{width:100%;height:auto;aspect-ratio:1/1;border-radius:0;border:0;font-size:64px}
+.songpress-noart.songpress-cover{display:flex;width:100%;height:auto;aspect-ratio:1/1;border-radius:0;border:0;font-size:64px}
 .songpress-audio{position:absolute;left:0;right:0;bottom:0;width:100%}
 .songpress-song h2{font-size:24px;margin:2px 0 6px}
 .songpress-song .songpress-by{white-space:normal;font-size:14px}
@@ -53,6 +53,25 @@
 .songpress-donate a{color:var(--sp-accent);font-size:13px;text-decoration:none;font-weight:600;letter-spacing:.04em}
 .sp-app .songpress-donate a{color:var(--sp-accent)}
 @media print{.songpress-donate,.songpress-tabs{display:none}}
+
+/* Desktop and tablet: use the width instead of a phone column. */
+@media (min-width:900px){
+ .songpress.sp-app{max-width:1120px;padding:28px 36px 12px;display:flex;flex-direction:column}
+ .songpress.sp-app .songpress-tabs{order:-1;margin:0 0 18px;border:1px solid var(--sp-line);border-radius:12px;overflow:hidden;align-self:flex-start;width:auto}
+ .songpress.sp-app .songpress-tabs a{flex:none;min-height:0;flex-direction:row;padding:10px 20px;font-size:14px}
+ .songpress.sp-app .songpress-tabs a.on{background:var(--sp-chip);color:var(--sp-accent)}
+ .songpress.sp-app .songpress-head h2{font-size:28px}
+ .songpress.sp-app .songpress-search{max-width:480px}
+ .songpress.sp-app .songpress-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .songpress.sp-app .songpress-cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:36px;align-items:start}
+ .songpress.sp-app .songpress-hero{margin:0 0 16px;border-radius:14px;overflow:hidden}
+ .songpress.sp-app .songpress-main .songpress-chartlabel:first-child{margin-top:0}
+ .songpress.sp-app .songpress-stats{max-width:520px}
+ .songpress.sp-app .songpress-profile-head{margin-bottom:20px}
+}
+@media (min-width:1280px){
+ .songpress.sp-app .songpress-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 
 .sp-cp{font-size:16px;line-height:1.3;color:var(--sp-text,inherit)}
 .sp-cp-line{margin:.35em 0}
