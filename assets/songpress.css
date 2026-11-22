@@ -1,14 +1,21 @@
 /* SongPress front end. Dark, amber accent, fully self-contained so the site theme cannot wash it out. */
 .sp-app{--sp-bg:#0f1012;--sp-card:#141518;--sp-line:#24262b;--sp-field:#17181c;--sp-chip:#22252b;--sp-text:#e9eaec;--sp-soft:#c4c8d0;--sp-mute:#a4a8b0;--sp-accent:#f5a524;--sp-good:#5fd39a;
- box-sizing:border-box;max-width:640px;margin:0 auto;background:var(--sp-bg);color:var(--sp-text);border-radius:18px;padding:20px 16px 8px;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+ box-sizing:border-box;max-width:1120px;margin:0 auto;background:var(--sp-bg);color:var(--sp-text);border-radius:18px;padding:20px 16px 8px;font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.sp-app{container-type:inline-size;width:100%;display:flex;flex-direction:column}
 .sp-app *,.sp-app *::before,.sp-app *::after{box-sizing:border-box}
+.sp-app,.sp-app a,.sp-app span,.sp-app p,.sp-app li,.sp-app div,.sp-app nav,.sp-app h1,.sp-app h2,.sp-app h3,.sp-app input,.sp-app button,.sp-app label{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif!important}
+.sp-app h1,.sp-app h2,.sp-app h3{font-family:"Space Grotesk",Inter,system-ui,sans-serif!important}
+.sp-app a,.sp-app a:hover,.sp-app a:focus{text-decoration:none!important;border:0;box-shadow:none!important;background-image:none}
+.sp-app ul,.sp-app li{list-style:none!important;margin-left:0}
+.sp-app .songpress-serial,.sp-app .songpress-chart,.sp-app .songpress-chart *{font-variant-numeric:tabular-nums}
+.sp-app .songpress-chart{font-family:ui-monospace,Menlo,Consolas,monospace!important}
 .sp-app a{color:inherit;text-decoration:none;box-shadow:none}
 .sp-app h1,.sp-app h2,.sp-app h3{font-family:"Space Grotesk",Inter,system-ui,sans-serif;color:var(--sp-text);margin:0;font-weight:600;letter-spacing:0;text-transform:none}
 .sp-app p{margin:0 0 10px;color:var(--sp-soft)}
 .sp-app img{max-width:100%;height:auto}
-.songpress-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.songpress-head img{width:28px;height:28px;display:block}
-.songpress-head h2{font-size:22px}
+.songpress-head{display:flex!important;flex-wrap:nowrap;align-items:center;gap:10px;margin-bottom:14px}
+.songpress-head img{width:28px;height:28px;display:block;flex:none;margin:0;border-radius:0;box-shadow:none}
+.songpress-head h2{font-size:22px;margin:0!important;padding:0;flex:1;min-width:0;line-height:1.2}
 .songpress-search{margin:0 0 12px}
 .songpress-search input{display:block;width:100%;height:48px;padding:0 14px;border-radius:12px;border:1px solid #2a2d33;background:var(--sp-field);color:var(--sp-text);font-size:16px;font-family:inherit;box-shadow:none;margin:0}
 .songpress-search input::placeholder{color:var(--sp-mute);opacity:1}
@@ -16,7 +23,7 @@
 .songpress-chips{display:flex;gap:8px;overflow-x:auto;margin:0 0 12px;padding-bottom:2px}
 .songpress-chips a{flex:none;white-space:nowrap;border:1px solid #2a2d33;color:var(--sp-mute);border-radius:999px;padding:8px 14px}
 .songpress-chips a.on{background:var(--sp-chip);color:#fff;border-color:var(--sp-chip)}
-.songpress-list{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:10px}
+.songpress-list{margin:0 0 10px;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px;width:100%}
 .songpress-list li{margin:0;padding:0}
 .songpress-list a.songpress-row{display:flex;align-items:center;gap:12px;padding:14px;background:var(--sp-card);border:1px solid var(--sp-line);border-radius:14px;color:var(--sp-text)}
 .songpress-list a.songpress-row:hover{border-color:#3a3d44}
@@ -54,23 +61,25 @@
 .sp-app .songpress-donate a{color:var(--sp-accent)}
 @media print{.songpress-donate,.songpress-tabs{display:none}}
 
-/* Desktop and tablet: use the width instead of a phone column. */
-@media (min-width:900px){
- .songpress.sp-app{max-width:1120px;padding:28px 36px 12px;display:flex;flex-direction:column}
- .songpress.sp-app .songpress-tabs{order:-1;margin:0 0 18px;border:1px solid var(--sp-line);border-radius:12px;overflow:hidden;align-self:flex-start;width:auto}
- .songpress.sp-app .songpress-tabs a{flex:none;min-height:0;flex-direction:row;padding:10px 20px;font-size:14px}
- .songpress.sp-app .songpress-tabs a.on{background:var(--sp-chip);color:var(--sp-accent)}
- .songpress.sp-app .songpress-head h2{font-size:28px}
- .songpress.sp-app .songpress-search{max-width:480px}
- .songpress.sp-app .songpress-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
- .songpress.sp-app .songpress-cols{display:grid;grid-template-columns:340px minmax(0,1fr);gap:36px;align-items:start}
- .songpress.sp-app .songpress-hero{margin:0 0 16px;border-radius:14px;overflow:hidden}
- .songpress.sp-app .songpress-main .songpress-chartlabel:first-child{margin-top:0}
- .songpress.sp-app .songpress-stats{max-width:520px}
- .songpress.sp-app .songpress-profile-head{margin-bottom:20px}
+/* Wide layouts respond to the width of the box SongPress sits in (your theme's content column), not the browser window. */
+@container (min-width:620px){
+ .songpress-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .songpress-search{max-width:480px}
+ .songpress-head h2{font-size:28px}
 }
-@media (min-width:1280px){
- .songpress.sp-app .songpress-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+@container (min-width:960px){
+ .songpress-list{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@container (min-width:720px){
+ .songpress-cols{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:32px;align-items:start}
+ .songpress-hero{margin:0 0 16px;border-radius:14px;overflow:hidden}
+ .songpress-main .songpress-chartlabel:first-child{margin-top:0}
+ .songpress-stats{max-width:520px}
+}
+@container (min-width:620px){
+ .songpress-tabs{margin:0 0 18px;border:1px solid var(--sp-line);border-radius:12px;overflow:hidden;width:max-content;max-width:100%;order:-1}
+ .songpress-tabs a{flex:none;min-height:0;flex-direction:row;padding:10px 20px;font-size:14px}
+ .songpress-tabs a.on{background:var(--sp-chip)}
 }
 
 .sp-cp{font-size:16px;line-height:1.3;color:var(--sp-text,inherit)}
