@@ -49,6 +49,15 @@ class Songpress_Install {
 			Songpress_Caps::migrate_class_names();
 			update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
 		}
+		// One-time catch-ups for songs that already exist. They run on update, not only on activation.
+		if ( '43' !== get_option( 'songpress_version_rules' ) ) {
+			Songpress_Songs::apply_version_rules();
+			update_option( 'songpress_version_rules', '43' );
+		}
+		if ( '47' !== get_option( 'songpress_titles' ) ) {
+			Songpress_Songs::unify_titles();
+			update_option( 'songpress_titles', '47' );
+		}
 		self::ensure_artist();
 		if ( ! get_option( 'songpress_pages_done' ) ) {
 			self::create_pages();

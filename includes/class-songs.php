@@ -63,6 +63,27 @@ class Songpress_Songs {
 		return (bool) $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$t} WHERE song_id = %d AND user_id = %d LIMIT 1", $song_id, $user_id ) );
 	}
 
+	/**
+	 * Every version carries the original work's title. A title a version had of its own (for example "Land Of My Father (R&B)")
+	 * moves to its release title when that is empty, so the name is kept. Returns the number of versions changed.
+	 */
+	public static function unify_titles() {
+		global $wpdb;
+		$t = Songpress_Install::table( 'songs' );
+		$n = 0;
+		foreach ( (array) $wpdb->get_results( "SELECT id, family_id, title FROM {$t} WHERE version_no = 0 AND title <> ''" ) as $o ) {
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, title, release_title FROM {$t} WHERE family_id = %d AND version_no > 0 AND title <> %s", (int) $o->family_id, $o->title ) ) as $v ) {
+				$set = array( 'title' => $o->title );
+				if ( '' !== trim( (string) $v->title ) && '' === trim( (string) $v->release_title ) ) {
+					$set['release_title'] = $v->title;
+				}
+				$wpdb->update( $t, $set, array( 'id' => (int) $v->id ) );
+				++$n;
+			}
+		}
+		return $n;
+	}
+
 	/** A version with no title of its own shows its original work's title. */
 	public static function display_title( $s ) {
 		if ( '' !== trim( (string) $s->title ) ) {

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.47.2
+Stable tag: 0.47.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.47.3 =
+* Every version now carries the original work's title. A title a version had of its own moves to its Release title when that is empty, so no name is lost. A hint under the title on a version says renaming changes every version.
+* Fix: the one-time catch-ups from 0.43.1 (clear copied per-version fields) only ran when the plugin was activated, not when it updated. They now run on update, together with the title change.
 
 = 0.47.2 =
 * DistroKid and UPC numbers now belong to versions, like the ISRC. They show on versions (tinted), not on the original work; they are not copied to new versions or synced between versions.

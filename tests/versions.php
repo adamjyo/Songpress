@@ -663,6 +663,14 @@ Songpress_Songs::replace_identifiers( $da, array( array( 'kind' => 'ascap', 'val
 Songpress_Songs::sync_shared( $da );
 $dkv = array(); foreach ( Songpress_Songs::identifiers( $db_ ) as $i ) { $dkv[ $i->kind ] = $i->value; } ksort( $dkv );
 check( 'ASCAP is shared; DistroKid, UPC and ISRC stay on the version and are dropped from the original', array( wp_ids( $da ), $dkv ), array( array( 'ascap' ), array( 'ascap' => 'A1', 'distrokid' => 'DK9', 'isrc' => 'US9' ) ) );
+$ta = Songpress_Songs::create( array( 'title' => 'Root Name', 'status' => 'writing' ), 1 );
+$tb = Songpress_Songs::create_version( $ta, 1 );
+$tc = Songpress_Songs::create_version( $ta, 1 );
+Songpress_Songs::update( $tb, array( 'title' => 'Root Name (Acoustic)' ) );
+Songpress_Songs::update( $tc, array( 'title' => 'Other', 'release_title' => 'Kept Release' ) );
+$tn = Songpress_Songs::unify_titles();
+check( 'versions take the original title; their own name moves to the release title when empty', array( $tn >= 2, Songpress_Songs::get( $tb )->title, Songpress_Songs::get( $tb )->release_title, Songpress_Songs::get( $tc )->title, Songpress_Songs::get( $tc )->release_title ), array( true, 'Root Name', 'Root Name (Acoustic)', 'Root Name', 'Kept Release' ) );
+check( 'unify twice changes nothing', Songpress_Songs::unify_titles(), 0 );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
