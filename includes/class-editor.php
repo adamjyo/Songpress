@@ -228,7 +228,7 @@ class Songpress_Editor {
 		$o  = '<div id="spe-cp-modal" class="spe-cpm" hidden><div class="spe-cpm-in"><iframe id="spe-cp-frame" title="ChordPro tool"></iframe></div></div>';
 		$o .= '<script>(function(){var ed=document.getElementById("spe-chordpro");if(!ed)return;var box=document.getElementById("spe-cp-modal"),fr=document.getElementById("spe-cp-frame"),direct=false,ready=false,pending=null;'
 			. 'function send(){if(ready&&fr.contentWindow){fr.contentWindow.postMessage({type:"ct-load",text:ed.value},location.origin);}}'
-			. 'function open(){if(!box.hidden)return;box.hidden=false;ready=false;if(!fr.getAttribute("src")){fr.setAttribute("src",ed.getAttribute("data-tool"));}else{send();}}'
+			. 'function open(){if(!box.hidden)return;box.hidden=false;if(!fr.getAttribute("src")){ready=false;fr.setAttribute("src",ed.getAttribute("data-tool"));}else{send();}}'
 			. 'function close(){box.hidden=true;ed.blur();}'
 			. 'ed.addEventListener("focus",function(){if(!direct)open();});ed.addEventListener("blur",function(){direct=false;});'
 			. 'document.getElementById("spe-cp-open").addEventListener("click",open);var tp=document.getElementById("spe-cp-top");if(tp)tp.addEventListener("click",open);'
@@ -299,11 +299,11 @@ class Songpress_Editor {
 		$map = array();
 		foreach ( (array) $wpdb->get_results( "SELECT name, ipi FROM {$t} WHERE kind = 'person' ORDER BY name" ) as $r ) {
 			$o .= '<option value="' . esc_attr( $r->name ) . '">';
-			if ( '' !== (string) $r->ipi ) {
-				$map[ strtolower( $r->name ) ] = array( $r->name, $r->ipi );
+			{
+				$map[ strtolower( $r->name ) ] = array( $r->name, $r->ipi, Songpress_Profiles::chip( $r->name, 28, 'person' ) );
 			}
 		}
-		$o .= '</datalist><script>(function(){var M=' . wp_json_encode( $map ) . ';document.addEventListener("input",function(e){var i=e.target;if(!i.matches||!i.matches("input[list=spe-people]")){return;}var v=M[i.value.trim().toLowerCase()];if(!v){return;}var c=i.closest(".spe-credit"),p=c&&c.querySelector("input[name$=\"[ipi]\"]");if(p){p.value=v[1];}});})();</script>';
+		$o .= '</datalist><script>(function(){var M=' . wp_json_encode( $map ) . ';document.addEventListener("input",function(e){var i=e.target;if(!i.matches||!i.matches("input[list=spe-people]")){return;}var v=M[i.value.trim().toLowerCase()],w=i.closest(".spe-who"),f=w&&w.querySelector(".sp-face");if(f){f.remove();}if(!v){return;}if(w){i.insertAdjacentHTML("beforebegin",v[2]);}var c=i.closest(".spe-credit"),p=c&&c.querySelector("input[name$=\"[ipi]\"]");if(p&&v[1]){p.value=v[1];}});})();</script>';
 		return $o;
 	}
 

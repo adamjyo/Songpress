@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.46.3
+Stable tag: 0.46.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.46.4 =
+* Choosing a writer from the People list also fills in their picture (or initials), next to their IPI.
+* The ChordPro tool now opens with whatever is in the ChordPro box every time, not only the first time. Before, opening it a second time without reloading the page showed the earlier text.
 
 = 0.46.3 =
 * DistroKid numbers are no longer shared between versions. In the old catalog 93 works have a different DistroKid number on each version, and syncing would have overwritten them. The original work can still hold its own DistroKid number; each version keeps its own, like the ISRC. Everything else shared stays shared.
