@@ -138,6 +138,9 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'notes', __( 'Notes', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
 		}
+		if ( Songpress_Caps::can( 'pitch' ) && ! wp_is_mobile() ) {
+			$nav .= $mk( 'pitch', __( 'Pitch', 'songpress' ), $svg( '<path d="M3 11v2a1 1 0 001 1h2l5 4V6L6 10H4a1 1 0 00-1 1zM15 9a4 4 0 010 6M18 6.5a8 8 0 010 11"/>' ), 'pitch' );
+		}
 		if ( Songpress_Caps::can( 'money' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'money', __( 'Stats', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
 		}

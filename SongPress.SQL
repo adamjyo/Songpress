@@ -438,3 +438,23 @@ CREATE TABLE {prefix}songpress_note_versions (
   PRIMARY KEY  (id),
   KEY entry_id (entry_id)
 ) {charset};
+
+-- Pitch log: where a song was sent (a playlist curator, a radio station, a sync library), when to follow up, and how it went.
+CREATE TABLE {prefix}songpress_pitches (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  channel varchar(64) NOT NULL DEFAULT '',
+  sent_to varchar(191) NOT NULL DEFAULT '',
+  sent_at varchar(10) NOT NULL DEFAULT '',
+  follow_up varchar(10) NOT NULL DEFAULT '',
+  outcome varchar(16) NOT NULL DEFAULT 'open',
+  notes text,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY song_id (song_id),
+  KEY outcome (outcome),
+  KEY follow_up (follow_up)
+) {charset};
+

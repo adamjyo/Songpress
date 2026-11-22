@@ -516,3 +516,23 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-side-name{display:flex;flex-direction:column;min-width:0;line-height:1.2}
 .sp-side-name b{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:17px;font-weight:600;color:#fff;letter-spacing:-.01em}
 .sp-side-name small{font-size:10px;white-space:nowrap;color:#8a8f98;margin-top:2px}
+
+/* Pitch */
+.sp-pitch .spp-due{background:#f5a524;color:#111;border-radius:9px;padding:0 6px;font-size:11px;margin-left:4px}
+.sp-pitch .spp-chan{list-style:none;margin:0 0 18px;padding:0}
+.sp-pitch .spp-chan li{display:flex;gap:12px;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.sp-pitch .spp-cost{font-size:11px;opacity:.7;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:0 6px}
+.sp-pitch .spp-row{border-bottom:1px solid rgba(255,255,255,.08);padding:8px 0}
+.sp-pitch .spp-row summary{display:flex;gap:12px;align-items:center;cursor:pointer}
+.sp-pitch .spp-row summary>span:first-child{flex:1}
+.sp-pitch .spp-meta{opacity:.7;font-size:13px}
+.sp-pitch .spp-chip{font-size:12px;border-radius:9px;padding:1px 8px;background:rgba(255,255,255,.1)}
+.sp-pitch .spp-chip.late{background:#f5a524;color:#111}
+.sp-pitch .spp-chip.placed{background:#2e7d4f;color:#fff}
+.sp-pitch .spp-copy textarea{width:100%;font:13px/1.45 ui-monospace,monospace}
+.sp-pitch .spp-copy h4{display:flex;gap:10px;align-items:center;margin:16px 0 6px}
+.sp-pitch .spp-ready{list-style:none;padding:0;columns:2}
+.sp-pitch .spp-ready .no{color:#f5a524}
+.sp-pitch .spp-new{margin:8px 0 12px}
+.sp-pitch .spp-new summary{cursor:pointer;color:#f5a524}
+@media(max-width:759px){.sp-pitch .spp-ready{columns:1}}

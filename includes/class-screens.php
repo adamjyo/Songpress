@@ -143,6 +143,9 @@ class Songpress_Screens {
 		if ( 'journal' === $slug || 'notes' === $slug ) {
 			return Songpress_Journal::render();
 		}
+		if ( 'pitch' === $slug ) {
+			return Songpress_Pitch::render();
+		}
 		if ( in_array( $slug, array( 'money', 'stats' ), true ) ) {
 			return Songpress_Money::render( $slug );
 		}

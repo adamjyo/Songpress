@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.36.3
+Stable tag: 0.37.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.37.0 =
+* New Pitch page in the rail: where to pitch (radio, playlists, worship, sync), ready-to-send radio, Spotify and email copy plus a one-sheet built from each work, and a pitch log with follow-up dates and outcomes. A Pitch button is also in the work editor.
 
 = 0.36.3 =
 * Rail: the subtitle fits on one line.

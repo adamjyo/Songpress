@@ -42,6 +42,7 @@ class Songpress_Audit {
 			'notes'         => __( 'Notes', 'songpress' ),
 			'people'        => __( 'People', 'songpress' ),
 			'money'         => __( 'Stats', 'songpress' ),
+			'pitch'         => __( 'Pitch', 'songpress' ),
 			'sessions'      => __( 'Sessions', 'songpress' ),
 			'art'           => __( 'Art', 'songpress' ),
 			'agreements'    => __( 'Agreements', 'songpress' ),
@@ -81,6 +82,9 @@ class Songpress_Audit {
 		}
 		if ( isset( self::ACTIONS[ $action ] ) ) {
 			return self::ACTIONS[ $action ];
+		}
+		if ( 0 === strpos( $action, 'songpress_pitch_' ) ) {
+			return array( 'pitch', ucfirst( str_replace( '_', ' ', substr( $action, 16 ) ) ) . ' (pitch)' );
 		}
 		if ( 0 === strpos( $action, 'songpress_money_' ) ) {
 			return array( 'money', ucfirst( str_replace( '_', ' ', substr( $action, 16 ) ) ) );

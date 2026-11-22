@@ -8,6 +8,7 @@ function __( $s ) { return $s; }
 function current_time() { return '2026-01-01 00:00:00'; }
 function sanitize_text_field( $s ) { return trim( (string) $s ); }
 function sanitize_textarea_field( $s ) { return (string) $s; }
+if ( ! function_exists( 'sanitize_key' ) ) { function sanitize_key( $k ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $k ) ); } }
 function esc_url_raw( $s ) { return (string) $s; }
 function wp_generate_password( $n ) { return substr( str_repeat( md5( uniqid( '', true ) ), 2 ), 0, $n ); }
 function wp_get_attachment_url( $id ) { return 'https://site.test/uploads/audio-' . (int) $id . '.mp3'; }
@@ -60,6 +61,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_note_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INT, title TEXT DEFAULT \'\', notes TEXT, user_id INT DEFAULT 0, saved_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT DEFAULT 0, area TEXT, action TEXT, subject TEXT DEFAULT \'\', detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_pitches (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, channel TEXT, sent_to TEXT, sent_at TEXT, follow_up TEXT DEFAULT \'\', outcome TEXT DEFAULT \'open\', notes TEXT, user_id INT DEFAULT 0, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -106,6 +108,7 @@ require __DIR__ . '/../includes/class-chordpro.php';
 require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
+require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
 require __DIR__ . '/../includes/class-agreements.php';
@@ -724,6 +727,22 @@ Songpress_Journal::persist( array( 'entry_id' => $nv, 'title' => 'Versioned', 'n
 check( 'after the gap another copy is kept', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 2 );
 Songpress_Journal::ajax_op( array( 'op' => 'delete', 'entry_id' => $nv ) );
 check( 'deleting a note deletes its versions', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 0 );
+
+$pf = array( 'title' => 'Glass Houses', 'serial' => '0001', 'band' => 'Red Beard', 'writers' => array( array( 'name' => 'Ann', 'share' => '50' ), array( 'name' => 'Bo', 'share' => '50' ) ), 'genre' => 'Americana', 'key' => 'G', 'tempo' => '92', 'isrc' => '', 'iswc' => '', 'audio' => 'https://x.test/a.mp3', 'art' => '', 'about' => "<p>Written after   the flood.</p>", 'status' => '', 'release' => '' );
+check( 'radio copy names the song and band', array( strpos( Songpress_Pitch::radio_copy( $pf ), '"Glass Houses" by Red Beard' ) !== false, strpos( Songpress_Pitch::radio_copy( $pf ), 'Written after the flood.' ) !== false ), array( true, true ) );
+check( 'spotify pitch is at most 500 characters', mb_strlen( Songpress_Pitch::spotify_copy( array_merge( $pf, array( 'about' => str_repeat( 'word ', 400 ) ) ) ) ) <= 500, true );
+check( 'one-sheet lists writers with shares', strpos( Songpress_Pitch::onesheet( $pf ), 'Ann (50%); Bo (50%)' ) !== false, true );
+$rd = array_column( Songpress_Pitch::readiness( $pf ), 0 );
+check( 'readiness flags missing art and ISRC', array( $rd[2], $rd[7], $rd[4] ), array( false, false, true ) );
+check( 'outcome falls back to open', Songpress_Pitch::outcome( 'bogus' ), 'open' );
+check( 'a pitch needs a work and a destination', array( Songpress_Pitch::add( array( 'song_id' => 0, 'sent_to' => 'WXYZ' ) ), Songpress_Pitch::add( array( 'song_id' => 1 ) ) ), array( 0, 0 ) );
+$pid = Songpress_Pitch::add( array( 'song_id' => 1, 'channel' => 'spotify', 'sent_to' => 'WXYZ', 'sent_at' => '2026-01-01', 'follow_up' => '2026-01-10' ) );
+check( 'pitch is logged', $pid > 0, true );
+check( 'follow-up shows when due', array( count( Songpress_Pitch::rows( 'due', 0, '2026-01-09' ) ), count( Songpress_Pitch::rows( 'due', 0, '2026-01-10' ) ) ), array( 0, 1 ) );
+Songpress_Pitch::update( $pid, array( 'outcome' => 'placed', 'follow_up' => '', 'notes' => 'added' ) );
+check( 'a placed pitch is no longer due or waiting', array( count( Songpress_Pitch::rows( 'due', 0, '2026-02-01' ) ), count( Songpress_Pitch::rows( 'open' ) ), count( Songpress_Pitch::rows( 'all' ) ) ), array( 0, 0, 1 ) );
+Songpress_Pitch::delete( $pid );
+check( 'a pitch can be removed', count( Songpress_Pitch::rows( 'all' ) ), 0 );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
