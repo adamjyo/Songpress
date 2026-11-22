@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.16.0 =
+* Activity log (Managers only): a new rail page showing who did what and when across the app: song changes, notes, people and logins, money, sessions, uploads and downloads, agreements, registrations, art and sign-ins. Filter by area or person, search, page through, and download as CSV. Entries are never edited or removed.
+
 = 0.15.0 =
 * Notes looks and works like the old notes app again: a tag column (#'s, All, Pinned, Archived), a dated list with search, a large title and writing area with the floating toolbar (bold, italic, heading, list, link, ChordPro block, image, audio, preview, pin, archive, delete), and a details panel (date, created, location, authors, key, tempo, kind, songs mentioned, add a tag). Notes autosave. The + ↓ ↑ ☑ ↕ ▤ buttons add, import, export as .md, select several, sort and hide the tag column. Days and Map stay as links in the details panel.
 

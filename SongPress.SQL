@@ -404,3 +404,18 @@ CREATE TABLE {prefix}songpress_activity (
   KEY source_key (source_key)
 ) {charset};
 
+
+-- Who did what, when, anywhere in the app. Managers read it on the Activity log screen. Never edited or deleted by the plugin.
+CREATE TABLE {prefix}songpress_audit (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  area varchar(16) NOT NULL DEFAULT '',
+  action varchar(48) NOT NULL DEFAULT '',
+  subject varchar(255) NOT NULL DEFAULT '',
+  detail text,
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY area (area),
+  KEY user_id (user_id),
+  KEY created_at (created_at)
+) {charset};

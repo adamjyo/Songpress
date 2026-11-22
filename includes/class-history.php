@@ -17,6 +17,10 @@ class Songpress_History {
 			'detail'     => $detail ? wp_json_encode( $detail ) : '',
 			'created_at' => current_time( 'mysql', true ),
 		) );
+		if ( class_exists( 'Songpress_Audit' ) ) {
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT serial, title FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE id = %d', (int) $song_id ) ); // phpcs:ignore WordPress.DB
+			Songpress_Audit::log( 'songs', ucfirst( $action ), $row ? trim( $row->serial . ' ' . $row->title ) : '', array_intersect_key( $detail, array_flip( array( 'from', 'after' ) ) ) );
+		}
 	}
 
 	/** Compare old and new values of the listed fields. Returns field => array( old, new ) for what changed. */

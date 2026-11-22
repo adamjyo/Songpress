@@ -282,15 +282,20 @@ class Songpress_Journal {
 			if ( '' !== $err ) {
 				return array( 'ok' => false, 'error' => $err );
 			}
-			return array( 'ok' => true, 'note' => self::shape( self::row( $nid ) ) );
+			$nrow = self::row( $nid );
+			Songpress_Audit::log( 'notes', ( absint( $in['entry_id'] ?? 0 ) ? 'Edited' : 'Added' ) . ' a note', $nrow->title, array( 'entry_id' => $nid ) );
+			return array( 'ok' => true, 'note' => self::shape( $nrow ) );
 		}
 		if ( 'flag' === $op && $id ) {
 			$what = 'archived' === ( $in['flag'] ?? '' ) ? 'archived' : 'pinned';
 			$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::t() . " SET {$what} = 1 - {$what} WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB -- one of two literals.
+			Songpress_Audit::log( 'notes', ( 'archived' === $what ? 'Archived or restored' : 'Pinned or unpinned' ) . ' a note', (string) ( self::row( $id )->title ?? '' ), array( 'entry_id' => $id ) );
 			return array( 'ok' => true, 'note' => self::shape( self::row( $id ) ) );
 		}
 		if ( 'delete' === $op && $id ) {
+			$gone = self::row( $id );
 			$wpdb->delete( self::t(), array( 'id' => $id ) );
+			Songpress_Audit::log( 'notes', 'Deleted a note', $gone ? (string) $gone->title : '', array( 'entry_id' => $id ) );
 			return array( 'ok' => true, 'deleted' => $id );
 		}
 		if ( 'songs' === $op ) {

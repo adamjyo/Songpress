@@ -57,6 +57,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, session_date TEXT, session_time TEXT, title TEXT, song_id INT DEFAULT 0, location TEXT, notes TEXT, lyrics TEXT, audio_url TEXT, owner_user_id INT DEFAULT 0, source_key TEXT DEFAULT \'\', created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_people (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, name TEXT, person_key TEXT, user_id INT DEFAULT 0, ipi TEXT DEFAULT \'\', share TEXT DEFAULT \'\')' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, author TEXT, user_id INT DEFAULT 0, kind TEXT DEFAULT \'text\', body TEXT, audio_url TEXT, source_key TEXT DEFAULT \'\', created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT DEFAULT 0, area TEXT, action TEXT, subject TEXT DEFAULT \'\', detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
@@ -78,6 +79,7 @@ $wpdb = new FakeWpdb();
 require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
+require __DIR__ . '/../includes/class-audit.php';
 require __DIR__ . '/../includes/class-artists.php';
 require __DIR__ . '/../includes/class-profiles.php';
 require __DIR__ . '/../includes/class-media.php';
@@ -565,6 +567,21 @@ check( 'notes screen: empty save refused', Songpress_Journal::ajax_op( array( 'o
 check( 'notes screen: pin then archive', array( Songpress_Journal::ajax_op( array( 'op' => 'flag', 'entry_id' => $nid, 'flag' => 'pinned' ) )['note']['pinned'], Songpress_Journal::ajax_op( array( 'op' => 'flag', 'entry_id' => $nid, 'flag' => 'archived' ) )['note']['archived'] ), array( 1, 1 ) );
 check( 'notes screen: unknown action', Songpress_Journal::ajax_op( array( 'op' => 'zzz' ) )['ok'], false );
 check( 'notes screen: delete', array( Songpress_Journal::ajax_op( array( 'op' => 'delete', 'entry_id' => $nid ) )['deleted'], $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Songpress_Install::table( 'journal' ) . ' WHERE id = ' . (int) $nid ) ), array( $nid, 0 ) );
+
+// Activity log
+check( 'audit: known action', Songpress_Audit::classify( 'songpress_session_save' ), array( 'sessions', 'Saved a session' ) );
+check( 'audit: money action by prefix', Songpress_Audit::classify( 'songpress_money_import' ), array( 'money', 'Import' ) );
+check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
+check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
+check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );
+check( 'audit: detail read back', Songpress_Audit::describe_detail( '{"entry_id":"4","title":["a","b"]}' ), 'entry_id: 4 · title: a → b' );
+$before = Songpress_Audit::rows( '', 0, '', 1 )['total'];
+Songpress_Audit::log( 'people', 'Renamed', 'Zed', array( 'login' => 'zed' ), 7 );
+$ar = Songpress_Audit::rows( 'people', 7, 'Zed', 1 );
+check( 'audit: log then find by area, user and search', array( $ar['total'], $ar['rows'][0]->action, (int) $ar['rows'][0]->user_id ), array( 1, 'Renamed', 7 ) );
+check( 'audit: total grew by one', Songpress_Audit::rows( '', 0, '', 1 )['total'], $before + 1 );
+$an = Songpress_Audit::rows( 'notes', 0, '', 1 );
+check( 'audit: note actions from the Notes screen were recorded', $an['total'] >= 4, true );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
