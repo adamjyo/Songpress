@@ -744,3 +744,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spn-audres button,.spn-audupb{text-align:left;padding:7px 10px;border:1px solid #34302b;border-radius:8px;background:transparent;color:#d9d2c8;cursor:pointer;font:inherit}
 .spn-audres button:hover,.spn-audupb:hover{border-color:var(--acc);color:var(--acc)}
 .spn-aui{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border:1px solid #34302b;border-radius:10px;background:#1c1916;font:13px system-ui,sans-serif;color:#d9d2c8}.spn-aui audio{height:32px;max-width:100%}
+.spn-pos-end{margin-top:auto}#spn-map{height:220px;margin:6px 0 0}
+#spn-map{background:#17140f;border:1px solid #26221e}

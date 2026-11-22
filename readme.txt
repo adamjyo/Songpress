@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.11
+Stable tag: 0.63.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.12 =
+* Notes: the Days, Map, ChordPro tool and export links at the bottom of the details panel are gone; the location map is shown there instead, and clicking it sets the note's position. Fixes the map, which the audio change in 0.63.11 had broken.
 
 = 0.63.11 =
 * Notes: an audio link now takes two rows, not three or more. The long address is kept out of the text (it is saved with the note as before) and the pencil on the player changes it.
