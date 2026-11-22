@@ -70,16 +70,17 @@ class Songpress_Admin {
 		// A form posted from the front-end app carries sp_return: go back there, not to the WordPress admin.
 		$ret = isset( $_POST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- every caller has already checked its nonce.
 		if ( '' !== $ret ) {
-			$q = array();
-			foreach ( $args as $k => $v ) {
-				if ( 'song' === $k ) {
-					$q['sp_edit'] = (int) $v;
-				} else {
-					$q[ 'sp_' . $k ] = $v;
+			if ( 'songpress-song' === $page || 'songpress' === $page ) {
+				$q = array();
+				foreach ( $args as $k => $v ) {
+					$q[ 'song' === $k ? 'sp_edit' : 'sp_' . $k ] = 'song' === $k ? (int) $v : $v;
 				}
-			}
-			if ( 'songpress-song' !== $page ) {
-				unset( $q['sp_edit'] );
+				if ( 'songpress' === $page ) {
+					unset( $q['sp_edit'] );
+				}
+			} else {
+				// management screens read their messages from plain GET names, so keep the names
+				$q = array_merge( array( 'sp_page' => preg_replace( '/^songpress-/', '', $page ) ), $args );
 			}
 			wp_safe_redirect( add_query_arg( $q, $ret ) );
 			exit;
@@ -1323,7 +1324,7 @@ class Songpress_Admin {
 		self::update_box();
 		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
 		echo '<p><label>' . esc_html__( 'GitHub repository', 'songpress' ) . ' <input name="github_repo" size="28" value="' . esc_attr( Songpress_Updater::repo() ) . '" placeholder="owner/repository"></label></p>';
-		echo '<p class="sp-help">' . esc_html__( 'WordPress asks GitHub twice a day whether there is a newer release. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
+		echo '<p class="sp-help">' . esc_html__( 'SongPress checks GitHub every few minutes for a newer version. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
 		submit_button();
 		echo '</form>';
 

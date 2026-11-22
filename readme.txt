@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.24
+Stable tag: 0.1.25
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.1.25 =
+* Phones and tablets only view songs; adding and editing is for the desktop app. The song editor shows every section on desktop.
+* The left rail now has every tool: Members, People, Artists, Import, Link writers, Settings and Export CSV, all opening inside the app instead of WordPress admin.
 
 = 0.1.24 =
 * Opening a song opens the editor (for people who can edit it). A View song link shows the read-only page.

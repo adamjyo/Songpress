@@ -213,7 +213,10 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-editor textarea{min-height:90px;resize:vertical;line-height:1.45}
 .sp-editor textarea.spe-chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14px;min-height:260px}
 .sp-editor input:focus,.sp-editor select:focus,.sp-editor textarea:focus{outline:2px solid var(--sp-accent);outline-offset:1px}
-.spe-head,.spe-credit{display:grid;grid-template-columns:minmax(0,1fr) 70px 36px;gap:8px;align-items:center}
+.spe-head,.spe-credit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:center}
+.spe-head{display:none}
+.spe-credit .spe-who{grid-column:1/-1}
+.spe-credit .spe-x{grid-column:2;justify-self:end}
 .spe-head{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sp-mute);padding:0 2px 4px}
 .spe-credit{margin:0 0 8px}
 .spe-who{display:flex;align-items:center;gap:8px;min-width:0}
@@ -242,15 +245,8 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spe-history time{color:var(--sp-mute);margin-right:8px}
 .songpress-editlink{float:right}
 .sp-app a.songpress-editlink{display:inline-flex;align-items:center;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--f-line,#2a2d33);color:var(--sp-text)}
-/* Phones and narrow boxes: the short form. Everything marked adv is hidden. */
-.sp-editor .adv{display:none!important}
-.spe-panel[data-panel=release],.spe-panel[data-panel=codes],.spe-panel[data-panel=story],.spe-panel[data-panel=versions]{display:none!important}
-.spe-credit{grid-template-columns:minmax(0,1fr) 64px 36px}
-.spe-credit .adv+span,.spe-credit>span:not(.spe-who){display:none}
 /* Wide: the full editor, one tab at a time. */
 @container (min-width:720px){
- .sp-editor .adv{display:revert!important}
- .sp-editor .spe-field.adv{display:flex!important}
  .spe-panel[data-panel]{display:none!important}
  .spe-panels[data-on=basics] .spe-panel[data-panel=basics],.spe-panels[data-on=people] .spe-panel[data-panel=people],.spe-panels[data-on=media] .spe-panel[data-panel=media],.spe-panels[data-on=chart] .spe-panel[data-panel=chart],.spe-panels[data-on=release] .spe-panel[data-panel=release],.spe-panels[data-on=codes] .spe-panel[data-panel=codes],.spe-panels[data-on=story] .spe-panel[data-panel=story],.spe-panels[data-on=versions] .spe-panel[data-panel=versions]{display:block!important}
  .spe-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:28px;align-items:start}
@@ -260,7 +256,10 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
  .sp-app .spe-tabs button.on{background:#22252b;color:#fff;font-weight:500}
  .spe-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
  .spe-grid .wide{grid-column:1/-1}
+ .spe-head{display:grid}
  .spe-head,.spe-credit{grid-template-columns:minmax(0,1.6fr) minmax(0,.8fr) 90px minmax(0,1.2fr) 36px}
+ .spe-credit .spe-who{grid-column:auto}
+ .spe-credit .spe-x{grid-column:auto;justify-self:auto}
  .spe-credit>span:not(.spe-who){display:block}
  .spe-pairs .spe-pair{max-width:760px}
  .spe-panel{max-width:960px}
@@ -280,3 +279,30 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-forgot{font-size:13px;text-align:center;color:var(--sp-mute);margin:0}
 
 .sp-app a.spe-viewlink{margin-left:auto;color:var(--sp-soft);font-size:14px}
+
+/* Management screens drawn inside the app (People, Artists, Import, Link writers, Settings) */
+.sp-wp,.sp-wp .wrap{color:var(--sp-text)}
+.sp-wp h1,.sp-wp h2{font-family:"Space Grotesk",Inter,system-ui,sans-serif;color:var(--sp-text);margin:0 0 12px}
+.sp-wp h1{font-size:26px}.sp-wp h2{font-size:18px;margin-top:22px}.sp-wp h3,.sp-wp h4{color:var(--sp-soft)}
+.sp-wp .wp-header-end{display:none}
+.sp-wp .page-title-action,.sp-wp a.button,.sp-wp button.button,.sp-wp .button,.sp-wp input[type=submit]{display:inline-flex;align-items:center;height:38px;padding:0 16px;border-radius:10px;border:1px solid #2a2d33;background:#1b1d22;color:var(--sp-text);font:inherit;font-size:14px;cursor:pointer;text-decoration:none;margin:2px 6px 2px 0;width:auto;min-height:0}
+.sp-wp .button-primary,.sp-wp input.button-primary{background:var(--sp-accent);color:#14110a;border-color:var(--sp-accent);font-weight:600}
+.sp-wp .button-link{background:none;border:0;color:var(--sp-soft);text-decoration:underline;cursor:pointer;font:inherit}
+.sp-wp .sp-help,.sp-wp .description{color:var(--sp-mute);font-size:13px}
+.sp-wp .notice{margin:0 0 10px;padding:10px 12px;border-radius:10px;background:#1b1d22;border:1px solid #2a2d33}
+.sp-wp .notice-success{background:#12301c;color:#7ee2a0;border-color:#12301c}
+.sp-wp .notice-warning{background:#35290c;color:#f5c460;border-color:#35290c}
+.sp-wp .notice-error{background:#3d1517;color:#ff8a8f;border-color:#3d1517}
+.sp-wp .notice p{margin:0}
+.sp-wp table.widefat,.sp-wp table.form-table{width:100%;border-collapse:collapse;max-width:960px}
+.sp-wp table.widefat th,.sp-wp table.widefat td,.sp-wp .form-table th,.sp-wp .form-table td{padding:8px 10px;border-bottom:1px solid var(--sp-line);text-align:left;vertical-align:middle;font-weight:400}
+.sp-wp .widefat thead th,.sp-wp .form-table th{color:var(--sp-mute);font-size:12px;letter-spacing:.05em;text-transform:uppercase;font-weight:500}
+.sp-wp input[type=text],.sp-wp input[type=search],.sp-wp input[type=url],.sp-wp input[type=email],.sp-wp input[type=password],.sp-wp input[type=number],.sp-wp input:not([type]),.sp-wp select,.sp-wp textarea{min-height:40px;padding:8px 12px;border-radius:10px;border:1px solid #2a2d33;background:var(--f-bg,#17181c);color:var(--sp-text);font:inherit;font-size:15px;box-shadow:none;max-width:100%}
+.sp-wp textarea{width:100%;min-height:90px}
+.sp-wp details{background:#141518;border:1px solid var(--sp-line);border-radius:12px;padding:10px 14px;margin:10px 0;max-width:960px}
+.sp-wp summary{font-weight:600;cursor:pointer}
+.sp-wp .sp-media-preview img{max-width:120px;border-radius:10px;display:block;margin-bottom:6px}
+.sp-wp code{background:#1b1d22;padding:1px 6px;border-radius:6px}
+.sp-wp a{color:var(--sp-accent)}
+.sp-wp [style*="background:#fff"],.sp-wp [style*="background: #fff"]{background:#141518!important;color:var(--sp-text)!important;border-color:var(--sp-line)!important}
+.sp-wp [style*="background:#fff"] *,.sp-wp [style*="background: #fff"] *{color:inherit}

@@ -84,12 +84,18 @@ class Songpress_Media {
 	}
 
 	/** The picker row for the song editor: a button that opens the Media Library, a preview and a clear button. */
+	/** True while a management screen is drawn inside the front-end app: pickers upload instead of opening the Media Library window. */
+	public static $front = false;
+
 	public static function picker( $field, $label, $type, $id, $url ) {
 		$src = $id ? ( 'image' === $type ? (string) wp_get_attachment_image_url( (int) $id, 'thumbnail' ) : (string) wp_get_attachment_url( (int) $id ) ) : '';
 		$h   = '<div class="sp-media" data-type="' . esc_attr( $type ) . '" data-field="' . esc_attr( $field ) . '">';
 		$h  .= '<input type="hidden" name="' . esc_attr( $field ) . '_id" value="' . (int) $id . '"><input type="hidden" class="sp-media-clearflag" name="' . esc_attr( $field ) . '_clear" value="0">';
 		$h  .= '<div class="sp-media-preview">' . ( $id && 'image' === $type && '' !== $src ? '<img src="' . esc_url( $src ) . '" alt="" style="max-width:120px;height:auto;display:block;margin-bottom:6px">' : ( $id && '' !== $src ? esc_html( wp_basename( $src ) ) : '' ) ) . '</div>';
-		$h  .= '<button type="button" class="button sp-media-pick">' . esc_html( $label ) . '</button> <button type="button" class="button-link sp-media-clear"' . ( $id ? '' : ' hidden' ) . '>' . esc_html__( 'Remove', 'songpress' ) . '</button>';
+		$pick = self::$front
+			? '<label class="button spe-btn">' . esc_html__( 'Upload', 'songpress' ) . '<input type="file" accept="' . ( 'image' === $type ? 'image/*' : 'audio/*' ) . '" hidden></label>'
+			: '<button type="button" class="button sp-media-pick">' . esc_html( $label ) . '</button>';
+		$h  .= $pick . ' <button type="button" class="button-link sp-media-clear"' . ( $id ? '' : ' hidden' ) . '>' . esc_html__( 'Remove', 'songpress' ) . '</button>';
 		if ( ! $id && '' !== (string) $url ) {
 			$h .= '<p class="sp-help">' . esc_html__( 'Linked from outside the Media Library:', 'songpress' ) . ' ' . esc_html( $url ) . '</p>';
 		}
@@ -97,6 +103,13 @@ class Songpress_Media {
 	}
 
 	public static function picker_script() {
+		if ( self::$front ) {
+			$cfg = wp_json_encode( array( 'url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_upload' ) ) );
+			echo '<script>(function(){var CFG=' . $cfg . ';' // phpcs:ignore WordPress.Security.EscapeOutput -- json from wp_json_encode.
+				. 'document.addEventListener("change",function(e){var i=e.target;if(i.type!=="file"){return;}var b=i.closest(".sp-media");if(!b||!i.files[0]){return;}var fd=new FormData();fd.append("action","songpress_upload");fd.append("nonce",CFG.nonce);fd.append("file",i.files[0]);fetch(CFG.url,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){if(j&&j.success){b.querySelector("input[type=hidden]").value=j.data.id;b.querySelector(".sp-media-clearflag").value="0";var p=b.querySelector(".sp-media-preview");p.innerHTML="";if(j.data.thumb){var im=document.createElement("img");im.src=j.data.thumb;im.alt="";p.appendChild(im);}else{p.textContent=j.data.name||"Uploaded";}var c=b.querySelector(".sp-media-clear");if(c){c.hidden=false;}}else{alert((j&&j.data&&j.data.message)||"That file could not be added.");}});i.value="";});'
+				. 'document.addEventListener("click",function(e){var c=e.target.closest(".sp-media-clear");if(!c){return;}var b=c.closest(".sp-media");b.querySelector("input[type=hidden]").value="0";b.querySelector(".sp-media-clearflag").value="1";b.querySelector(".sp-media-preview").innerHTML="";c.hidden=true;});})();</script>';
+			return;
+		}
 		$cfg = wp_json_encode( array( 'url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_upload' ) ) );
 		echo '<style>.sp-dropping{outline:3px dashed #f5a524;outline-offset:4px}.sp-drop-msg{margin:6px 0;color:#646970}</style>';
 		echo '<script>(function(){var CFG=' . $cfg . ';' // phpcs:ignore WordPress.Security.EscapeOutput -- json from wp_json_encode.

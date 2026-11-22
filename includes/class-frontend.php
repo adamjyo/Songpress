@@ -116,10 +116,22 @@ class Songpress_Frontend {
 		$out     = ' <a href="' . esc_url( wp_logout_url( $here ) ) . '">' . $svg( '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>' ) . esc_html__( 'Log out', 'songpress' ) . '</a>';
 		$cat_url = self::main_id( 'catalog' ) ? get_permalink( self::main_id( 'catalog' ) ) : $here;
 		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
-		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && empty( $_GET['sp_members'] ) ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
+		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
+		$in_app  = '' === $page && empty( $_GET['sp_members'] );
+		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && $in_app ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
 		if ( Songpress_Caps::can( 'members' ) ) {
-			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( 'sp_members', '1', $cat_url ), __( 'Members', 'songpress' ), $me, ! empty( $_GET['sp_members'] ) ) . self::nav_item( admin_url( 'admin.php?page=songpress-people' ), __( 'People', 'songpress' ), $people, false );
-			$nav .= self::nav_item( admin_url( 'admin.php?page=songpress' ), __( 'Manage', 'songpress' ), $manage, false );
+			$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
+				return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $page === $slug ) : '';
+			};
+			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( 'sp_members', '1', $cat_url ), __( 'Members', 'songpress' ), $me, ! empty( $_GET['sp_members'] ) );
+			$nav .= $mk( 'people', __( 'People', 'songpress' ), $people, 'members' );
+			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
+			$nav .= $mk( 'import', __( 'Import', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
+			$nav .= $mk( 'link', __( 'Link writers', 'songpress' ), $svg( '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>' ), 'link' );
+			$nav .= $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
+			if ( Songpress_Caps::can( 'export' ) ) {
+				$nav .= self::nav_item( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ), __( 'Export CSV', 'songpress' ), $svg( '<path d="M12 15V3M7 8l5-5 5 5M4 20h16"/>' ), false );
+			}
 		}
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
 		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt="SongPress"></div>' . $nav . '<span class="sp-grow"></span>' . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
@@ -151,16 +163,20 @@ class Songpress_Frontend {
 		if ( $msg = self::gate() ) {
 			return $msg;
 		}
-		if ( isset( $_GET['sp_members'] ) ) {
+		$desktop = ! wp_is_mobile(); // phones and tablets only view; managing and editing is for the desktop app
+		if ( $desktop && isset( $_GET['sp_page'] ) ) {
+			return Songpress_Screens::render( sanitize_key( wp_unslash( $_GET['sp_page'] ) ) );
+		}
+		if ( $desktop && isset( $_GET['sp_members'] ) ) {
 			return Songpress_Members::render();
 		}
-		if ( isset( $_GET['sp_edit'] ) ) {
+		if ( $desktop && isset( $_GET['sp_edit'] ) ) {
 			$e = sanitize_text_field( wp_unslash( $_GET['sp_edit'] ) );
 			return Songpress_Editor::render( 'new' === $e ? 0 : absint( $e ) );
 		}
 		wp_enqueue_style( 'songpress' );
 		$uid = get_current_user_id();
-		if ( isset( $_GET['sp_song'] ) && empty( $_GET['sp_view'] ) && Songpress_Caps::can_edit_song( absint( $_GET['sp_song'] ) ) ) {
+		if ( $desktop && isset( $_GET['sp_song'] ) && empty( $_GET['sp_view'] ) && Songpress_Caps::can_edit_song( absint( $_GET['sp_song'] ) ) ) {
 			return Songpress_Editor::render( absint( $_GET['sp_song'] ) ); // people who can edit a song open it in the editor
 		}
 		if ( isset( $_GET['sp_song'] ) ) {
@@ -174,7 +190,7 @@ class Songpress_Frontend {
 		$dir    = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc';
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
 		$out    = '<div class="songpress sp-app">' . self::tabs( 'catalog', 'top' ) . self::head( __( 'Songs', 'songpress' ) );
-		$add    = Songpress_Caps::can( 'create' ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
+		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
 		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
 		$out .= '<div class="songpress-colhead" role="row"><span class="songpress-ch-play"></span><span class="songpress-ch-main">';
 		foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
@@ -243,7 +259,7 @@ class Songpress_Frontend {
 		if ( ! $s ) {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
-		$edit = Songpress_Caps::can_edit_song( $id ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
+		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
 		return '<div class="songpress sp-app">' . self::tabs( 'catalog', 'top' ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
