@@ -406,12 +406,15 @@ class Songpress_Uploads {
 
 	const NOTES_JOB = 'songpress_notes_job';
 
+	/** The note being imported right now, so a crash can name it. */
+	private static $cur = '';
+
 	/** If PHP dies in the middle of an import (a blank page), remember why, so the Notes upload panel can show it next time. */
 	private static function watch( $what ) {
 		register_shutdown_function( function () use ( $what ) {
 			$e = error_get_last();
 			if ( $e && in_array( $e['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ), true ) ) {
-				update_option( 'songpress_last_fatal', array( 'what' => $what, 'when' => gmdate( 'Y-m-d H:i:s' ), 'msg' => mb_substr( $e['message'], 0, 400 ), 'file' => basename( (string) $e['file'] ), 'line' => (int) $e['line'], 'mem' => ini_get( 'memory_limit' ), 'time' => ini_get( 'max_execution_time' ), 'post' => ini_get( 'post_max_size' ), 'upload' => ini_get( 'upload_max_filesize' ) ), false );
+				update_option( 'songpress_last_fatal', array( 'what' => $what . ( '' !== self::$cur ? ', file ' . self::$cur : '' ), 'when' => gmdate( 'Y-m-d H:i:s' ), 'msg' => mb_substr( $e['message'], 0, 400 ), 'file' => basename( (string) $e['file'] ), 'line' => (int) $e['line'], 'mem' => ini_get( 'memory_limit' ), 'time' => ini_get( 'max_execution_time' ), 'post' => ini_get( 'post_max_size' ), 'upload' => ini_get( 'upload_max_filesize' ) ), false );
 			}
 		} );
 	}
@@ -631,6 +634,7 @@ class Songpress_Uploads {
 
 	/** Add the note or notes in one file's text. */
 	private static function import_one( $name, $text, &$added, &$skip ) {
+		self::$cur = (string) $name;
 		if ( preg_match( '/\.json$/i', $name ) || '{' === substr( ltrim( $text ), 0, 1 ) ) {
 			$j = json_decode( $text, true );
 			if ( is_array( $j ) && isset( $j['notes'] ) && is_array( $j['notes'] ) ) {
