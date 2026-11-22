@@ -119,10 +119,13 @@ class Songpress_Frontend {
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
 		$in_app  = '' === $page && empty( $_GET['sp_members'] );
 		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && $in_app ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
+		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
+			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $page === $slug ) : '';
+		};
+		if ( Songpress_Caps::can( 'money' ) && ! wp_is_mobile() ) {
+			$nav .= '<span class="sp-navgap"></span>' . $mk( 'money', __( 'Money', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
+		}
 		if ( Songpress_Caps::can( 'members' ) ) {
-			$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
-				return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $page === $slug ) : '';
-			};
 			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( 'sp_members', '1', $cat_url ), __( 'Members', 'songpress' ), $me, ! empty( $_GET['sp_members'] ) );
 			$nav .= $mk( 'people', __( 'People', 'songpress' ), $people, 'members' );
 			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
@@ -375,7 +378,7 @@ class Songpress_Frontend {
 		$out  = '<div class="songpress songpress-profile sp-app">' . self::tabs( 'profile', 'top' ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Songs', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
-		$out .= '<p class="songpress-sub">' . esc_html__( 'Earnings and streams will appear here when that feature is added.', 'songpress' ) . '</p>';
+		$out .= Songpress_Money::my_earnings_html( $u->display_name );
 		$out .= wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'profile' ) . '</div>';
 		return $out;
 	}

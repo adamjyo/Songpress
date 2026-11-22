@@ -14,6 +14,9 @@ function wp_get_attachment_url( $id ) { return 'https://site.test/uploads/audio-
 function wp_get_attachment_image_url( $id, $size = 'medium' ) { return 'https://site.test/uploads/art-' . (int) $id . '-' . $size . '.jpg'; }
 function attachment_url_to_postid( $u ) { return preg_match( '#/uploads/(?:art|audio)-(\d+)\.#', $u, $m ) ? (int) $m[1] : 0; }
 function esc_attr( $s ) { return htmlspecialchars( (string) $s, ENT_QUOTES ); }
+function esc_html__( $s ) { return htmlspecialchars( (string) $s ); }
+function esc_attr__( $s ) { return htmlspecialchars( (string) $s ); }
+function number_format_i18n( $n ) { return number_format( $n ); }
 function esc_html( $s ) { return htmlspecialchars( (string) $s ); }
 function esc_url( $s ) { return (string) $s; }
 function get_current_user_id() { return 7; }
@@ -32,13 +35,19 @@ class FakeWpdb {
 	function __construct() {
 		$this->pdo = new PDO( 'sqlite::memory:' ); $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_families (id INTEGER PRIMARY KEY AUTOINCREMENT, family_no INT UNIQUE, created_at TEXT)' );
-		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
+		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
 		$this->pdo->exec( "CREATE TABLE wp_songpress_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, $cols)" );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, role TEXT, name TEXT, ipi TEXT, share REAL, user_id INT, position INT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_history (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, user_id INT, action TEXT, detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_artists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT UNIQUE, settings TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, name TEXT, name_key TEXT, aliases TEXT, photo_id INT DEFAULT 0, photo_url TEXT, bio TEXT, email TEXT, phone TEXT, website TEXT, ipi TEXT, pro TEXT, updated_at TEXT, UNIQUE(kind,name_key))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_earnings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, quarter TEXT, src TEXT, amount REAL, UNIQUE(song_id,quarter,src))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_person_earnings (id INTEGER PRIMARY KEY AUTOINCREMENT, person TEXT, person_key TEXT, work_title TEXT, song_id INT, quarter TEXT, src TEXT, amount REAL)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_payments (id INTEGER PRIMARY KEY AUTOINCREMENT, pay_year INT, pay_quarter INT, kind TEXT, party TEXT, party_key TEXT, amount REAL, paid INT, paid_on TEXT, notes TEXT, updated_at TEXT, UNIQUE(pay_year,pay_quarter,kind,party_key))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_streams (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, service TEXT, streams INT, UNIQUE(day,service))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, row_key TEXT UNIQUE, month TEXT, store TEXT, title TEXT, isrc TEXT, song_id INT, units INT, earnings REAL)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -63,6 +72,8 @@ require __DIR__ . '/../includes/class-artists.php';
 require __DIR__ . '/../includes/class-profiles.php';
 require __DIR__ . '/../includes/class-media.php';
 require __DIR__ . '/../includes/class-songs.php';
+require __DIR__ . '/../includes/class-people.php';
+require __DIR__ . '/../includes/class-money.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -262,6 +273,55 @@ $sw = Songpress_Songs::query( array( 'order' => 'writer', 'per_page' => 50 ) );
 check( 'sort by writer runs', is_array( $sw['rows'] ), true );
 $sx = Songpress_Songs::query( array( 'order' => 'bad; DROP', 'per_page' => 50 ) );
 check( 'unknown sort column is ignored', $sx['total'], $sa['total'] );
+
+// money: import a small catalog file, then check totals, matching and that a second import is safe
+$GLOBALS['wpdb']->update( 'wp_songpress_songs', array( 'legacy_id' => 11 ), array( 'id' => $v0 ) );
+$GLOBALS['wpdb']->update( 'wp_songpress_songs', array( 'legacy_id' => 12 ), array( 'id' => $s2 ) );
+$mf  = tempnam( sys_get_temp_dir(), 'spm' );
+$mp  = new PDO( 'sqlite:' . $mf );
+$mp->exec( 'CREATE TABLE royalty_work_quarter (work_id INT, quarter TEXT, src TEXT, amount REAL)' );
+$mp->exec( "INSERT INTO royalty_work_quarter VALUES (11,'2026 Q2','D',10.5),(11,'2026 Q2','D',1.5),(11,'2026 Q2','M',2),(12,'2026 Q1','A',4),(99,'2026 Q1','A',50),(11,'junk','D',1)" );
+$mp->exec( 'CREATE TABLE royalty_person_quarter (person TEXT, work_title TEXT, quarter TEXT, src TEXT, amount REAL)' );
+$mp->exec( "INSERT INTO royalty_person_quarter VALUES ('Adam Page','Harbor Lights','2026 Q2','D',6),('Adam Page','Harbor Lights','2026 Q2','D',2),('Mack Butts','Harbor Lights','2026 Q2','M',1),('Adam Page','Second Song','2026 Q1','A',4)" );
+$mp->exec( 'CREATE TABLE paid_entry (id INT, y INT, q INT, party TEXT, kind TEXT, amount REAL, notes TEXT, updated_at TEXT)' );
+$mp->exec( "INSERT INTO paid_entry VALUES (1,2026,2,'Adam Page','writer',8,'x',''),(2,2026,2,'Mack Butts','writer',1,'','')" );
+$mp->exec( 'CREATE TABLE pay_board (id INT, y INT, q INT, kind TEXT, party TEXT, paid INT, paid_on TEXT)' );
+$mp->exec( "INSERT INTO pay_board VALUES (1,2026,2,'writer','Adam Page',1,'2026-09-05'),(2,2026,1,'writer','Late Person',0,NULL)" );
+$mp->exec( 'CREATE TABLE dk_daily_estimates (day TEXT, service TEXT, streams INT)' );
+$mp->exec( "INSERT INTO dk_daily_estimates VALUES ('2026-01-01','Spotify',100),('2026-01-01','Apple Music',50),('2026-01-02','Spotify',70)" );
+$mp->exec( 'CREATE TABLE distrokid (sale_month TEXT, store TEXT, title TEXT, isrc TEXT, quantity INT, earnings_usd REAL)' );
+$mp->exec( "INSERT INTO distrokid VALUES ('2026-07-01','Spotify','Harbor Lights','USX1',100,0.4),('2026-07-01','Spotify','Harbor Lights','USX1',50,0.2),('2026-07-01','Apple','second song','',10,0.1),('2026-07-01','Apple','Unknown','',5,0.05)" );
+unset( $mp );
+$r = Songpress_Money::import_sqlite( $mf );
+check( 'money import earnings lines', $r['earnings'], 3 );
+check( 'money import person lines', $r['person'], 3 );
+check( 'money import streams', $r['streams'], 3 );
+check( 'money import store lines', $r['stats'], 3 );
+check( 'money import payouts (Adam, Mack, Late Person)', $r['payments'], 3 );
+check( 'earned total skips unknown work and bad quarter', round( Songpress_Money::earned_total(), 2 ), 18.0 );
+check( 'quarters newest first', Songpress_Money::quarters(), array( '2026-Q2', '2026-Q1' ) );
+check( 'top song is Harbor Lights', Songpress_Money::top_songs( 5 )[0]->title, 'Harbor Lights' );
+$ow = Songpress_Money::owed( '2026-Q2' );
+check( 'owed Adam', array( $ow[0]->person, round( (float) $ow[0]->total, 2 ) ), array( 'Adam Page', 8.0 ) );
+$pp = Songpress_Money::payments_for( 2026, 2 );
+check( 'Adam marked paid from the board', array( (int) $pp['writer|adampage']->paid, $pp['writer|adampage']->paid_on, round( (float) $pp['writer|adampage']->amount, 2 ) ), array( 1, '2026-09-05', 8.0 ) );
+check( 'paid total', round( Songpress_Money::paid_total(), 2 ), 8.0 );
+$mn = Songpress_Money::months();
+check( 'stats by month', array( $mn[0]->month, (int) $mn[0]->units ), array( '2026-07', 165 ) );
+$ts = Songpress_Money::top_streamed( 5 );
+check( 'ISRC matched statement lines to the song', (int) $ts[0]->song_id, $v0 );
+check( 'title matched when there is no ISRC', in_array( $s2, array_map( function ( $x ) { return (int) $x->song_id; }, $ts ), true ), true );
+check( 'daily streams newest first', array( Songpress_Money::daily( 5 )[0]->day, (int) Songpress_Money::daily( 5 )[0]->streams ), array( '2026-01-02', 70 ) );
+// edit a payout by hand, import again: the hand edit stays, the statements are replaced not doubled
+$GLOBALS['wpdb']->update( 'wp_songpress_payments', array( 'amount' => 9.99 ), array( 'party_key' => 'mackbutts' ) );
+$r2 = Songpress_Money::import_sqlite( $mf );
+check( 'second import adds no payouts', $r2['payments'], 0 );
+check( 'second import does not double earnings', round( Songpress_Money::earned_total(), 2 ), 18.0 );
+check( 'hand-edited payout survives import', round( (float) Songpress_Money::payments_for( 2026, 2 )['writer|mackbutts']->amount, 2 ), 9.99 );
+check( 'my earnings found by name', strpos( Songpress_Money::my_earnings_html( 'Adam Page' ), '$12.00' ) !== false, true );
+check( 'no earnings, no section', Songpress_Money::my_earnings_html( 'Nobody Here' ), '' );
+check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
+unlink( $mf );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

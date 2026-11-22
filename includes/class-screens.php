@@ -37,6 +37,9 @@ class Songpress_Screens {
 	}
 
 	public static function render( $slug ) {
+		if ( in_array( $slug, array( 'money', 'stats' ), true ) ) {
+			return Songpress_Money::render( $slug );
+		}
 		if ( ! isset( self::MAP[ $slug ] ) ) {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'That screen does not exist.', 'songpress' ) . '</p></div>';
 		}

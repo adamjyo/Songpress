@@ -149,3 +149,89 @@ CREATE TABLE {prefix}songpress_profiles (
   PRIMARY KEY  (id),
   UNIQUE KEY kind_key (kind,name_key)
 ) {charset};
+
+-- Money. Earnings per song per quarter and source (distrokid, mlc, ascap, ccli), as reported by the
+-- statements that were imported. Rows are replaced when money is imported again.
+CREATE TABLE {prefix}songpress_earnings (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  song_id bigint(20) unsigned NOT NULL,
+  quarter varchar(8) NOT NULL,
+  src varchar(12) NOT NULL,
+  amount decimal(16,6) NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY song_quarter_src (song_id,quarter,src),
+  KEY quarter (quarter)
+) {charset};
+
+-- What each person earned per song, quarter and source (their share of the statements).
+CREATE TABLE {prefix}songpress_person_earnings (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  person varchar(191) NOT NULL,
+  person_key varchar(191) NOT NULL,
+  work_title varchar(255) NOT NULL DEFAULT '',
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  quarter varchar(8) NOT NULL,
+  src varchar(12) NOT NULL,
+  amount decimal(16,6) NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  KEY person_key (person_key),
+  KEY quarter (quarter),
+  KEY song_id (song_id)
+) {charset};
+
+-- Payouts: what was paid to whom for a quarter, and when. Entered by hand, never replaced by an import.
+CREATE TABLE {prefix}songpress_payments (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  pay_year smallint(5) unsigned NOT NULL,
+  pay_quarter tinyint(3) unsigned NOT NULL,
+  kind varchar(12) NOT NULL DEFAULT 'writer',
+  party varchar(191) NOT NULL,
+  party_key varchar(191) NOT NULL,
+  amount decimal(14,2) NOT NULL DEFAULT 0,
+  paid tinyint(1) NOT NULL DEFAULT 0,
+  paid_on date NULL,
+  notes text NULL,
+  updated_at datetime NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY pay_key (pay_year,pay_quarter,kind,party_key)
+) {charset};
+
+-- Streams per day and service (estimates), and streams and income per month, store and title.
+CREATE TABLE {prefix}songpress_streams (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  day date NOT NULL,
+  service varchar(48) NOT NULL,
+  streams int(10) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY day_service (day,service)
+) {charset};
+
+CREATE TABLE {prefix}songpress_stats (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  row_key char(32) NOT NULL,
+  month char(7) NOT NULL,
+  store varchar(64) NOT NULL DEFAULT '',
+  title varchar(255) NOT NULL DEFAULT '',
+  isrc varchar(24) NOT NULL DEFAULT '',
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  units bigint(20) NOT NULL DEFAULT 0,
+  earnings decimal(16,6) NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY row_key (row_key),
+  KEY month (month),
+  KEY song_id (song_id)
+) {charset};
+
+CREATE TABLE {prefix}songpress_expenses (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  spent_on date NOT NULL,
+  payee varchar(191) NOT NULL DEFAULT '',
+  category varchar(64) NOT NULL DEFAULT '',
+  amount decimal(12,2) NOT NULL DEFAULT 0,
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  person varchar(191) NOT NULL DEFAULT '',
+  notes text NULL,
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY spent_on (spent_on)
+) {charset};

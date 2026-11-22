@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.25
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.2.0 =
+* New Money and Stats in the rail (Managers, desktop): earnings by quarter and source (DistroKid, MLC, ASCAP, CCLI), top songs, payouts with paid dates, expenses, plays by month, streams per day, income by store.
+* Load money once from your old catalog file (Money, bottom of page). Payouts and expenses you enter are never replaced by a later load.
+* Writers see My earnings on their Profile.
 
 = 0.1.25 =
 * Phones and tablets only view songs; adding and editing is for the desktop app. The song editor shows every section on desktop.

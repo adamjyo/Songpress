@@ -306,3 +306,23 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-wp a{color:var(--sp-accent)}
 .sp-wp [style*="background:#fff"],.sp-wp [style*="background: #fff"]{background:#141518!important;color:var(--sp-text)!important;border-color:var(--sp-line)!important}
 .sp-wp [style*="background:#fff"] *,.sp-wp [style*="background: #fff"] *{color:inherit}
+
+/* Money and Stats */
+.sp-money h3{margin:22px 0 8px}
+.spm-cards{margin-bottom:6px}
+.spm-scroll{overflow-x:auto;margin:0 0 10px}
+.spm-table{width:100%;border-collapse:collapse;font-size:14px}
+.spm-table th,.spm-table td{padding:8px 10px;border-bottom:1px solid var(--sp-line);text-align:left;vertical-align:middle}
+.spm-table th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sp-mute);font-weight:500}
+.spm-table .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.spm-pay,.spm-del{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0}
+.spm-pay input.spm-amt{width:96px}
+.spm-pay input[type=date]{width:auto}
+.spm-chk{display:inline-flex;gap:4px;align-items:center;color:var(--sp-soft);font-size:13px}
+.spm-qpick{margin:0 0 8px}
+.spm-bars{list-style:none;margin:0 0 8px;padding:0}
+.spm-bars li{display:grid;grid-template-columns:minmax(70px,26%) 1fr minmax(80px,auto);gap:10px;align-items:center;padding:4px 0;font-size:13px}
+.spm-lab{color:var(--sp-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spm-bar{height:10px;border-radius:5px;background:#1b1d22;overflow:hidden}
+.spm-bar i{display:block;height:100%;background:var(--sp-accent);border-radius:5px}
+.spm-val{color:var(--sp-text);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}

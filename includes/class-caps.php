@@ -14,13 +14,13 @@ class Songpress_Caps {
 	const META = 'songpress_class';
 
 	const CLASSES = array(
-		'manager' => array( 'Manager', 'Everything: add, edit, archive, share and export any song, import, settings and members. WordPress administrators are always Managers.' ),
+		'manager' => array( 'Manager', 'Everything: add, edit, archive, share and export any song, money and stats, import, settings and members. WordPress administrators are always Managers.' ),
 		'writer'  => array( 'Writer', 'Sees every song. Edits and shares only the songs they are credited on, and can upload files for them.' ),
 		'viewer'  => array( 'Viewer', 'Sees every song. Changes nothing.' ),
 	);
 
 	const PERMS = array(
-		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists' ),
+		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists', 'money' ),
 		'writer'  => array( 'view_all', 'view_own', 'edit_own', 'share_own', 'upload' ),
 		'viewer'  => array( 'view_all', 'view_own' ),
 	);
