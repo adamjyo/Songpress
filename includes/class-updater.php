@@ -11,6 +11,8 @@ class Songpress_Updater {
 	const DEFAULT_REPO = 'adamjyo/Songpress';
 	const CACHE        = 'songpress_github_release';
 	const BRANCH       = 'main';
+	const CRON         = 'songpress_check_updates';
+	const LAST         = 'songpress_update_last';
 
 	public static function init() {
 		if ( defined( 'SONGPRESS_NO_GITHUB_UPDATES' ) && SONGPRESS_NO_GITHUB_UPDATES ) {
@@ -22,6 +24,45 @@ class Songpress_Updater {
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'forget' ) );
 		add_action( 'load-plugins.php', array( __CLASS__, 'refresh_if_stale' ) );
 		add_action( 'load-update-core.php', array( __CLASS__, 'refresh_if_stale' ) );
+		add_action( self::CRON, array( __CLASS__, 'background_check' ) );
+		add_filter( 'auto_update_plugin', array( __CLASS__, 'auto_update' ), 10, 2 );
+		if ( self::enabled() && ! wp_next_scheduled( self::CRON ) ) {
+			wp_schedule_event( time() + 300, 'hourly', self::CRON );
+		}
+	}
+
+	/** Install SongPress updates by themselves (on by default; switch it off in Settings). */
+	public static function auto_enabled() {
+		return '0' !== get_option( 'songpress_auto_update', '1' );
+	}
+
+	/** WordPress asks this for every plugin that has an update. */
+	public static function auto_update( $update, $item ) {
+		if ( is_object( $item ) && isset( $item->plugin ) && plugin_basename( SONGPRESS_FILE ) === $item->plugin && self::enabled() ) {
+			return self::auto_enabled();
+		}
+		return $update;
+	}
+
+	/** Pure: has a minute passed since the last forced look? */
+	public static function due( $last, $now, $gap = 60 ) {
+		return ! $last || ( $now - (int) $last ) >= $gap;
+	}
+
+	/** Every hour: look at GitHub afresh, tell WordPress, and install a newer version if automatic updates are on. */
+	public static function background_check() {
+		if ( ! self::enabled() ) {
+			return;
+		}
+		self::forget();
+		delete_site_transient( 'update_plugins' );
+		if ( ! function_exists( 'wp_update_plugins' ) ) {
+			require_once ABSPATH . 'wp-includes/update.php';
+		}
+		wp_update_plugins();
+		if ( self::auto_enabled() && function_exists( 'wp_maybe_auto_update' ) ) {
+			wp_maybe_auto_update();
+		}
 	}
 
 	public static function enabled() {
@@ -110,10 +151,10 @@ class Songpress_Updater {
 		}
 		$best = self::pick( $release, self::from_branch( $headers ) );
 		if ( ! $best ) {
-			set_transient( self::CACHE, array(), 5 * MINUTE_IN_SECONDS ); // nothing usable: try again in five minutes
+			set_transient( self::CACHE, array(), 2 * MINUTE_IN_SECONDS ); // nothing usable: try again in two minutes
 			return null;
 		}
-		set_transient( self::CACHE, $best, 10 * MINUTE_IN_SECONDS );
+		set_transient( self::CACHE, $best, 5 * MINUTE_IN_SECONDS );
 		return $best;
 	}
 
@@ -171,11 +212,13 @@ class Songpress_Updater {
 		return $source;
 	}
 
-	/** Opening Plugins or Updates re-checks GitHub when our ten-minute memory has run out, so a new version shows up without waiting for WordPress's own twice-a-day check. */
+	/** Opening Plugins or Updates always looks at GitHub afresh (at most once a minute), so a new version is there when you ask for it. */
 	public static function refresh_if_stale() {
-		if ( ! self::enabled() || false !== get_transient( self::CACHE ) ) {
+		if ( ! self::enabled() || ! self::due( get_transient( self::LAST ), time() ) ) {
 			return;
 		}
+		set_transient( self::LAST, time(), MINUTE_IN_SECONDS );
+		self::forget();
 		delete_site_transient( 'update_plugins' );
 	}
 

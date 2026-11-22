@@ -1316,6 +1316,7 @@ class Songpress_Admin {
 		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
 		self::update_box();
 		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
+		echo '<p><label><input type="checkbox" name="auto_update" value="1"' . checked( Songpress_Updater::auto_enabled(), true, false ) . '> ' . esc_html__( 'Install SongPress updates automatically (checked every hour)', 'songpress' ) . '</label></p>';
 		echo '<p><label>' . esc_html__( 'GitHub repository', 'songpress' ) . ' <input name="github_repo" size="28" value="' . esc_attr( Songpress_Updater::repo() ) . '" placeholder="owner/repository"></label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'SongPress checks GitHub every few minutes for a newer version. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
 		submit_button();
@@ -1445,6 +1446,7 @@ class Songpress_Admin {
 		update_option( 'songpress_delete_on_uninstall', empty( $_POST['delete_on_uninstall'] ) ? '0' : '1' );
 		update_option( 'songpress_public_donate', empty( $_POST['public_donate'] ) ? '0' : '1' );
 		update_option( 'songpress_github_updates', empty( $_POST['github_updates'] ) ? '0' : '1' );
+		update_option( 'songpress_auto_update', empty( $_POST['auto_update'] ) ? '0' : '1' );
 		$repo = sanitize_text_field( wp_unslash( $_POST['github_repo'] ?? '' ) );
 		if ( Songpress_Updater::valid_repo( $repo ) ) {
 			update_option( 'songpress_github_repo', $repo );

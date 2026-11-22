@@ -39,6 +39,7 @@ class Songpress_Install {
 	}
 
 	public static function deactivate() {
+		wp_clear_scheduled_hook( Songpress_Updater::CRON );
 		// Data, roles and settings are kept. Removal only happens in uninstall.php, and only if the owner asked for it.
 	}
 

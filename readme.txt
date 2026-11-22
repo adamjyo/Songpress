@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.61.3 =
+* Updates: opening Plugins or Updates always checks GitHub afresh (at most once a minute); SongPress also checks every hour and installs a newer version by itself. A Settings checkbox turns automatic installing off.
+
 = 0.61.2 =
 * Loading a whole database file now also fills the screens (notes, statements, payouts, art, agreements, registrations, photos). A new button fills them from rows already stored, with no new upload.
 
