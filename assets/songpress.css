@@ -459,3 +459,17 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spa-list{list-style:none;margin:8px 0;padding:0}.spa-list li{padding:8px 0;border-bottom:1px solid var(--sp-line)}.spa-list time{color:var(--sp-mute);margin-right:8px;font-variant-numeric:tabular-nums}.spa-sub{color:var(--sp-accent)}.spa-area{font-size:11px;color:var(--sp-mute);border:1px solid var(--sp-line);border-radius:10px;padding:1px 7px;margin-left:6px}.spa-list small{display:block;color:var(--sp-mute);margin-top:2px}
 .sph-list{list-style:none;margin:6px 0 14px;padding:0}.sph-list li{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--sp-line)}.sph-dot{flex:none;width:10px;height:10px;border-radius:50%;background:#3fb27f;transform:translateY(1px)}.sph-warn .sph-dot{background:#e0a030}.sph-bad .sph-dot{background:#d9534f}.sph-d{color:var(--sp-mute)}
 .sp-namecheck{margin:4px 0 0;font-size:13px}.sp-namecheck div{padding:2px 0}.sp-nc-same{color:#e0a030}.sp-nc-close{color:var(--sp-mute)}.sp-nc-links{display:block;margin-top:4px;color:var(--sp-mute)}.sp-nc-links a{color:var(--sp-accent)}
+
+/* art studio: draw tools + AI */
+.spa-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.spa-tools .spe-btn.on{background:#c9a24a;color:#14161a;border-color:#c9a24a}
+.spa-tl{display:flex;gap:6px;align-items:center;font-size:12px;opacity:.85}
+.spa-tl input{width:90px}
+.spa-tools input[type=color]{width:34px;height:30px;padding:0;border:1px solid #3a3f48;background:none;border-radius:6px}
+.spa-ai{border:1px solid #2c3038;border-radius:10px;padding:12px;margin:0 0 12px;background:#181b20}
+.spa-ai[hidden],.spa-aikey[hidden]{display:none!important}
+.spa-aigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.spa-aipic{padding:0;border:2px solid #2c3038;border-radius:8px;background:#000;cursor:pointer;overflow:hidden;aspect-ratio:1}
+.spa-aipic:hover{border-color:#c9a24a}.spa-aipic:disabled{opacity:.5}
+.spa-aipic img{width:100%;height:100%;object-fit:cover;display:block}
+@media(max-width:600px){.spa-aigrid{grid-template-columns:repeat(2,1fr)}}

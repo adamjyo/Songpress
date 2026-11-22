@@ -15,6 +15,9 @@ class Songpress_Art {
 	public static function init() {
 		add_action( 'wp_ajax_songpress_art_save', array( __CLASS__, 'ajax_save' ) );
 		add_action( 'admin_post_songpress_art_delete', array( __CLASS__, 'handle_delete' ) );
+		add_action( 'wp_ajax_songpress_art_key', array( __CLASS__, 'ajax_key' ) );
+		add_action( 'wp_ajax_songpress_art_generate', array( __CLASS__, 'ajax_generate' ) );
+		add_action( 'wp_ajax_songpress_art_claim', array( __CLASS__, 'ajax_claim' ) );
 	}
 
 	private static function t() {
@@ -193,6 +196,149 @@ class Songpress_Art {
 		wp_send_json_success( array( 'id' => $id, 'song_id' => $sid, 'preview_url' => $row['preview_url'] ?? '', 'cover' => $cover, 'url' => add_query_arg( array( 'sp_page' => 'art', 'art' => $id ), Songpress_Editor::list_url() ) ) );
 	}
 
+	/* ---------- AI pictures (xAI) ---------- */
+
+	const XAI_URL = 'https://api.x.ai/v1/images/generations';
+
+	/** Pull the picture addresses out of an xAI response body. URLs stay URLs; base64 becomes a data: address. */
+	public static function parse_images( $body ) {
+		$j   = is_array( $body ) ? $body : json_decode( (string) $body, true );
+		$out = array();
+		if ( ! is_array( $j ) || empty( $j['data'] ) || ! is_array( $j['data'] ) ) {
+			return $out;
+		}
+		foreach ( $j['data'] as $d ) {
+			if ( ! is_array( $d ) ) {
+				continue;
+			}
+			if ( ! empty( $d['url'] ) && 0 === strpos( (string) $d['url'], 'https://' ) ) {
+				$out[] = (string) $d['url'];
+			} elseif ( ! empty( $d['b64_json'] ) && preg_match( '/^[A-Za-z0-9+\/=\s]+$/', (string) $d['b64_json'] ) ) {
+				$out[] = 'data:image/png;base64,' . preg_replace( '/\s+/', '', (string) $d['b64_json'] );
+			}
+		}
+		return $out;
+	}
+
+	/** The request bodies to try, newest model first. */
+	public static function xai_bodies( $prompt, $n = 4 ) {
+		return array(
+			array( 'model' => 'grok-imagine-image-2.0', 'prompt' => $prompt, 'n' => $n, 'aspect_ratio' => '1:1' ),
+			array( 'model' => 'grok-imagine-image', 'prompt' => $prompt, 'n' => $n, 'size' => '1024x1024' ),
+		);
+	}
+
+	private static function xai_key() {
+		return trim( (string) get_option( 'songpress_xai_key', '' ) );
+	}
+
+	public static function ajax_key() {
+		check_ajax_referer( 'songpress_art', 'nonce' );
+		if ( ! Songpress_Caps::can( 'art' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Only Managers can do this.', 'songpress' ) ), 403 );
+		}
+		$k = preg_replace( '/[^A-Za-z0-9_\-.]/', '', (string) wp_unslash( $_POST['key'] ?? '' ) );
+		if ( '' === $k ) {
+			delete_option( 'songpress_xai_key' );
+		} else {
+			update_option( 'songpress_xai_key', $k, false );
+		}
+		wp_send_json_success( array( 'has' => '' !== $k ) );
+	}
+
+	public static function ajax_generate() {
+		check_ajax_referer( 'songpress_art', 'nonce' );
+		if ( ! Songpress_Caps::can( 'art' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Only Managers can use the Art studio.', 'songpress' ) ), 403 );
+		}
+		$key = self::xai_key();
+		if ( '' === $key ) {
+			wp_send_json_error( array( 'message' => __( 'Add your xAI key first.', 'songpress' ) ), 400 );
+		}
+		$prompt = mb_substr( sanitize_textarea_field( wp_unslash( $_POST['prompt'] ?? '' ) ), 0, 2000 );
+		if ( '' === trim( $prompt ) ) {
+			wp_send_json_error( array( 'message' => __( 'Describe the picture first.', 'songpress' ) ), 400 );
+		}
+		if ( ! empty( $_POST['cover'] ) ) {
+			$prompt .= ', square 1:1 album cover artwork, no text, no letters, no watermark, no border, full bleed';
+		}
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 150 ); // phpcs:ignore
+		}
+		$err = '';
+		$img = array();
+		foreach ( self::xai_bodies( $prompt ) as $body ) {
+			$r = wp_remote_post( self::XAI_URL, array( 'timeout' => 140, 'headers' => array( 'Authorization' => 'Bearer ' . $key, 'Content-Type' => 'application/json' ), 'body' => wp_json_encode( $body ) ) );
+			if ( is_wp_error( $r ) ) {
+				$err = $r->get_error_message();
+				continue;
+			}
+			$code = (int) wp_remote_retrieve_response_code( $r );
+			$img  = self::parse_images( wp_remote_retrieve_body( $r ) );
+			if ( $code < 300 && $img ) {
+				break;
+			}
+			$j   = json_decode( wp_remote_retrieve_body( $r ), true );
+			$err = is_array( $j ) ? (string) ( $j['error']['message'] ?? $j['error'] ?? $j['message'] ?? '' ) : '';
+			$err = '' === $err ? sprintf( 'xAI answered %d.', $code ) : $err;
+			if ( 401 === $code || 403 === $code ) {
+				break;
+			}
+		}
+		if ( ! $img ) {
+			wp_send_json_error( array( 'message' => '' === $err ? __( 'No picture came back.', 'songpress' ) : $err ), 502 );
+		}
+		$ok = array();
+		foreach ( $img as $u ) {
+			if ( 0 === strpos( $u, 'https://' ) ) {
+				$ok[] = md5( $u );
+			}
+		}
+		set_transient( 'songpress_xai_' . get_current_user_id(), $ok, HOUR_IN_SECONDS );
+		wp_send_json_success( array( 'images' => $img ) );
+	}
+
+	/** Bring a chosen picture into the Media Library and return its address. */
+	public static function ajax_claim() {
+		check_ajax_referer( 'songpress_art', 'nonce' );
+		if ( ! Songpress_Caps::can( 'art' ) || ! Songpress_Caps::can( 'upload' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You are not allowed to do this.', 'songpress' ) ), 403 );
+		}
+		$src = (string) wp_unslash( $_POST['src'] ?? '' );
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		require_once ABSPATH . 'wp-admin/includes/media.php';
+		$tmp = '';
+		if ( preg_match( '#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $src, $m ) ) {
+			$bin = base64_decode( $m[1], true ); // phpcs:ignore
+			$tmp = wp_tempnam( 'songpress.png' );
+			if ( false === $bin || ! $tmp || false === file_put_contents( $tmp, $bin ) ) { // phpcs:ignore
+				wp_send_json_error( array( 'message' => __( 'The picture could not be read.', 'songpress' ) ), 400 );
+			}
+		} else {
+			$allowed = (array) get_transient( 'songpress_xai_' . get_current_user_id() );
+			if ( 0 !== strpos( $src, 'https://' ) || ! in_array( md5( $src ), $allowed, true ) ) {
+				wp_send_json_error( array( 'message' => __( 'That picture is no longer available. Generate again.', 'songpress' ) ), 400 );
+			}
+			$tmp = download_url( $src, 60 );
+			if ( is_wp_error( $tmp ) ) {
+				wp_send_json_error( array( 'message' => $tmp->get_error_message() ), 502 );
+			}
+		}
+		$info = @getimagesize( $tmp ); // phpcs:ignore
+		if ( ! $info || 0 !== strpos( (string) $info['mime'], 'image/' ) ) {
+			@unlink( $tmp ); // phpcs:ignore
+			wp_send_json_error( array( 'message' => __( 'The picture could not be read.', 'songpress' ) ), 415 );
+		}
+		$ext = 'image/jpeg' === $info['mime'] ? 'jpg' : ( 'image/webp' === $info['mime'] ? 'webp' : 'png' );
+		$att = media_handle_sideload( array( 'name' => 'songpress-ai-' . gmdate( 'Ymd-His' ) . '.' . $ext, 'tmp_name' => $tmp ), 0 );
+		if ( is_wp_error( $att ) ) {
+			@unlink( $tmp ); // phpcs:ignore
+			wp_send_json_error( array( 'message' => $att->get_error_message() ), 400 );
+		}
+		wp_send_json_success( array( 'url' => (string) wp_get_attachment_url( $att ), 'id' => (int) $att ) );
+	}
+
 	public static function handle_delete() {
 		check_admin_referer( 'songpress_art_delete' );
 		if ( ! Songpress_Caps::can( 'art' ) ) {
@@ -252,9 +398,13 @@ class Songpress_Art {
 			'nonce'  => wp_create_nonce( 'songpress_art' ),
 			'upload' => wp_create_nonce( 'songpress_upload' ),
 			'list'   => add_query_arg( 'sp_page', 'art', Songpress_Editor::list_url() ),
+			'ai'     => '' !== self::xai_key(),
+			'prompt' => (string) ( $s->art_prompt ?? '' ),
 		);
 		$o  = '<div class="songpress sp-app sp-editor sp-art"><div class="spe-top"><h2>' . esc_html__( 'Art studio', 'songpress' ) . '</h2> <a class="spe-btn" href="' . esc_url( $cfg['list'] ) . '">' . esc_html__( 'All art', 'songpress' ) . '</a></div>';
 		$o .= '<div class="spa-bar"><label class="spe-field"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><input id="spa-name"></label><label class="spe-field"><span>' . esc_html__( 'Song serial (to set its cover)', 'songpress' ) . '</span><input id="spa-serial" placeholder="0378"></label><label class="spe-field"><span>' . esc_html__( 'Export size', 'songpress' ) . '</span><select id="spa-size"><option value="1000">1000 px</option><option value="2000">2000 px</option><option value="3000" selected>3000 px</option></select></label></div>';
+		$o .= '<div class="spa-tools" id="spa-tools"><button type="button" class="spe-btn on" data-tool="move">' . esc_html__( 'Move', 'songpress' ) . '</button><button type="button" class="spe-btn" data-tool="brush">' . esc_html__( 'Brush', 'songpress' ) . '</button><button type="button" class="spe-btn" data-tool="eraser">' . esc_html__( 'Eraser', 'songpress' ) . '</button><label class="spa-tl">' . esc_html__( 'Size', 'songpress' ) . '<input type="range" id="spa-bsize" min="1" max="200" value="24"></label><label class="spa-tl">' . esc_html__( 'Flow', 'songpress' ) . '<input type="range" id="spa-bflow" min="5" max="100" value="100"></label><input type="color" id="spa-bcolor" value="#ffffff" title="' . esc_attr__( 'Brush colour', 'songpress' ) . '"><button type="button" class="spe-btn" id="spa-undo">' . esc_html__( 'Undo', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-newdraw">+ ' . esc_html__( 'Drawing', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-aibtn">✦ ' . esc_html__( 'Make a picture with AI', 'songpress' ) . '</button></div>';
+		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-aikey" id="spa-aikey"><label class="spe-field"><span>' . esc_html__( 'Your xAI key (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="xai-…"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make four', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div>';
 		$o .= '<div class="spa-main"><div class="spa-stage"><div class="spa-square" id="spa-square"><canvas id="spa-canvas" width="1000" height="1000"></canvas><div id="spa-sel" hidden><i id="spa-handle"></i></div></div><p class="spe-help" id="spa-msg"></p></div>';
 		$o .= '<div class="spa-side"><div class="spa-add"><button type="button" class="spe-btn" data-add="text">+ ' . esc_html__( 'Text', 'songpress' ) . '</button><button type="button" class="spe-btn" data-add="rect">+ ' . esc_html__( 'Box', 'songpress' ) . '</button><button type="button" class="spe-btn" data-add="ellipse">+ ' . esc_html__( 'Circle', 'songpress' ) . '</button><label class="spe-btn">+ ' . esc_html__( 'Picture', 'songpress' ) . '<input type="file" id="spa-file" accept="image/*" hidden></label></div><ul id="spa-layers" class="spa-layers"></ul><div id="spa-props" class="spa-props"></div></div></div>';
 		$o .= '<div class="spa-actions"><button type="button" class="spe-save" id="spa-save">' . esc_html__( 'Save project', 'songpress' ) . '</button> <button type="button" class="spe-btn" id="spa-cover">' . esc_html__( 'Save and make cover', 'songpress' ) . '</button> <button type="button" class="spe-btn" id="spa-down">' . esc_html__( 'Download PNG', 'songpress' ) . '</button>';
@@ -287,6 +437,7 @@ function paint(ctx,S){
   ctx.save();ctx.globalAlpha=l.opacity;
   if(l.rotate){ctx.translate(x+w/2,y+h/2);ctx.rotate(l.rotate*Math.PI/180);ctx.translate(-(x+w/2),-(y+h/2))}
   if(l.type==='canvas'){ctx.fillStyle=l.color||'#000';ctx.fillRect(0,0,S,S)}
+  else if(l.type==='image'&&l._bm){ctx.drawImage(l._bm,0,0,l._bm.width,l._bm.height,x,y,w,h);if(l._st){ctx.globalAlpha=l.opacity*l._sa;ctx.drawImage(l._st,0,0,l._bm.width,l._bm.height,x,y,w,h)}}
   else if(l.type==='image'&&l.src){var r=image(l.src,draw);if(r.ok){var n=r.img,c=l.crop;ctx.drawImage(n,c.x*n.naturalWidth,c.y*n.naturalHeight,c.w*n.naturalWidth,c.h*n.naturalHeight,x,y,w,h)}}
   else if(l.type==='shape'){ctx.fillStyle=l.color||'#fff';if(l.shape==='ellipse'){ctx.beginPath();ctx.ellipse(x+w/2,y+h/2,Math.max(1,w/2),Math.max(1,h/2),0,0,Math.PI*2);ctx.fill()}else{ctx.fillRect(x,y,w,h)}}
   else if(l.type==='text'){
@@ -313,7 +464,7 @@ function rail(){
    if(e.target.classList.contains('spa-eye')){l.visible=l.visible?0:1;dirty=true}
    else if(a==='up'&&i<L.length-1){L.splice(i+1,0,L.splice(i,1)[0]);sel=i+1;dirty=true}
    else if(a==='dn'&&i>0){L.splice(i-1,0,L.splice(i,1)[0]);sel=i-1;dirty=true}
-   else if(a==='dup'){var c=JSON.parse(JSON.stringify(l));c.x+=3;c.y+=3;L.splice(i+1,0,c);sel=i+1;dirty=true}
+   else if(a==='dup'){var c=clone(l);c.x+=3;c.y+=3;L.splice(i+1,0,c);sel=i+1;dirty=true}
    else if(a==='del'){if(L.length>0){L.splice(i,1);sel=Math.max(0,Math.min(sel,L.length-1));dirty=true}}
    else{sel=i}
    all()};
@@ -341,23 +492,67 @@ document.querySelectorAll('[data-add]').forEach(function(b){b.onclick=function()
 $('spa-file').onchange=function(e){var f=e.target.files[0];if(!f)return;say('Uploading…');var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',C.upload);fd.append('file',f);
  fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){say((j.data&&j.data.message)||'Upload failed');return}
   var im=new Image();im.onload=function(){var ar=im.naturalWidth/im.naturalHeight,w=50,h=w/ar;L.push({type:'image',name:f.name.replace(/\.[^.]+$/,''),src:j.data.url,x:25,y:25,w:w,h:h,crop:{x:0,y:0,w:1,h:1},visible:1,opacity:1,rotate:0,text:'',font:'',size:32,color:'#ffffff',bold:0,italic:0,caps:0,align:'center',valign:'middle',shadow:0,shape:'rect'});sel=L.length-1;dirty=true;say('');all()};im.src=j.data.url}).catch(function(){say('Upload failed')});e.target.value=''};
+
+/* draw tools */
+function clone(l){var c=JSON.parse(JSON.stringify(l,function(k,v){return k.charAt(0)==='_'?undefined:v}));if(l._bm){c._bm=cvCopy(l._bm);c._dirty=true;c.src=''}return c}
+function cvCopy(b){var c=document.createElement('canvas');c.width=b.width;c.height=b.height;c.getContext('2d').drawImage(b,0,0);return c}
+var tool='move',undos=[],stroke=null,BM=1600;
+function plain(l){return l&&l.type==='image'&&!l.rotate&&l.crop.x===0&&l.crop.y===0&&l.crop.w===1&&l.crop.h===1}
+function mkBitmap(l,done){
+ if(l._bm){done(true);return}
+ if(!l.src){var c=document.createElement('canvas');c.width=c.height=BM;l._bm=c;l._dirty=true;done(true);return}
+ var r=image(l.src,function(){});var go=function(){if(r.tainted){say('That picture is hosted elsewhere, so it cannot be drawn on. Upload it here first.');done(false);return}
+  var n=r.img,k=Math.min(1,BM/Math.max(n.naturalWidth,n.naturalHeight)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(n.naturalWidth*k));c.height=Math.max(1,Math.round(n.naturalHeight*k));c.getContext('2d').drawImage(n,0,0,c.width,c.height);l._bm=c;done(true)};
+ if(r.ok)go();else{var t=setInterval(function(){if(imgs[l.src]&&imgs[l.src].ok){clearInterval(t);r=imgs[l.src];go()}},100);setTimeout(function(){clearInterval(t)},8000)}}
+function newDrawing(){L.push({type:'image',name:'Drawing',src:'',x:0,y:0,w:100,h:100,crop:{x:0,y:0,w:1,h:1},visible:1,opacity:1,rotate:0,text:'',font:'',size:32,color:'#ffffff',bold:0,italic:0,caps:0,align:'center',valign:'middle',shadow:0,shape:'rect'});sel=L.length-1;mkBitmap(L[sel],function(){});dirty=true;all();return L[sel]}
+function setTool(t){tool=t;document.querySelectorAll('[data-tool]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tool')===t)});sq.style.touchAction=t==='move'?'':'none';sq.style.cursor=t==='move'?'':'crosshair';
+ if(t!=='move'){var l=L[sel];if(!l||l.type!=='image'){newDrawing()}else if(!plain(l)){say('Set Rotate to 0 on this picture to draw on it, or press + Drawing.')}else{say('')}}else say('')}
+document.querySelectorAll('[data-tool]').forEach(function(b){b.onclick=function(){setTool(b.getAttribute('data-tool'))}});
+$('spa-newdraw').onclick=function(){newDrawing();if(tool==='move')setTool('brush')};
+function lp(e,l){var r=sq.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*100,py=(e.clientY-r.top)/r.height*100;return{x:(px-l.x)/l.w*l._bm.width,y:(py-l.y)/l.h*l._bm.height,k:l._bm.width/(l.w/100*1000)}}
+function seg(c,a,b,wd){c.lineWidth=wd;c.lineCap=c.lineJoin='round';c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x+0.01,b.y);c.stroke()}
+function drawStart(e){var l=L[sel];if(!l||l.type!=='image'||!plain(l)){say('Pick a picture or press + Drawing first.');return false}
+ if(!l._bm){mkBitmap(l,function(ok){if(ok)all()});return true}
+ undos.push({l:l,c:cvCopy(l._bm),d:!!l._dirty});if(undos.length>6)undos.shift();
+ var er=tool==='eraser',fl=parseInt($('spa-bflow').value,10)/100;
+ stroke={l:l,er:er,fl:fl,last:lp(e,l),pen:e.pointerType==='pen'};
+ if(!er){var st=document.createElement('canvas');st.width=l._bm.width;st.height=l._bm.height;l._st=st;l._sa=fl}
+ drawMove(e,true);e.preventDefault();return true}
+function drawMove(e,first){if(!stroke)return;var l=stroke.l,p=lp(e,l),pr=stroke.pen&&e.pressure?Math.max(0.15,e.pressure*1.6):1,wd=Math.max(1,parseInt($('spa-bsize').value,10)*p.k*pr),c;
+ if(stroke.er){c=l._bm.getContext('2d');c.save();c.globalCompositeOperation='destination-out';c.globalAlpha=stroke.fl;c.strokeStyle='#000';seg(c,stroke.last,p,wd);c.restore()}
+ else{c=l._st.getContext('2d');c.strokeStyle=$('spa-bcolor').value;seg(c,stroke.last,p,wd)}
+ stroke.last=p;l._dirty=true;dirty=true;draw()}
+function drawEnd(){if(!stroke)return;var l=stroke.l;if(l._st){var c=l._bm.getContext('2d');c.save();c.globalAlpha=stroke.fl;c.drawImage(l._st,0,0);c.restore();l._st=null}stroke=null;draw()}
+$('spa-undo').onclick=function(){var u=undos.pop();if(!u){say('Nothing to undo.');return}if(L.indexOf(u.l)<0){return}var c=u.l._bm.getContext('2d');c.save();c.globalCompositeOperation='copy';c.drawImage(u.c,0,0);c.restore();u.l._dirty=true;draw()};
+/* AI pictures */
+var ai=$('spa-ai');$('spa-aibtn').onclick=function(){ai.hidden=!ai.hidden;$('spa-aikey').hidden=!!C.ai;if(!$('spa-prompt').value)$('spa-prompt').value=C.prompt||$('spa-name').value||''};
+function aimsg(t){$('spa-aimsg').textContent=t||''}
+function post(action,data){var fd=new FormData();fd.append('action',action);fd.append('nonce',C.nonce);for(var k in data)fd.append(k,data[k]);return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
+$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your key first.');return}post('songpress_art_key',{key:v}).then(function(j){if(j.success){C.ai=true;$('spa-key').value='';$('spa-aikey').hidden=true;aimsg('Key saved.')}else aimsg((j.data&&j.data.message)||'Could not save the key')})};
+$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:''}).then(function(){C.ai=false;aimsg('Key removed.')})};
+$('spa-aigo').onclick=function(){if(!C.ai){$('spa-aikey').hidden=false;aimsg('Add your xAI key first.');return}var g=$('spa-aigrid');g.innerHTML='';aimsg('Making four pictures… this can take a minute.');$('spa-aigo').disabled=true;
+ post('songpress_art_generate',{prompt:$('spa-prompt').value,cover:$('spa-aicover').checked?1:0}).then(function(j){$('spa-aigo').disabled=false;if(!j.success){aimsg((j.data&&j.data.message)||'Nothing came back');return}aimsg('Click one to add it to the art (it is also kept in your Media Library).');
+  j.data.images.forEach(function(u){var b=document.createElement('button');b.type='button';b.className='spa-aipic';var im=document.createElement('img');im.src=u;im.alt='';b.appendChild(im);
+   b.onclick=function(){b.disabled=true;aimsg('Adding…');post('songpress_art_claim',{src:u}).then(function(r){if(!r.success){b.disabled=false;aimsg((r.data&&r.data.message)||'Could not add it');return}aimsg('Added.');
+    var pic=new Image();pic.onload=function(){L.push({type:'image',name:'AI picture',src:r.data.url,x:0,y:0,w:100,h:100*pic.naturalHeight/pic.naturalWidth,crop:{x:0,y:0,w:1,h:1},visible:1,opacity:1,rotate:0,text:'',font:'',size:32,color:'#ffffff',bold:0,italic:0,caps:0,align:'center',valign:'middle',shadow:0,shape:'rect'});sel=L.length-1;dirty=true;all()};pic.src=r.data.url})};
+   g.appendChild(b)})}).catch(function(){$('spa-aigo').disabled=false;aimsg('The request failed. Try again.')})};
 /* drag to move, corner to resize */
 var drag=null;
 function pt(e){var r=sq.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100}}
-sq.addEventListener('pointerdown',function(e){var p=pt(e);
+sq.addEventListener('pointerdown',function(e){if(tool!=='move'){if(drawStart(e)){sq.setPointerCapture(e.pointerId)}return}var p=pt(e);
  if(e.target===hd){drag={m:'size',p:p,l:L[sel],o:{w:L[sel].w,h:L[sel].h}};sq.setPointerCapture(e.pointerId);e.preventDefault();return}
  var hit=-1;for(var i=L.length-1;i>=0;i--){var l=L[i];if(l.type==='canvas'||!l.visible)continue;if(p.x>=l.x&&p.x<=l.x+l.w&&p.y>=l.y&&p.y<=l.y+l.h){hit=i;break}}
  if(hit>=0){sel=hit;drag={m:'move',p:p,l:L[sel],o:{x:L[sel].x,y:L[sel].y}};sq.setPointerCapture(e.pointerId);rail();props();draw()}
 });
-sq.addEventListener('pointermove',function(e){if(!drag)return;var p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y,l=drag.l;
+sq.addEventListener('pointermove',function(e){if(stroke){drawMove(e);return}if(!drag)return;var p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y,l=drag.l;
  if(drag.m==='move'){l.x=Math.round((drag.o.x+dx)*10)/10;l.y=Math.round((drag.o.y+dy)*10)/10}else{l.w=Math.max(1,Math.round((drag.o.w+dx)*10)/10);l.h=Math.max(1,Math.round((drag.o.h+dy)*10)/10)}
  dirty=true;draw()});
-function end(){if(drag){drag=null;props()}}sq.addEventListener('pointerup',end);sq.addEventListener('pointercancel',end);
+function end(){if(stroke){drawEnd();return}if(drag){drag=null;props()}}sq.addEventListener('pointerup',end);sq.addEventListener('pointercancel',end);
 /* output */
 function render(size){var c=document.createElement('canvas');c.width=c.height=size;paint(c.getContext('2d'),size);return c}
 function blob(size){return new Promise(function(res,rej){var c=render(size);try{c.toBlob(function(b){b?res(b):rej(new Error('x'))},'image/png')}catch(e){rej(e)}})}
 function save(cover){
- var fd=new FormData();fd.append('action','songpress_art_save');fd.append('nonce',C.nonce);fd.append('id',id);fd.append('name',$('spa-name').value);fd.append('serial',$('spa-serial').value);fd.append('layers',JSON.stringify(L));
+ var fd=new FormData();fd.append('action','songpress_art_save');fd.append('nonce',C.nonce);fd.append('id',id);fd.append('name',$('spa-name').value);fd.append('serial',$('spa-serial').value);fd.append('layers',JSON.stringify(L,function(k,v){return k.charAt(0)==='_'?undefined:v}));
  say(cover?'Rendering the cover…':'Saving…');
  var go=function(b){if(b){fd.append('file',b,'cover-'+Date.now()+'.png');if(cover)fd.append('set_cover','1')}
   fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){say((j.data&&j.data.message)||'Could not save');return}
@@ -365,8 +560,12 @@ function save(cover){
  var w=Math.min(3000,parseInt($('spa-size').value,10)||3000);
  blob(cover?w:1000).then(go,function(){say('A picture on this project could not be copied into the cover (it is hosted elsewhere). Save the project without the cover, or upload that picture here.')});
 }
-$('spa-save').onclick=function(){save(false)};
-$('spa-cover').onclick=function(){save(true)};
+function flush(){var jobs=L.filter(function(l){return l._bm&&l._dirty});if(!jobs.length)return Promise.resolve();say('Saving your drawing…');
+ return jobs.reduce(function(p,l){return p.then(function(){return new Promise(function(res,rej){try{l._bm.toBlob(function(b){if(!b){rej(new Error('x'));return}var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',C.upload);fd.append('file',b,'drawing-'+Date.now()+'.png');
+  fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){rej(new Error((j.data&&j.data.message)||'Upload failed'));return}l.src=j.data.url;l._dirty=false;res()},rej)},'image/png')}catch(e){rej(e)}})})},Promise.resolve())}
+function go(c){flush().then(function(){save(c)},function(e){say('Could not save the drawing: '+(e&&e.message||''))})}
+$('spa-save').onclick=function(){go(false)};
+$('spa-cover').onclick=function(){go(true)};
 $('spa-down').onclick=function(){blob(parseInt($('spa-size').value,10)||3000).then(function(b){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=(($('spa-name').value||'cover').replace(/[^\w.-]+/g,'-'))+'.png';document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)},function(){say('A picture on this project is hosted elsewhere and cannot be exported.')})};
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
 all();

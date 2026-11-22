@@ -703,6 +703,12 @@ $fam = (int) $wpdb->get_var( "SELECT family_id FROM wp_songpress_songs WHERE tit
 check( 'editing a song does not match its own family', count( array_filter( Songpress_Names::matches( 'song', 'Harbor Lights', $fam ), function ( $m ) { return 'same' === $m['level'] && false !== strpos( $m['where'], '0001' ); } ) ), 0 );
 check( 'too short a name matches nothing', Songpress_Names::matches( 'song', '' ), array() );
 
+$pi = Songpress_Art::parse_images( '{"data":[{"url":"https://x.ai/a.png"},{"b64_json":"QUJD"},{"url":"http://bad/x.png"},{"b64_json":"<script>"},"x"]}' );
+check( 'AI reply: https url and base64 kept, junk dropped', $pi, array( 'https://x.ai/a.png', 'data:image/png;base64,QUJD' ) );
+check( 'AI reply: garbage gives nothing', Songpress_Art::parse_images( 'nope' ), array() );
+$xb = Songpress_Art::xai_bodies( 'a cat', 4 );
+check( 'AI request tries two models, four pictures', array( count( $xb ), $xb[0]['n'], $xb[1]['model'] ), array( 2, 4, 'grok-imagine-image' ) );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
