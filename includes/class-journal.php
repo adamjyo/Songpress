@@ -752,6 +752,7 @@ JS
 	public static function parse_note_file( $name, $text ) {
 		$base = preg_replace( '/\.(bear|md|txt|markdown)$/i', '', basename( (string) $name ) );
 		$text = str_replace( array( "\r\n", "\r" ), "\n", preg_replace( '/^\xEF\xBB\xBF/', '', (string) $text ) );
+		$text = preg_replace( '/\[([^\]\n]*)\]\(bear:\/\/[^)\s]*\)/', '$1', $text ); // Bear's links to other notes and people mean nothing here; keep their words
 		$n    = array( 'title' => '', 'date' => '', 'kind' => 'note', 'pinned' => 0, 'archived' => 0, 'song_key' => '', 'tempo' => '', 'authors' => '', 'place' => '', 'latitude' => '', 'longitude' => '', 'notes' => '' );
 		if ( preg_match( '/^---\n(.*?)\n---\n?(.*)$/s', $text, $m ) ) {
 			foreach ( explode( "\n", $m[1] ) as $line ) {
@@ -815,8 +816,8 @@ JS
 			}
 			if ( isset( $lines[ $i ] ) && false !== strpos( $lines[ $i ], '|' ) ) {
 				$p = array_map( 'trim', explode( '|', $lines[ $i ] ) );
-				$n['song_key'] = $p[0] ?? '';
-				$n['tempo']    = $p[1] ?? '';
+				$n['song_key'] = ( '?' === ( $p[0] ?? '' ) ) ? '' : ( $p[0] ?? '' );
+				$n['tempo']    = preg_match( '/^\?\s*(bpm)?$/i', $p[1] ?? '' ) ? '' : ( $p[1] ?? '' );
 				$d             = $p[2] ?? '';
 				if ( preg_match( '/^(\d{4}-\d{2}-\d{2})/', $d, $dm ) ) {
 					$n['date'] = $dm[1];
