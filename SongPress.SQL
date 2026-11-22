@@ -235,3 +235,34 @@ CREATE TABLE {prefix}songpress_expenses (
   PRIMARY KEY  (id),
   KEY spent_on (spent_on)
 ) {charset};
+
+-- Work journal: dated notes about the work, optionally tied to a song. Entered by hand; the old journal can be loaded once.
+CREATE TABLE {prefix}songpress_journal (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  log_date date NOT NULL,
+  kind varchar(16) NOT NULL DEFAULT 'day',
+  title varchar(255) NOT NULL DEFAULT '',
+  notes longtext NULL,
+  place varchar(191) NOT NULL DEFAULT '',
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  pinned tinyint(1) NOT NULL DEFAULT 0,
+  archived tinyint(1) NOT NULL DEFAULT 0,
+  source_key varchar(64) NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY source_key (source_key),
+  KEY log_date (log_date),
+  KEY song_id (song_id)
+) {charset};
+
+-- Star ratings for songs (1 to 5), one per voter.
+CREATE TABLE {prefix}songpress_ratings (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  song_id bigint(20) unsigned NOT NULL,
+  voter varchar(64) NOT NULL,
+  stars tinyint(3) unsigned NOT NULL,
+  created_at datetime NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY song_voter (song_id,voter)
+) {charset};

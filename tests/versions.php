@@ -48,6 +48,8 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_streams (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, service TEXT, streams INT, UNIQUE(day,service))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, row_key TEXT UNIQUE, month TEXT, store TEXT, title TEXT, isrc TEXT, song_id INT, units INT, earnings REAL)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -74,6 +76,7 @@ require __DIR__ . '/../includes/class-media.php';
 require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
+require __DIR__ . '/../includes/class-journal.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -291,6 +294,10 @@ $mp->exec( 'CREATE TABLE dk_daily_estimates (day TEXT, service TEXT, streams INT
 $mp->exec( "INSERT INTO dk_daily_estimates VALUES ('2026-01-01','Spotify',100),('2026-01-01','Apple Music',50),('2026-01-02','Spotify',70)" );
 $mp->exec( 'CREATE TABLE distrokid (sale_month TEXT, store TEXT, title TEXT, isrc TEXT, quantity INT, earnings_usd REAL)' );
 $mp->exec( "INSERT INTO distrokid VALUES ('2026-07-01','Spotify','Harbor Lights','USX1',100,0.4),('2026-07-01','Spotify','Harbor Lights','USX1',50,0.2),('2026-07-01','Apple','second song','',10,0.1),('2026-07-01','Apple','Unknown','',5,0.05)" );
+$mp->exec( 'CREATE TABLE work_log (id INT, log_date TEXT, notes TEXT, kind TEXT, title TEXT, pinned INT, archived INT, place TEXT)' );
+$mp->exec( "INSERT INTO work_log VALUES (1,'2026-10-26','worked on archives','day','',0,0,''),(2,'2007-08-04','verse','note','0001 Harbor Lights',1,0,'Church'),(3,'bad','x','day','',0,0,'')" );
+$mp->exec( 'CREATE TABLE song_ratings (id INT, song_id INT, voter TEXT, stars INT, created_at TEXT)' );
+$mp->exec( "INSERT INTO song_ratings VALUES (1,11,'a',5,'2026-09-01T23:25:46+00:00'),(2,11,'b',4,''),(3,99,'a',5,''),(4,11,'c',9,'')" );
 unset( $mp );
 $r = Songpress_Money::import_sqlite( $mf );
 check( 'money import earnings lines', $r['earnings'], 3 );
@@ -320,6 +327,16 @@ check( 'second import does not double earnings', round( Songpress_Money::earned_
 check( 'hand-edited payout survives import', round( (float) Songpress_Money::payments_for( 2026, 2 )['writer|mackbutts']->amount, 2 ), 9.99 );
 check( 'my earnings found by name', strpos( Songpress_Money::my_earnings_html( 'Adam Page' ), '$12.00' ) !== false, true );
 check( 'no earnings, no section', Songpress_Money::my_earnings_html( 'Nobody Here' ), '' );
+check( 'journal import', array( $r['journal'], $r['ratings'] ), array( 2, 2 ) );
+check( 'journal entry links its song by serial', (int) $GLOBALS['wpdb']->get_var( "SELECT song_id FROM wp_songpress_journal WHERE title LIKE '0001%'" ), $v0 );
+$GLOBALS['wpdb']->update( 'wp_songpress_journal', array( 'notes' => 'my edit' ), array( 'source_key' => 'old:1' ) );
+check( 'second import adds no journal entries', $r2['journal'], 0 );
+check( 'journal edit survives import', $GLOBALS['wpdb']->get_var( "SELECT notes FROM wp_songpress_journal WHERE source_key = 'old:1'" ), 'my edit' );
+$js = Songpress_Journal::search( 'my edit', 'live', 1 );
+check( 'journal search', array( $js['total'], count( $js['rows'] ) ), array( 1, 1 ) );
+check( 'pinned entries come first', Songpress_Journal::search( '', 'live', 1 )['rows'][0]->title, '0001 Harbor Lights' );
+check( 'top rated average', array( round( (float) Songpress_Journal::top_rated( 3 )[0]->avg_stars, 1 ), (int) Songpress_Journal::top_rated( 3 )[0]->votes ), array( 4.5, 2 ) );
+check( 'serial parsed from a journal title', array( Songpress_Journal::serial_in( '#0258-01 The Lord' ), Songpress_Journal::serial_in( 'hello' ) ), array( '0258-01', '' ) );
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 

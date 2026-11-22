@@ -326,3 +326,11 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spm-bar{height:10px;border-radius:5px;background:#1b1d22;overflow:hidden}
 .spm-bar i{display:block;height:100%;background:var(--sp-accent);border-radius:5px}
 .spm-val{color:var(--sp-text);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Journal */
+.spj-new{margin:0 0 12px}.spj-new summary{display:inline-flex;list-style:none;cursor:pointer}
+.spj-find{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}.spj-find input[type=search]{flex:1 1 200px}
+.spj-entry{border-bottom:1px solid var(--sp-line);padding:8px 0}
+.spj-entry summary{cursor:pointer;color:var(--sp-text)}.spj-entry time{color:var(--sp-mute);margin-right:6px;font-variant-numeric:tabular-nums}
+.spj-entry.pinned summary{color:var(--sp-accent)}.spj-pin{color:var(--sp-accent)}
+.spj-flag{display:inline-block;margin:0}.spj-pages{margin:12px 0}

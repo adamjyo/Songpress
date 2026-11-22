@@ -20,7 +20,7 @@ class Songpress_Caps {
 	);
 
 	const PERMS = array(
-		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists', 'money' ),
+		'manager' => array( 'view_all', 'view_own', 'create', 'edit_any', 'edit_own', 'archive', 'share_any', 'share_own', 'export', 'upload', 'link', 'import', 'settings', 'members', 'artists', 'money', 'journal' ),
 		'writer'  => array( 'view_all', 'view_own', 'edit_own', 'share_own', 'upload' ),
 		'viewer'  => array( 'view_all', 'view_own' ),
 	);
