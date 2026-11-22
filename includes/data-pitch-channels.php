@@ -100,15 +100,6 @@ return array (
       ),
       3 => 
       array (
-        'id' => 'plaympe',
-        'name' => 'Play MPE (Caster)',
-        'cost' => 'Paid servicing',
-        'blurb' => 'Industry standard for commercial FM, satellite, and some public radio. Labels use this. Only after AirPlay Direct + college FM if you want paid commercial servicing.',
-        'url' => 'https://www.plaympe.com/',
-        'cta' => 'Open Play MPE',
-      ),
-      4 => 
-      array (
         'id' => 'soundexchange',
         'name' => 'SoundExchange',
         'cost' => 'Free to register',
@@ -188,15 +179,6 @@ return array (
         'cta' => 'Search Spinitron',
       ),
       7 => 
-      array (
-        'id' => 'pandora-amp',
-        'name' => 'Pandora AMP',
-        'cost' => 'Free',
-        'blurb' => 'Artist Marketing Platform. Pitch already-released tracks into Pandora’s catalog/radio. US-heavy streaming radio, not FM.',
-        'url' => 'https://amp.pandora.com/',
-        'cta' => 'Open Pandora AMP',
-      ),
-      8 => 
       array (
         'id' => 'nacc',
         'name' => 'NACC college charts',
@@ -310,15 +292,6 @@ return array (
         'blurb' => 'Curated. Higher bar, better fees. Apply with your strongest, fully cleared masters and instrumentals.',
         'url' => 'https://www.musicbed.com/artists',
         'cta' => 'Apply to Musicbed',
-      ),
-      3 => 
-      array (
-        'id' => 'youtube-audio',
-        'name' => 'YouTube Audio Library / DistroKid Social',
-        'cost' => 'Free with DistroKid pack',
-        'blurb' => 'If the work is already on DistroKid, the Social Media Pack can put instrumentals in YouTube Creator Music. No extra site to join.',
-        'url' => 'https://distrokid.com/',
-        'cta' => 'Open DistroKid',
       ),
     ),
   ),
