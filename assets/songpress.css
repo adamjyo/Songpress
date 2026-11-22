@@ -684,3 +684,9 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-list:has(.songpress-card){border:0;padding:0;margin-top:4px}
 .songpress-cardtext .songpress-title.songpress-notitle{color:var(--sp-mute);font-weight:500;font-style:italic}
 .songpress-card .songpress-play .songpress-playicon{opacity:1}
+/* work view: art left; title, artist and author icons beside it; the player across the full width underneath */
+.songpress-top .songpress-audio{grid-column:1/-1;grid-row:2;margin-top:8px}
+.songpress-authors{display:flex;flex-wrap:nowrap;gap:6px;margin:8px 0 0;overflow-x:auto;scrollbar-width:none}
+.songpress-authors::-webkit-scrollbar{display:none}
+.songpress-authors .songpress-icon{flex:none;display:inline-flex}
+.songpress-authors .sp-face{width:32px!important;height:32px!important;font-size:12px!important;margin:0!important}

@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.57.0 =
+* Work view: the audio player runs the full width of the screen under the cover art and title. Only an original work shows the work name; a version shows its release title. The authors are one row of icons under the artist (writers only, no names, swipe sideways if there are many), and the credits block under the chart is gone.
+
 = 0.56.3 =
 * The work view has the cover art on the left, with the title, artist and audio player to its right.
 
