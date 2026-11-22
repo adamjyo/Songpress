@@ -52,6 +52,8 @@ class Songpress_Uploads {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_notes_import', array( __CLASS__, 'handle_notes_import' ) );
+		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
+		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
 		add_action( 'admin_post_songpress_statement', array( __CLASS__, 'handle_statement' ) );
 		add_action( 'admin_post_songpress_download', array( __CLASS__, 'handle_download' ) );
 	}
@@ -400,11 +402,15 @@ class Songpress_Uploads {
 		exit;
 	}
 
+	const NOTES_JOB = 'songpress_notes_job';
+
+	/** Stage the chosen files on disk, one note per line, so a big batch (3000 notes, say) is imported in small steps and never held in memory. */
 	public static function handle_notes_import() {
 		check_admin_referer( 'songpress_notes_import' );
 		if ( ! Songpress_Caps::can( 'journal' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
+		@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$files = array();
 		if ( ! empty( $_FILES['files']['tmp_name'] ) && is_array( $_FILES['files']['tmp_name'] ) ) {
 			foreach ( $_FILES['files']['tmp_name'] as $i => $tmp ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
@@ -415,57 +421,145 @@ class Songpress_Uploads {
 		}
 		$args = array( 'type' => 'notes_files' );
 		if ( ! $files ) {
-			self::back( $args + array( 'm_err' => __( 'No files were received.', 'songpress' ) ) );
+			self::back( $args + array( 'm_err' => __( 'No files were received. If you chose many files, put them in one zip and choose that instead (servers usually accept only 20 files at a time).', 'songpress' ) ) );
 		}
-		$texts = array();
+		$dir = Songpress_Import::private_dir();
+		if ( '' === $dir ) {
+			self::back( $args + array( 'm_err' => __( 'The uploads folder cannot be written to.', 'songpress' ) ) );
+		}
+		$old = get_option( self::NOTES_JOB );
+		if ( is_array( $old ) && ! empty( $old['path'] ) ) {
+			@unlink( $old['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+		}
+		$path = trailingslashit( $dir ) . 'notes-' . wp_generate_password( 12, false ) . '.jsonl';
+		$out  = fopen( $path, 'w' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( ! $out ) {
+			self::back( $args + array( 'm_err' => __( 'The uploads folder cannot be written to.', 'songpress' ) ) );
+		}
+		$total = 0;
+		$put   = function ( $name, $text ) use ( $out, &$total ) {
+			$text = (string) $text;
+			if ( ! preg_match( '//u', $text ) ) {
+				$text = function_exists( 'mb_convert_encoding' ) ? mb_convert_encoding( $text, 'UTF-8', 'Windows-1252' ) : utf8_encode( $text ); // phpcs:ignore PHPCompatibility.FunctionUse.RemovedFunctions
+			}
+			$j = wp_json_encode( array( (string) $name, $text ), JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE );
+			if ( false !== $j ) {
+				fwrite( $out, $j . "\n" ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+				++$total;
+			}
+		};
 		foreach ( $files as $f ) {
 			if ( preg_match( '/\.zip$/i', $f['name'] ) ) {
 				if ( ! class_exists( 'ZipArchive' ) ) {
+					fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+					@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
 					self::back( $args + array( 'm_err' => __( 'This server cannot open zip files. Unzip them first and choose the files inside.', 'songpress' ) ) );
 				}
 				$z = new ZipArchive();
 				if ( true === $z->open( $f['tmp'] ) ) {
 					for ( $i = 0; $i < $z->numFiles; $i++ ) {
 						$n = $z->getNameIndex( $i );
-						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) && 'info.json' !== basename( $n ) ) {
+						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) && 'info.json' !== basename( $n ) && false === strpos( $n, '__MACOSX/' ) ) {
 							// inside a .textbundle folder the text is called text.md; the folder name is the note's name
 							$bn = basename( $n );
 							if ( 'text.md' === $bn && false !== strpos( dirname( $n ), '.textbundle' ) ) {
 								$bn = basename( dirname( $n ), '.textbundle' ) . '.md';
 							}
-							$texts[] = array( $bn, (string) $z->getFromIndex( $i ) );
+							$put( $bn, $z->getFromIndex( $i ) );
 						}
 					}
 					$z->close();
 				}
 				continue;
 			}
-			$texts[] = array( $f['name'], (string) file_get_contents( $f['tmp'] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- an uploaded temp file.
+			$put( $f['name'], file_get_contents( $f['tmp'] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions -- an uploaded temp file.
 		}
-		$added = 0;
-		$skip  = 0;
-		foreach ( $texts as $t ) {
-			list( $name, $text ) = $t;
-			if ( preg_match( '/\.json$/i', $name ) || '{' === substr( ltrim( $text ), 0, 1 ) ) {
-				$j = json_decode( $text, true );
-				if ( is_array( $j ) && isset( $j['notes'] ) && is_array( $j['notes'] ) ) {
-					foreach ( $j['notes'] as $o ) {
-						$n = array( 'title' => (string) ( $o['title'] ?? '' ), 'date' => (string) ( $o['date'] ?? '' ), 'kind' => (string) ( $o['kind'] ?? 'note' ), 'pinned' => ! empty( $o['pinned'] ) ? 1 : 0, 'archived' => ! empty( $o['archived'] ) ? 1 : 0, 'song_key' => (string) ( $o['song_key'] ?? $o['key'] ?? '' ), 'tempo' => (string) ( $o['song_tempo'] ?? $o['tempo'] ?? '' ), 'authors' => (string) ( $o['authors'] ?? '' ), 'place' => (string) ( $o['place'] ?? '' ), 'latitude' => (string) ( $o['lat'] ?? '' ), 'longitude' => (string) ( $o['lng'] ?? '' ), 'notes' => (string) ( $o['notes'] ?? '' ) );
-						Songpress_Journal::add_note( $n, 'file:' . md5( wp_json_encode( $n ) ) ) ? ++$added : ++$skip;
-					}
-				} else {
-					++$skip;
+		fclose( $out ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( ! $total ) {
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+			self::back( $args + array( 'm_err' => __( 'No notes were found in those files.', 'songpress' ) ) );
+		}
+		update_option( self::NOTES_JOB, array( 'path' => $path, 'pos' => 0, 'total' => $total, 'done' => 0, 'added' => 0, 'skip' => 0 ), false );
+		self::back( $args + array( 'nj_go' => 1 ) );
+	}
+
+	/** One step of the staged import: a few seconds of work, then back to the page, which carries on by itself. */
+	public static function handle_notes_step() {
+		check_admin_referer( 'songpress_notes_step' );
+		if ( ! Songpress_Caps::can( 'journal' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$args = array( 'type' => 'notes_files' );
+		$job  = get_option( self::NOTES_JOB );
+		if ( ! is_array( $job ) || empty( $job['path'] ) || ! file_exists( $job['path'] ) ) {
+			self::back( $args + array( 'm_err' => __( 'There is nothing waiting to import. Choose the files again.', 'songpress' ) ) );
+		}
+		@set_time_limit( 60 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$start = microtime( true );
+		$fh    = fopen( $job['path'], 'r' ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		fseek( $fh, (int) $job['pos'] );
+		$eof = false;
+		while ( true ) {
+			$line = fgets( $fh );
+			if ( false === $line ) {
+				$eof = true;
+				break;
+			}
+			$row = json_decode( $line, true );
+			if ( is_array( $row ) && 2 === count( $row ) ) {
+				try {
+					self::import_one( $row[0], $row[1], $job['added'], $job['skip'] );
+				} catch ( \Throwable $e ) {
+					++$job['skip'];
 				}
-				continue;
 			}
-			if ( '' === trim( $text ) ) {
-				++$skip;
-				continue;
+			++$job['done'];
+			$job['pos'] = ftell( $fh );
+			if ( microtime( true ) - $start > 8 ) {
+				break;
 			}
-			$n = Songpress_Journal::parse_note_file( $name, $text );
-			Songpress_Journal::add_note( $n, 'file:' . md5( $name . "\n" . $text ) ) ? ++$added : ++$skip;
 		}
-		self::back( $args + array( 'm_ok' => sprintf( /* translators: 1: notes added 2: skipped */ __( 'Added %1$d notes. %2$d were empty or already here.', 'songpress' ), $added, $skip ) ) );
+		fclose( $fh ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+		if ( $eof ) {
+			@unlink( $job['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+			delete_option( self::NOTES_JOB );
+			Songpress_Audit::log( 'notes', 'Imported notes', sprintf( '%d added', (int) $job['added'] ) );
+			self::back( $args + array( 'm_ok' => sprintf( /* translators: 1: notes added 2: skipped */ __( 'Added %1$d notes. %2$d were empty or already here.', 'songpress' ), (int) $job['added'], (int) $job['skip'] ) ) );
+		}
+		update_option( self::NOTES_JOB, $job, false );
+		self::back( $args + array( 'nj_go' => 1 ) );
+	}
+
+	public static function handle_notes_cancel() {
+		check_admin_referer( 'songpress_notes_cancel' );
+		$job = get_option( self::NOTES_JOB );
+		if ( is_array( $job ) && ! empty( $job['path'] ) ) {
+			@unlink( $job['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+		}
+		delete_option( self::NOTES_JOB );
+		self::back( array( 'type' => 'notes_files', 'm_ok' => __( 'The import was cancelled. Notes already added were kept.', 'songpress' ) ) );
+	}
+
+	/** Add the note or notes in one file's text. */
+	private static function import_one( $name, $text, &$added, &$skip ) {
+		if ( preg_match( '/\.json$/i', $name ) || '{' === substr( ltrim( $text ), 0, 1 ) ) {
+			$j = json_decode( $text, true );
+			if ( is_array( $j ) && isset( $j['notes'] ) && is_array( $j['notes'] ) ) {
+				foreach ( $j['notes'] as $o ) {
+					$n = array( 'title' => (string) ( $o['title'] ?? '' ), 'date' => (string) ( $o['date'] ?? '' ), 'kind' => (string) ( $o['kind'] ?? 'note' ), 'pinned' => ! empty( $o['pinned'] ) ? 1 : 0, 'archived' => ! empty( $o['archived'] ) ? 1 : 0, 'song_key' => (string) ( $o['song_key'] ?? $o['key'] ?? '' ), 'tempo' => (string) ( $o['song_tempo'] ?? $o['tempo'] ?? '' ), 'authors' => (string) ( $o['authors'] ?? '' ), 'place' => (string) ( $o['place'] ?? '' ), 'latitude' => (string) ( $o['lat'] ?? '' ), 'longitude' => (string) ( $o['lng'] ?? '' ), 'notes' => (string) ( $o['notes'] ?? '' ) );
+					Songpress_Journal::add_note( $n, 'file:' . md5( wp_json_encode( $n ) ) ) ? ++$added : ++$skip;
+				}
+			} else {
+				++$skip;
+			}
+			return;
+		}
+		if ( '' === trim( $text ) ) {
+			++$skip;
+			return;
+		}
+		$n = Songpress_Journal::parse_note_file( $name, $text );
+		Songpress_Journal::add_note( $n, 'file:' . md5( $name . "\n" . $text ) ) ? ++$added : ++$skip;
 	}
 
 	/** The SQL of one download with its table names filled in. */
@@ -524,7 +618,18 @@ class Songpress_Uploads {
 			$o .= $panel( 'works', '<p class="spe-help">' . esc_html__( 'One upload does it all: your old catalog.sqlite. You get a report first and nothing is written until you confirm. The songs come in 500 at a time; when none are left, the same file also brings the photos and bios, statements, payouts, streams, notes, ratings, art projects, agreements and registrations. Run it again to bring the next batch.', 'songpress' ) . '</p>' . ( 'works' === $type ? Songpress_Screens::legacy( 'import' ) : '<p class="spe-help">' . esc_html__( 'Choose this upload to open the tool.', 'songpress' ) . '</p>' ) );
 		}
 		if ( Songpress_Caps::can( 'journal' ) ) {
-			$o .= $panel( 'notes_files', '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them, or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . '</p><form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button></form>' );
+			$job   = get_option( self::NOTES_JOB );
+			$njhtml = '';
+			if ( is_array( $job ) && ! empty( $job['path'] ) && file_exists( $job['path'] ) ) {
+				$next   = wp_nonce_url( add_query_arg( array( 'action' => 'songpress_notes_step', 'sp_return' => rawurlencode( Songpress_Editor::list_url() ) ), admin_url( 'admin-post.php' ) ), 'songpress_notes_step' );
+				$cancel = wp_nonce_url( add_query_arg( array( 'action' => 'songpress_notes_cancel', 'sp_return' => rawurlencode( Songpress_Editor::list_url() ) ), admin_url( 'admin-post.php' ) ), 'songpress_notes_cancel' );
+				$pct    = $job['total'] ? (int) floor( 100 * $job['done'] / $job['total'] ) : 0;
+				$njhtml = '<div class="notice notice-info"><p><strong>' . esc_html( sprintf( /* translators: 1: notes done, 2: notes in all */ __( 'Importing… %1$s of %2$s notes.', 'songpress' ), number_format_i18n( $job['done'] ), number_format_i18n( $job['total'] ) ) ) . '</strong> ' . esc_html__( 'Keep this page open; it carries on by itself.', 'songpress' ) . '</p><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden"><div style="height:8px;width:' . $pct . '%;background:#f5a524"></div></div><p><a class="spe-btn" href="' . esc_url( $next ) . '">' . esc_html__( 'Continue now', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( $cancel ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a></p></div>';
+				if ( isset( $_GET['nj_go'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+					$njhtml .= '<script>setTimeout(function(){location.href=' . wp_json_encode( $next ) . ';},300);</script>';
+				}
+			}
+			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . '</p><form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button></form>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
