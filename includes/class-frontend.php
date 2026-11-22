@@ -137,10 +137,10 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
 			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page );
-			$nav .= $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 		}
+		$bot  = $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
-		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt="SongPress"></div>' . $nav . '<span class="sp-grow"></span>' . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
+		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt="SongPress"></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
 	}
 
 	private static function gate() {
