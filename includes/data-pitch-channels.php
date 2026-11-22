@@ -107,6 +107,15 @@ return array (
         'url' => 'https://www.soundexchange.com/',
         'cta' => 'Register at SoundExchange',
       ),
+      9 => 
+      array (
+        'id' => 'plaympe',
+        'name' => 'Play MPE (Caster)',
+        'cost' => 'Paid servicing',
+        'blurb' => 'Industry standard for delivering music to commercial FM, satellite and some public radio. Usually used by labels and pluggers, so budget for it. Try AirPlay Direct and college radio first.',
+        'url' => 'https://www.plaympe.com/',
+        'cta' => 'Open Play MPE',
+      ),
     ),
   ),
   'radio' => 

@@ -736,6 +736,7 @@ $rd = Songpress_Pitch::readiness( $pf );
 check( 'readiness flags missing art and ISRC, passes the WAV', array( $rd[0][0], $rd[2][0], $rd[9][0], $rd[7][0] ), array( true, false, false, true ) );
 check( 'an explicit song needs a clean version', end( Songpress_Pitch::readiness( array_merge( $pf, array( 'explicit' => 1 ) ) ) )[1], 'Clean version' );
 check( 'every missing item explains itself', count( array_filter( $rd, function ( $r ) { return '' === $r[3]; } ) ), 0 );
+check( 'channels carry a price badge, free first', array( Songpress_Pitch::channel_groups()[0]['items'][0]['tier'], end( Songpress_Pitch::channel_groups()[0]['items'] )['tier'] ), array( 'free', 'paid' ) );
 check( 'draft bio uses the band and genre', strpos( Songpress_Pitch::draft_bio( $pf ), 'Red Beard makes Americana' ) === 0, true );
 check( 'channels pick the right words', array( Songpress_Pitch::copy_key( 'submithub', 'playlists' ), Songpress_Pitch::copy_key( 'x', 'radio' ), Songpress_Pitch::copy_key( 'x', 'sync' ), Songpress_Pitch::copy_key( 'x', 'christian' ) ), array( 'email', 'radio', 'onesheet', 'email' ) );
 Songpress_Pitch::save_kit( 1, array( 'wav' => 'https://x.test/m.wav', 'bio' => 'Hello band', 'contact' => 'me' ) );

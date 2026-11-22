@@ -65,6 +65,18 @@ class Songpress_Pitch {
 		return $o;
 	}
 
+	/** Price tier of each channel: free, mixed (free to start, paid extras) or paid. Anything not listed is free. */
+	const TIERS = array(
+		'groover'       => 'paid',
+		'plaympe'       => 'paid',
+		'submithub'     => 'mixed',
+		'submithub-radio' => 'mixed',
+		'radioairplay'  => 'mixed',
+		'playlistpal'   => 'mixed',
+		'musosoup'      => 'mixed',
+		'airplaydirect' => 'mixed',
+	);
+
 	/** Which ready-made words a channel gets: radio, onesheet or email. */
 	public static function copy_key( $channel, $group ) {
 		if ( in_array( $group, array( 'terrestrial', 'radio' ), true ) ) {
@@ -80,11 +92,16 @@ class Songpress_Pitch {
 			$items = array();
 			foreach ( $g['items'] as $i ) {
 				$i['copy'] = self::copy_key( $i['id'], $gid );
+				$i['tier'] = self::TIERS[ $i['id'] ] ?? 'free';
 				$items[]   = $i;
 			}
+			$rank = array( 'free' => 0, 'mixed' => 1, 'paid' => 2 );
+			usort( $items, function ( $a, $b ) use ( $rank ) {
+				return $rank[ $a['tier'] ] <=> $rank[ $b['tier'] ];
+			} );
 			$out[] = array( 'id' => $gid, 'label' => $g['label'], 'tip' => $g['tip'] ?? '', 'items' => $items );
 		}
-		$out[] = array( 'id' => 'other', 'label' => __( 'Somewhere else', 'songpress' ), 'tip' => __( 'A blogger, a DJ, a friend in the business, a venue. Use the short email and note who you sent it to.', 'songpress' ), 'items' => array( array( 'id' => 'other', 'name' => __( 'A person or site not listed', 'songpress' ), 'cost' => '', 'blurb' => __( 'Anyone you email or message yourself.', 'songpress' ), 'url' => '', 'cta' => '', 'copy' => 'email' ) ) );
+		$out[] = array( 'id' => 'other', 'label' => __( 'Somewhere else', 'songpress' ), 'tip' => __( 'A blogger, a DJ, a friend in the business, a venue. Use the short email and note who you sent it to.', 'songpress' ), 'items' => array( array( 'id' => 'other', 'name' => __( 'A person or site not listed', 'songpress' ), 'cost' => '', 'tier' => 'free', 'blurb' => __( 'Anyone you email or message yourself.', 'songpress' ), 'url' => '', 'cta' => '', 'copy' => 'email' ) ) );
 		return $out;
 	}
 
@@ -769,7 +786,7 @@ function step3(){
 function step4(){
  var f=S.info.facts,tabs='',g=D.groups[S.gi];
  D.groups.forEach(function(x,gi){tabs+='<button type="button" class="spe-btn'+(gi===S.gi?' on':'')+'" data-g="'+gi+'">'+h(x.label)+'</button> '});
- var list='<p class="spe-help">'+h(g.tip)+'</p><ul class="spp-chan">'+g.items.map(function(i){return '<li><button type="button" class="spp-pick'+(S.ch&&S.ch.id===i.id?' on':'')+'" data-c="'+a(i.id)+'"><b>'+h(i.name)+'</b> <span class="spp-cost">'+h(i.cost)+'</span><br><span class="spe-help">'+h(i.blurb)+'</span></button></li>'}).join('')+'</ul>';
+ var list='<p class="spe-help">'+h(g.tip)+'</p><ul class="spp-chan">'+g.items.map(function(i){return '<li><button type="button" class="spp-pick'+(S.ch&&S.ch.id===i.id?' on':'')+'" data-c="'+a(i.id)+'"><b>'+h(i.name)+'</b> <span class="spp-badge '+i.tier+'">'+({free:'Free',mixed:'Free + paid',paid:'Paid'})[i.tier]+'</span> <span class="spp-cost">'+h(i.cost)+'</span><br><span class="spe-help">'+h(i.blurb)+'</span></button></li>'}).join('')+'</ul>';
  var detail='';
  if(S.ch){var c=S.ch,txt=S.info.copies[c.copy]||'',warn='';
   if(c.copy==='radio'&&f.explicit&&!f.clean)warn+='<p class="spe-note bad">This song is marked explicit and has no clean version. Stations cannot play it in the daytime.</p>';
@@ -779,7 +796,7 @@ function step4(){
   +'<p><b>2.</b> Paste this where it asks for your message. Replace anything in [brackets].</p><textarea id="spp-copy" rows="9" readonly>'+h(txt)+'</textarea><p><button type="button" class="spe-btn" id="spp-cp">Copy the text</button> <span class="spe-help" id="spp-cpm"></span></p>'
   +'<p><b>3.</b> Come back and log it so we can remind you to follow up.</p><div class="spp-logform"><label class="spe-field"><span>Who or where did you send it? (name, station, playlist)</span><input id="spp-to" placeholder="e.g. WXYZ college radio, Jane the music director"></label><label class="spe-field"><span>Follow up on (two weeks is polite)</span><input id="spp-fu" type="date" value="'+addDays(D.today,14)+'"></label><label class="spe-field"><span>Notes</span><textarea id="spp-nt" rows="2"></textarea></label><button type="button" class="spe-save" id="spp-log">I sent it, log it</button> <span class="spe-help" id="spp-lm"></span></div></div>';
  }
- body.innerHTML=intro('<b>Where do you want to send it?</b> Start with the <b>free</b> ones. Pick a place, open its site, paste the text we wrote for it, then log it here. You can send the same song to several places; log each one.')+'<div class="spp-tabs">'+tabs+'</div>'+list+detail;
+ body.innerHTML=intro('<b>Where do you want to send it?</b> Start with the <b>Free</b> ones; each place is marked Free, Free + paid (free to start, paid extras) or Paid. Pick a place, open its site, paste the text we wrote for it, then log it here. You can send the same song to several places; log each one.')+'<div class="spp-tabs">'+tabs+'</div>'+list+detail;
  body.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){S.gi=+b.getAttribute('data-g');S.ch=null;step4()}});
  body.querySelectorAll('[data-c]').forEach(function(b){b.onclick=function(){var id=b.getAttribute('data-c');D.groups.forEach(function(gr){gr.items.forEach(function(i){if(i.id===id)S.ch=i})});step4();var d=body.querySelector('.spp-send');if(d)d.scrollIntoView({block:'nearest'})}});
  var cp=body.querySelector('#spp-cp');if(cp)cp.onclick=function(){var t=body.querySelector('#spp-copy');t.select();var m=body.querySelector('#spp-cpm');try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t.value);m.textContent='Copied.'}else{m.textContent=document.execCommand('copy')?'Copied.':'Press Ctrl+C.'}}catch(e){m.textContent='Press Ctrl+C.'}};

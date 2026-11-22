@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.38.3
+Stable tag: 0.39.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.39.0 =
+* Pitch: paid routes are back (Play MPE, Groover and others), and every place carries a badge: green Free, amber Free + paid, red Paid. Free ones are listed first.
 
 = 0.38.3 =
 * Pitch: every route is now one an independent can use directly. Removed Play MPE (label servicing), Pandora AMP and the DistroKid/YouTube entry (need an existing account).
