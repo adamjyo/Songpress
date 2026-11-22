@@ -49,7 +49,7 @@ class Songpress_Admin {
 			array( 'link', 'songpress-link', 'page_link_writers', __( 'Link writers', 'songpress' ) ),
 			array( 'settings', 'songpress-settings', 'page_settings', __( 'Settings', 'songpress' ) ),
 			array( 'artists', 'songpress-artists', 'page_artists', __( 'Artists', 'songpress' ) ),
-			array( 'members', 'songpress-people', 'page_people', __( 'People', 'songpress' ) ),
+			array( 'members', 'songpress-people', 'page_people', __( 'Writers', 'songpress' ) ),
 		) as $m ) {
 			// The song editor is also how writers open their own songs, so it is registered for anyone who can edit any song.
 			if ( Songpress_Caps::can( $m[0] ) || ( 'songpress-song' === $m[1] && Songpress_Caps::can( 'edit_own' ) ) ) {
@@ -112,7 +112,7 @@ class Songpress_Admin {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-song', $artist ? array( 'artist' => $artist ) : array() ) ) . '">' . esc_html__( 'Add song', 'songpress' ) . '</a>';
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
-			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people' ) ) . '">' . esc_html__( 'People', 'songpress' ) . '</a>';
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people' ) ) . '">' . esc_html__( 'Writers', 'songpress' ) . '</a>';
 		}
 		if ( Songpress_Caps::can( 'artists' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-artists' ) ) . '">' . esc_html__( 'Artists', 'songpress' ) . '</a>';
@@ -281,7 +281,7 @@ class Songpress_Admin {
 
 		echo '<details open><summary>' . esc_html__( 'People', 'songpress' ) . '</summary>';
 		echo '<p class="sp-help">' . esc_html__( 'Writer shares are the splits for this version and should add up to 100. Everyone listed here belongs to this version only. Type a username or email in Account to let that person see this song on their own profile. Add as many people as the song has.', 'songpress' ) . '</p>';
-		$by_role = array( 'writer' => array(), 'publisher' => array(), 'performer' => array(), 'producer' => array() );
+		$by_role = array( 'writer' => array(), 'publisher' => array(), 'label' => array(), 'performer' => array(), 'producer' => array() );
 		foreach ( $song ? Songpress_Songs::credits( $id ) : array() as $c ) {
 			if ( isset( $by_role[ $c->role ] ) ) {
 				$by_role[ $c->role ][] = $c;
@@ -294,6 +294,7 @@ class Songpress_Admin {
 		}
 		self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true );
 		self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true );
+		self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false );
 		self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false );
 		self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true );
 		echo '</details>';
@@ -588,7 +589,7 @@ class Songpress_Admin {
 		$rows    = array();
 		$unknown = array();
 		$posted = isset( $_POST['credits'] ) && is_array( $_POST['credits'] ) ? wp_unslash( $_POST['credits'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- each field sanitized in replace_credits().
-		foreach ( array( 'writer', 'publisher', 'performer', 'producer' ) as $role ) {
+		foreach ( array( 'writer', 'publisher', 'label', 'performer', 'producer' ) as $role ) {
 			foreach ( ( isset( $posted[ $role ] ) && is_array( $posted[ $role ] ) ) ? $posted[ $role ] : array() as $r ) {
 				if ( ! is_array( $r ) ) {
 					continue;
@@ -946,16 +947,14 @@ class Songpress_Admin {
 			self::profile_form( $p );
 			return;
 		}
-		$kind = isset( $_GET['kind'] ) && in_array( $_GET['kind'], Songpress_Profiles::KINDS, true ) ? sanitize_key( $_GET['kind'] ) : '';
-		$rows = $kind ? $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE kind = %s ORDER BY name LIMIT 500", $kind ) ) : $wpdb->get_results( "SELECT * FROM {$t} ORDER BY name LIMIT 500" );
-		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'People', 'songpress' ) . '</h1> <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people', array( 'profile' => 'new' ) ) ) . '">' . esc_html__( 'Add', 'songpress' ) . '</a><hr class="wp-header-end">';
-		echo '<p class="sp-help">' . esc_html__( 'Photos, bios and contact details for writers, performers, bands and publishers. They show beside names on songs. Photos come from the Media Library.', 'songpress' ) . '</p><p>';
-		foreach ( array( '' => __( 'All', 'songpress' ), 'person' => __( 'People', 'songpress' ), 'band' => __( 'Bands', 'songpress' ), 'publisher' => __( 'Publishers', 'songpress' ) ) as $k => $l ) {
-			echo '<a class="button' . ( $k === $kind ? ' button-primary' : '' ) . '" href="' . esc_url( self::url( 'songpress-people', $k ? array( 'kind' => $k ) : array() ) ) . '">' . esc_html( $l ) . '</a> ';
-		}
-		echo '</p><table class="widefat striped" style="max-width:760px"><tbody>';
+		// Writers, bands, labels and publishers are different things and never share a list.
+		$kind = isset( $_GET['kind'] ) && in_array( $_GET['kind'], Songpress_Profiles::KINDS, true ) ? sanitize_key( $_GET['kind'] ) : 'person';
+		$names = self::kind_names();
+		$rows  = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE kind = %s ORDER BY name LIMIT 500", $kind ) );
+		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html( $names[ $kind ][1] ) . '</h1> <a class="page-title-action" href="' . esc_url( self::url( 'songpress-people', array( 'profile' => 'new', 'kind' => $kind ) ) ) . '">' . esc_html__( 'Add', 'songpress' ) . '</a><hr class="wp-header-end">';
+		echo '<p class="sp-help">' . esc_html( $names[ $kind ][2] ) . '</p><table class="widefat striped" style="max-width:760px"><tbody>';
 		foreach ( $rows as $r ) {
-			echo '<tr><td style="width:44px">' . wp_kses_post( Songpress_Profiles::chip( $r->name, 32, $r->kind ) ) . '</td><td><a href="' . esc_url( self::url( 'songpress-people', array( 'profile' => (int) $r->id ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td><td>' . esc_html( ucfirst( $r->kind ) ) . '</td></tr>';
+			echo '<tr><td style="width:44px">' . wp_kses_post( Songpress_Profiles::chip( $r->name, 32, $r->kind ) ) . '</td><td><a href="' . esc_url( self::url( 'songpress-people', array( 'profile' => (int) $r->id, 'kind' => $kind ) ) ) . '"><strong>' . esc_html( $r->name ) . '</strong></a></td></tr>';
 		}
 		if ( ! $rows ) {
 			echo '<tr><td>' . esc_html__( 'Nothing here yet. Importing your old catalog fills this in.', 'songpress' ) . '</td></tr>';
@@ -963,17 +962,24 @@ class Songpress_Admin {
 		echo '</tbody></table>' . wp_kses_post( songpress_donate_link() ) . '</div>';
 	}
 
+	/** Each kind of profile: singular, plural, and what it is for. They are kept apart on purpose. */
+	public static function kind_names() {
+		return array(
+			'person'    => array( __( 'Writer', 'songpress' ), __( 'Writers', 'songpress' ), __( 'Writers and other people credited on songs, with photo, bio, contact details and IPI. A writer can also be an author, and a band can also be an artist, but each is kept in its own list.', 'songpress' ) ),
+			'band'      => array( __( 'Band', 'songpress' ), __( 'Bands', 'songpress' ), __( 'Bands and groups. They are not writers. A band can also be set up as an Artist (a brand that songs are released under).', 'songpress' ) ),
+			'label'     => array( __( 'Label', 'songpress' ), __( 'Labels', 'songpress' ), __( 'Record labels a song is released on.', 'songpress' ) ),
+			'publisher' => array( __( 'Publisher', 'songpress' ), __( 'Publishers', 'songpress' ), __( 'Music publishers, with their IPI and contact details.', 'songpress' ) ),
+		);
+	}
+
 	private static function profile_form( $p ) {
-		echo '<div class="wrap songpress-wrap"><h1>' . ( $p ? esc_html( $p->name ) : esc_html__( 'Add a person, band or publisher', 'songpress' ) ) . '</h1>';
+		echo '<div class="wrap songpress-wrap"><h1>' . ( $p ? esc_html( $p->name ) : esc_html( sprintf( /* translators: %s: kind such as Writer */ __( 'Add: %s', 'songpress' ), self::kind_names()[ isset( $_GET['kind'] ) && isset( self::kind_names()[ $_GET['kind'] ] ) ? $_GET['kind'] : 'person' ][0] ) ) ) . '</h1>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'songpress_profile_save' );
 		echo '<input type="hidden" name="action" value="songpress_profile_save"><input type="hidden" name="profile_id" value="' . (int) ( $p->id ?? 0 ) . '"><table class="form-table" role="presentation">';
-		$kind = $p->kind ?? 'person';
-		$ko   = '';
-		foreach ( array( 'person' => __( 'Person', 'songpress' ), 'band' => __( 'Band', 'songpress' ), 'publisher' => __( 'Publisher', 'songpress' ) ) as $k => $l ) {
-			$ko .= '<option value="' . esc_attr( $k ) . '"' . selected( $kind, $k, false ) . '>' . esc_html( $l ) . '</option>';
-		}
-		self::row( 'kind', __( 'Type', 'songpress' ), '<select name="kind">' . $ko . '</select>' );
+		$kind  = $p->kind ?? ( isset( $_GET['kind'] ) && in_array( $_GET['kind'], Songpress_Profiles::KINDS, true ) ? sanitize_key( $_GET['kind'] ) : 'person' );
+		$names = self::kind_names();
+		echo '<input type="hidden" name="kind" value="' . esc_attr( $kind ) . '">';
 		self::row( 'name', __( 'Name', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $p->name ?? '' ) . '" required>' );
 		self::row( 'aliases', __( 'Also known as', 'songpress' ), '<input class="regular-text" name="aliases" value="' . esc_attr( $p->aliases ?? '' ) . '" placeholder="' . esc_attr__( 'Other spellings, separated by commas', 'songpress' ) . '">' );
 		self::row( 'photo', __( 'Photo', 'songpress' ), Songpress_Media::picker( 'photo', __( 'Choose a photo', 'songpress' ), 'image', (int) ( $p->photo_id ?? 0 ), (string) ( $p->photo_url ?? '' ) ) );
@@ -1014,7 +1020,7 @@ class Songpress_Admin {
 		$kind = in_array( $in['kind'] ?? '', Songpress_Profiles::KINDS, true ) ? $in['kind'] : 'person';
 		$name = sanitize_text_field( $in['name'] ?? '' );
 		if ( '' === Songpress_Profiles::key( $name ) ) {
-			self::back( 'songpress-people', array() );
+			self::back( 'songpress-people', array( 'kind' => $kind ) );
 		}
 		$t = Songpress_Install::table( 'profiles' );
 		// a form save replaces every field, so write directly; the photo keeps its old value unless changed or removed
@@ -1040,7 +1046,7 @@ class Songpress_Admin {
 		} else {
 			$wpdb->insert( $t, $row );
 		}
-		self::back( 'songpress-people', array( 'saved' => '1' ) );
+		self::back( 'songpress-people', array( 'saved' => '1', 'kind' => $kind ) );
 	}
 
 	/* ---------- members ---------- */

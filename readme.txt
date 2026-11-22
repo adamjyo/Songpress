@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.3.1 =
+* Writers, Bands, Labels and Publishers are now separate lists, each with its own entry in the left rail. They never appear together. A writer can also be an author and a band can also be an artist, but each profile belongs to one list.
+* New Labels list, and a Labels group on the song editor for the label a song is released on.
 
 = 0.3.0 =
 * New Art studio in the rail (Managers, desktop): layered cover art on a square canvas. Add text, boxes, circles and pictures; drag to move, drag the corner to resize; reorder, hide, duplicate and delete layers; fonts load from Google Fonts by name.

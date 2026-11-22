@@ -133,7 +133,11 @@ class Songpress_Frontend {
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( 'sp_members', '1', $cat_url ), __( 'Members', 'songpress' ), $me, ! empty( $_GET['sp_members'] ) );
-			$nav .= $mk( 'people', __( 'People', 'songpress' ), $people, 'members' );
+			$kn = function ( $kind, $label ) use ( $cat_url, $page, $people ) {
+				$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
+				return self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => $kind ), $cat_url ), $label, $people, 'people' === $page && $cur === $kind );
+			};
+			$nav .= $kn( 'person', __( 'Writers', 'songpress' ) ) . $kn( 'band', __( 'Bands', 'songpress' ) ) . $kn( 'label', __( 'Labels', 'songpress' ) ) . $kn( 'publisher', __( 'Publishers', 'songpress' ) );
 			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
 			$nav .= $mk( 'import', __( 'Import', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
 			$nav .= $mk( 'link', __( 'Link writers', 'songpress' ), $svg( '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>' ), 'link' );

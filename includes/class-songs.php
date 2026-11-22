@@ -322,7 +322,7 @@ class Songpress_Songs {
 			if ( '' === $name ) {
 				continue;
 			}
-			$role = in_array( $r['role'] ?? '', array( 'writer', 'publisher', 'performer', 'producer' ), true ) ? $r['role'] : 'writer';
+			$role = in_array( $r['role'] ?? '', array( 'writer', 'publisher', 'label', 'performer', 'producer' ), true ) ? $r['role'] : 'writer';
 			$share = ( isset( $r['share'] ) && '' !== $r['share'] && is_numeric( $r['share'] ) ) ? (float) $r['share'] : null;
 			$wpdb->insert( $t, array(
 				'song_id'  => (int) $song_id,
@@ -358,7 +358,7 @@ class Songpress_Songs {
 
 	/** One CSV row. People are "Name 50%" joined by "; ". Cells that start with = + - @ get a leading apostrophe so a spreadsheet never runs them as formulas. */
 	public static function export_row( $s ) {
-		$by = array( 'writer' => array(), 'publisher' => array(), 'performer' => array(), 'producer' => array() );
+		$by = array( 'writer' => array(), 'publisher' => array(), 'label' => array(), 'performer' => array(), 'producer' => array() );
 		foreach ( self::credits( (int) $s->id ) as $c ) {
 			$share = ( null !== $c->share && '' !== (string) $c->share ) ? ' ' . rtrim( rtrim( number_format( (float) $c->share, 4, '.', '' ), '0' ), '.' ) . '%' : '';
 			$by[ $c->role ][] = $c->name . $share;

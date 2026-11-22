@@ -4,7 +4,7 @@ defined( 'ABSPATH' ) || exit;
 /** Photos, bios and contact details for people, bands and publishers, matched to credits by name. */
 class Songpress_Profiles {
 
-	const KINDS = array( 'person', 'band', 'publisher' );
+	const KINDS = array( 'person', 'band', 'label', 'publisher' );
 
 	private static $cache = null;
 
@@ -76,6 +76,9 @@ class Songpress_Profiles {
 	public static function kind_for_role( $role ) {
 		if ( 'publisher' === $role ) {
 			return 'publisher';
+		}
+		if ( 'label' === $role ) {
+			return 'label';
 		}
 		if ( 'band' === $role || 'artist' === $role ) {
 			return 'band';

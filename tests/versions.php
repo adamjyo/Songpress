@@ -357,6 +357,13 @@ check( 'art text settings read from old meta', array( $al[2]['text'], $al[2]['fo
 check( 'art layer values are clamped and colours checked', array( $al[3]['x'], $al[3]['size'], $al[3]['color'] ), array( 500, 400, '#ffffff' ) );
 check( 'art preview link kept', $ap->preview_url, 'https://site.test/uploads/prev.jpg' );
 check( 'art second import adds nothing', $r2['art'], 0 );
+check( 'label role maps to its own kind', Songpress_Profiles::kind_for_role( 'label' ), 'label' );
+Songpress_Profiles::upsert( 'label', 'Redbeard Records', array() );
+Songpress_Profiles::upsert( 'person', 'Redbeard Records', array() );
+$kinds = array_map( function ( $r ) { return $r->kind; }, $GLOBALS['wpdb']->get_results( "SELECT kind FROM wp_songpress_profiles WHERE name = 'Redbeard Records' ORDER BY kind" ) );
+check( 'a label and a person with one name stay separate', $kinds, array( 'label', 'person' ) );
+Songpress_Songs::replace_credits( $s2, array( array( 'role' => 'writer', 'name' => 'W' ), array( 'role' => 'label', 'name' => 'Redbeard Records' ) ) );
+check( 'label credit is saved with the song', people( $s2, 'label' ), array( 'Redbeard Records:-' ) );
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 
