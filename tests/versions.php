@@ -790,6 +790,17 @@ check( 'a placed pitch is no longer due or waiting', array( count( Songpress_Pit
 Songpress_Pitch::delete( $pid );
 check( 'a pitch can be removed', count( Songpress_Pitch::rows( 'all' ) ), 0 );
 
+// History: version made, scheduled, released
+$hm = array_map( fn( $r ) => $r->action, Songpress_History::for_song( $v1, 50 ) );
+check( 'history notes a new version on the work it came from', in_array( 'version_made', $hm, true ), true );
+Songpress_Songs::update( $v3, array( 'release_date' => '2030-05-05' ) );
+Songpress_Songs::update( $v3, array( 'status' => 'released' ) );
+$hr = Songpress_History::for_song( $v3, 50 );
+$ha = array_map( fn( $r ) => $r->action, $hr );
+check( 'history notes scheduled and released', array( in_array( 'scheduled', $ha, true ), in_array( 'released', $ha, true ) ), array( true, true ) );
+$sch = array_values( array_filter( $hr, fn( $r ) => 'scheduled' === $r->action ) )[0];
+check( 'scheduled line reads with the date', Songpress_History::describe( $sch ), 'Scheduled for release on 2030-05-05' );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

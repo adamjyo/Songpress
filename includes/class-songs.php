@@ -280,6 +280,8 @@ class Songpress_Songs {
 		if ( ! is_wp_error( $new ) ) {
 			self::copy_children( (int) $from->id, (int) $new );
 			Songpress_History::log( $new, 'version', array( 'from' => $from->serial ) );
+			$made = self::get( $new );
+			Songpress_History::log( (int) $from->id, 'version_made', array( 'serial' => $made ? $made->serial : '' ) );
 		}
 		return $new;
 	}
@@ -316,6 +318,14 @@ class Songpress_Songs {
 			$changes = Songpress_History::diff( $was, $data, self::FIELDS );
 			if ( $changes ) {
 				Songpress_History::log( $id, 'edited', $changes );
+			}
+			// Release milestones get their own lines in the history.
+			$new_date = isset( $data['release_date'] ) ? (string) $data['release_date'] : (string) $was->release_date;
+			if ( isset( $data['release_date'] ) && (string) $was->release_date !== $new_date && '' !== $new_date && $new_date > current_time( 'Y-m-d' ) ) {
+				Songpress_History::log( $id, 'scheduled', array( 'date' => $new_date ) );
+			}
+			if ( isset( $data['status'] ) && 'released' === $data['status'] && 'released' !== $was->status ) {
+				Songpress_History::log( $id, 'released', array( 'date' => $new_date ) );
 			}
 		}
 		return $ok;

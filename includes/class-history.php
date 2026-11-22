@@ -57,6 +57,12 @@ class Songpress_History {
 				return __( 'Created', 'songpress' );
 			case 'version':
 				return __( 'Created as a version of an earlier song', 'songpress' );
+			case 'version_made':
+				return sprintf( /* translators: %s: serial number */ __( 'New version %s created', 'songpress' ), (string) ( $d['serial'] ?? '' ) );
+			case 'scheduled':
+				return sprintf( /* translators: %s: date */ __( 'Scheduled for release on %s', 'songpress' ), (string) ( $d['date'] ?? '' ) );
+			case 'released':
+				return '' !== (string) ( $d['date'] ?? '' ) ? sprintf( /* translators: %s: date */ __( 'Released (release date %s)', 'songpress' ), $d['date'] ) : __( 'Released', 'songpress' );
 			case 'synced':
 				return sprintf( /* translators: %s: serial number */ __( 'Shared details updated from %s', 'songpress' ), (string) ( $d['from'] ?? '' ) );
 			case 'archived':

@@ -30,6 +30,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.48.4 =
+* History now records when a new version is created (on the song it came from and on the version itself), when a release is scheduled (a future release date is set), and when a song is marked Released.
+* Dropdowns are the same height, width and text size as the other fields.
+* A version shows four writer rows, one performer and one producer unless more are filled in.
+
 = 0.48.3 =
 * The Status and Genre dropdowns now also offer the options from the old work editor (Starter, Scrapped, Scratch, Studio Demo, Pre Production, Production, Post Production, Taken Down, Outside; and Folk, Country, Pop, Rock, Americana, R&B, Hip-Hop, Gospel, Jazz, Electronic, Soundtrack, Other). No other dropdown changed.
 
