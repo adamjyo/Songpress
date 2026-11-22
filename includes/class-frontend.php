@@ -120,8 +120,10 @@ class Songpress_Frontend {
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
 		$in_app  = '' === $page;
 		$avatar  = get_avatar_url( get_current_user_id(), array( 'size' => 36 ) );
+		$cu      = wp_get_current_user();
+		$who     = '' !== trim( (string) $cu->display_name ) ? $cu->display_name : __( 'Profile', 'songpress' );
 		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
-		$nav     = self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $face, 'profile' === $which ) . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
+		$nav     = self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
 		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
 			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'lists', 'backups', 'health' ), true ) );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on ) : '';

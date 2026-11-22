@@ -490,3 +490,4 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-tabs a{padding:9px 16px;color:#a4a8b0;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
 .sp-tabs a:hover{color:#fff}.sp-tabs a.on{color:#fff;border-bottom-color:#f5a524}
 .sp-side a img.sp-me{border-radius:50%;object-fit:cover;width:18px;height:18px;flex:none}
+.sp-side a{min-width:0}.sp-side a:first-of-type{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
