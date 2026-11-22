@@ -48,7 +48,21 @@ class Songpress_Screens {
 		return $o . '</nav>';
 	}
 
+	/** Registrations and Agreements share one rail entry, "Rights". */
+	public static function rights_tabs( $active ) {
+		$o = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'Rights', 'songpress' ) . '">';
+		foreach ( array( 'registrations' => array( __( 'Registrations', 'songpress' ), 'registrations' ), 'agreements' => array( __( 'Agreements', 'songpress' ), 'agreements' ) ) as $k => $v ) {
+			if ( Songpress_Caps::can( $v[1] ) ) {
+				$o .= '<a href="' . esc_url( self::url( $k ) ) . '"' . ( $k === $active ? ' class="on" aria-current="page"' : '' ) . '>' . esc_html( $v[0] ) . '</a>';
+			}
+		}
+		return $o . '</nav>';
+	}
+
 	public static function render( $slug ) {
+		if ( in_array( $slug, array( 'registrations', 'agreements' ), true ) && Songpress_Caps::can( $slug ) ) {
+			return self::rights_tabs( $slug ) . self::render_one( $slug );
+		}
 		if ( in_array( $slug, self::SETTINGS_TABS, true ) && Songpress_Caps::can( 'settings' ) ) {
 			return self::settings_tabs( $slug ) . self::render_one( $slug );
 		}
