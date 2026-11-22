@@ -20,6 +20,7 @@ class Songpress_Legacy {
 		add_action( 'admin_post_songpress_legacy_upload', array( __CLASS__, 'handle_upload' ) );
 		add_action( 'admin_post_songpress_legacy_step', array( __CLASS__, 'handle_step' ) );
 		add_action( 'admin_post_songpress_legacy_cancel', array( __CLASS__, 'handle_cancel' ) );
+		add_action( 'admin_post_songpress_legacy_fill', array( __CLASS__, 'handle_fill' ) );
 	}
 
 	private static function table() {
@@ -107,6 +108,70 @@ class Songpress_Legacy {
 		}
 		unset( $st );
 		return true;
+	}
+
+	/** A stored value back to what it was: "base64:..." becomes the binary string again. */
+	public static function unpack_value( $v ) {
+		if ( is_string( $v ) && 0 === strpos( $v, 'base64:' ) ) {
+			$d = base64_decode( substr( $v, 7 ), true );
+			return false === $d ? $v : $d;
+		}
+		return $v;
+	}
+
+	/** Build a SQLite file from the stored rows, table by table, so the screens' importers can read it. Returns tables => rows. */
+	public static function rebuild( $path ) {
+		global $wpdb;
+		$pdo = self::open( $path );
+		$out = array();
+		$t   = self::table();
+		foreach ( self::stored() as $name => $n ) {
+			$last = 0;
+			$made = false;
+			$ins  = null;
+			$cols = array();
+			$pdo->beginTransaction();
+			while ( true ) {
+				$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, row_data FROM {$t} WHERE source_table = %s AND id > %d ORDER BY id LIMIT 1000", $name, $last ) ); // phpcs:ignore WordPress.DB
+				if ( ! $rows ) {
+					break;
+				}
+				foreach ( $rows as $r ) {
+					$last = (int) $r->id;
+					$d    = json_decode( $r->row_data, true );
+					if ( ! is_array( $d ) ) {
+						continue;
+					}
+					if ( ! $made ) {
+						$cols = array_keys( $d );
+						$q    = array_map( function ( $c ) {
+							return '"' . str_replace( '"', '""', $c ) . '"';
+						}, $cols );
+						$pdo->exec( 'CREATE TABLE "' . str_replace( '"', '""', $name ) . '" (' . implode( ',', $q ) . ')' );
+						$ins  = $pdo->prepare( 'INSERT INTO "' . str_replace( '"', '""', $name ) . '" VALUES (' . implode( ',', array_fill( 0, count( $cols ), '?' ) ) . ')' );
+						$made = true;
+					}
+					$vals = array();
+					foreach ( $cols as $c ) {
+						$v      = $d[ $c ] ?? null;
+						$vals[] = is_array( $v ) ? wp_json_encode( $v ) : self::unpack_value( $v );
+					}
+					$ins->execute( $vals );
+					$out[ $name ] = ( $out[ $name ] ?? 0 ) + 1;
+				}
+			}
+			$pdo->commit();
+		}
+		return $out;
+	}
+
+	/** Put what a catalog file holds into the places the screens read (notes, statements, payouts, art, agreements, photos…). */
+	public static function fill( $path ) {
+		$m   = Songpress_Money::import_sqlite( $path );
+		$out = array( 'notes' => (int) ( $m['journal'] ?? 0 ), 'lines' => (int) ( $m['earnings'] ?? 0 ) + (int) ( $m['person'] ?? 0 ), 'error' => (string) ( $m['error'] ?? '' ) );
+		$pr  = Songpress_Profiles::import_sqlite( $path );
+		$out['people'] = (int) ( $pr['people'] ?? 0 ) + (int) ( $pr['bands'] ?? 0 ) + (int) ( $pr['publishers'] ?? 0 );
+		return $out;
 	}
 
 	/** What is stored so far: source table => rows. */
@@ -198,13 +263,34 @@ class Songpress_Legacy {
 			self::back( array( 'legacy_err' => rawurlencode( $e->getMessage() ) ) );
 		}
 		if ( $done ) {
+			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			$f = self::fill( $st['path'] ); // the same file also fills the screens: notes, statements, photos and the rest
 			@unlink( $st['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
 			update_option( self::STATE, array( 'finished' => time(), 'name' => $st['name'], 'tables' => $st['tables'] ), false );
 			Songpress_Audit::log( 'settings', 'Loaded a whole database file', (string) $st['name'] );
-			self::back( array( 'legacy_ok' => 1 ) );
+			self::back( array( 'legacy_ok' => 1, 'lf_n' => $f['notes'], 'lf_s' => $f['lines'], 'lf_p' => $f['people'], 'lf_e' => rawurlencode( $f['error'] ) ) );
 		}
 		update_option( self::STATE, $st, false );
 		self::back( array( 'legacy_go' => 1 ) );
+	}
+
+	public static function handle_fill() {
+		self::guard( 'songpress_legacy_fill' );
+		$dir = Songpress_Import::private_dir();
+		if ( ! $dir || ! self::stored() ) {
+			self::back( array( 'legacy_err' => rawurlencode( __( 'Nothing is stored yet. Load a database file first.', 'songpress' ) ) ) );
+		}
+		@set_time_limit( 600 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$tmp = $dir . '/rebuild-' . wp_generate_password( 12, false, false ) . '.sqlite';
+		try {
+			self::rebuild( $tmp );
+			$f = self::fill( $tmp );
+		} catch ( Exception $e ) {
+			@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+			self::back( array( 'legacy_err' => rawurlencode( $e->getMessage() ) ) );
+		}
+		@unlink( $tmp ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+		self::back( array( 'legacy_ok' => 1, 'lf_n' => $f['notes'], 'lf_s' => $f['lines'], 'lf_p' => $f['people'], 'lf_e' => rawurlencode( $f['error'] ) ) );
 	}
 
 	public static function handle_cancel() {
@@ -246,12 +332,16 @@ class Songpress_Legacy {
 			return $o;
 		}
 		if ( isset( $_GET['legacy_ok'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$o .= '<div class="notice notice-success"><p>' . esc_html__( 'The whole file is stored.', 'songpress' ) . '</p></div>';
+			$o .= '<div class="notice notice-success"><p>' . esc_html__( 'The whole file is stored.', 'songpress' ) . ( isset( $_GET['lf_n'] ) ? ' ' . esc_html( sprintf( /* translators: 1: notes, 2: statement lines, 3: people, bands and publishers */ __( 'It also filled the screens: %1$d notes, %2$d statement lines, %3$d people, bands and publishers.', 'songpress' ), absint( $_GET['lf_n'] ), absint( $_GET['lf_s'] ?? 0 ), absint( $_GET['lf_p'] ?? 0 ) ) ) : '' ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification
+			if ( ! empty( $_GET['lf_e'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+				$o .= '<div class="notice notice-error"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['lf_e'] ) ) ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification
+			}
 		}
 		$o .= '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_legacy_upload', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_legacy_upload"><input type="hidden" name="sp_return" value="' . esc_attr( $ret ) . '">';
 		$o .= '<input type="file" name="legacy" accept=".sqlite,.db,.sqlite3,.sql" required> <button class="button button-primary spe-save" type="submit">' . esc_html__( 'Load everything', 'songpress' ) . '</button></form>';
 		$have = self::stored();
 		if ( $have ) {
+			$o .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:10px">' . wp_nonce_field( 'songpress_legacy_fill', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_legacy_fill"><input type="hidden" name="sp_return" value="' . esc_attr( $ret ) . '"><button class="button spe-btn" type="submit">' . esc_html__( 'Fill the screens from what is stored', 'songpress' ) . '</button> <span class="sp-help spe-help">' . esc_html__( 'Brings the notes, statements, payouts, art, agreements, registrations and photos into their screens, from the rows already stored, with no new upload.', 'songpress' ) . '</span></form>';
 			$o .= '<details><summary>' . esc_html( sprintf( /* translators: %d: number of tables */ _n( '%d table stored', '%d tables stored', count( $have ), 'songpress' ), count( $have ) ) ) . '</summary><ul>';
 			foreach ( $have as $t => $n ) {
 				$o .= '<li><code>' . esc_html( $t ) . '</code> ' . esc_html( number_format_i18n( $n ) ) . '</li>';

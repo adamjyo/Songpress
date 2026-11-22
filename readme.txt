@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.61.2 =
+* Loading a whole database file now also fills the screens (notes, statements, payouts, art, agreements, registrations, photos). A new button fills them from rows already stored, with no new upload.
+
 = 0.61.1 =
 * Uploading audio no longer also saves the picture embedded in the file as a second Media Library item. Only the audio and its name are kept.
 

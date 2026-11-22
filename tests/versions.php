@@ -829,6 +829,13 @@ check( 'binary values are kept as base64', json_decode( $lj, true )['blob_col'],
 $am = Songpress_Media::drop_embedded_art( array( 'title' => 'Something More', 'artist' => 'x', 'image' => array( 'data' => 'JPEG', 'mime' => 'image/jpeg' ) ) );
 check( 'embedded cover picture is dropped', array( isset( $am['image'] ), $am['title'] ), array( false, 'Something More' ) );
 
+// the stored rows can be turned back into a database file for the screens' importers
+$rb = $GLOBALS['sp_tmp'] . '/rebuilt.sqlite';
+$rbc = Songpress_Legacy::rebuild( $rb );
+$rp = new PDO( 'sqlite:' . $rb );
+check( 'rebuild gives back the tables and rows', array( $rbc['odd_one'], $rbc['kv'], (int) $rp->query( 'SELECT COUNT(*) FROM kv' )->fetchColumn() ), array( 3, 2, 2 ) );
+check( 'rebuild restores binary values', bin2hex( (string) $rp->query( "SELECT blob_col FROM odd_one WHERE name = 'a'" )->fetchColumn() ), 'ff00fe' );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
