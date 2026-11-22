@@ -484,3 +484,8 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spn-ver{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #26221e;font-size:12px}
 .spn-ver small{display:block;color:#8a8279}.spn-ver button{background:#1c1a17;border:1px solid #2c2823;color:#e8e4dc;border-radius:6px;padding:3px 8px;cursor:pointer}
 .spn.focus{--det:0px}.spn.focus .spn-side,.spn.focus .spn-tags,.spn.focus .spn-info{display:none}
+
+/* settings tab strip */
+.sp-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 18px;border-bottom:1px solid #24262b}
+.sp-tabs a{padding:9px 16px;color:#a4a8b0;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+.sp-tabs a:hover{color:#fff}.sp-tabs a.on{color:#fff;border-bottom-color:#f5a524}

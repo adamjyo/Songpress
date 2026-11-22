@@ -36,7 +36,26 @@ class Songpress_Screens {
 		return self::url( $slug, $args );
 	}
 
+	const SETTINGS_TABS = array( 'settings', 'lists', 'backups', 'health' );
+
+	/** The tab strip shared by Settings, Lists, Backups and Health. */
+	public static function settings_tabs( $active ) {
+		$names = array( 'settings' => __( 'Settings', 'songpress' ), 'lists' => __( 'Lists', 'songpress' ), 'backups' => __( 'Backups', 'songpress' ), 'health' => __( 'Health', 'songpress' ) );
+		$o     = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'Settings sections', 'songpress' ) . '">';
+		foreach ( $names as $k => $l ) {
+			$o .= '<a href="' . esc_url( self::url( $k ) ) . '"' . ( $k === $active ? ' class="on" aria-current="page"' : '' ) . '>' . esc_html( $l ) . '</a>';
+		}
+		return $o . '</nav>';
+	}
+
 	public static function render( $slug ) {
+		if ( in_array( $slug, self::SETTINGS_TABS, true ) && Songpress_Caps::can( 'settings' ) ) {
+			return self::settings_tabs( $slug ) . self::render_one( $slug );
+		}
+		return self::render_one( $slug );
+	}
+
+	private static function render_one( $slug ) {
 		if ( 'people' === $slug && ( empty( $_GET['kind'] ) || 'person' === $_GET['kind'] ) && empty( $_GET['profile'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			return Songpress_Persons::render();
 		}

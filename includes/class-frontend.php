@@ -124,7 +124,8 @@ class Songpress_Frontend {
 			$nav .= '<a href="' . esc_url( Songpress_ChordTool::url() ) . '" target="_blank" rel="noopener">' . $svg( '<path d="M9 18V5l12-2v13"/><path d="M3 21h18"/>' ) . esc_html__( 'ChordPro tool', 'songpress' ) . '</a>';
 		}
 		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
-			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $page === $slug ) : '';
+			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'lists', 'backups', 'health' ), true ) );
+			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on ) : '';
 		};
 		if ( Songpress_Caps::can( 'money' ) && ! wp_is_mobile() ) {
 			$nav .= '<span class="sp-navgap"></span>' . $mk( 'money', __( 'Money', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
@@ -152,9 +153,6 @@ class Songpress_Frontend {
 			};
 			$nav .= $kn( 'band', __( 'Bands', 'songpress' ) ) . $kn( 'label', __( 'Labels', 'songpress' ) ) . $kn( 'publisher', __( 'Publishers', 'songpress' ) );
 			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
-			$nav .= $mk( 'lists', __( 'Lists', 'songpress' ), $svg( '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>' ), 'settings' );
-			$nav .= $mk( 'backups', __( 'Backups', 'songpress' ), $svg( '<path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/>' ), 'settings' );
-			$nav .= $mk( 'health', __( 'Health', 'songpress' ), $svg( '<path d="M3 12h4l2-5 4 10 2-5h6"/>' ), 'settings' );
 			$nav .= $mk( 'activity', __( 'Activity log', 'songpress' ), $svg( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ), 'activity' );
 			$nav .= $mk( 'uploads', __( 'Upload / Download', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
 			$nav .= $mk( 'link', __( 'Link writers', 'songpress' ), $svg( '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>' ), 'link' );
