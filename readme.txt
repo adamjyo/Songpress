@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.1.1 =
+* Fixes a critical error on activation (pages are now created after WordPress has started).
+* Settings has an update panel: installed and latest version, Check GitHub now, Update now.
+* Multiple artists (bands and labels), with people, band and publisher photos and profiles.
 
 = 0.1.0 =
 * First milestone: tables, serial numbers, roles, catalog screens, import with dry run, phone catalog and profile.
