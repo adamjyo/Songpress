@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.52.3 =
+* The Art and audio card and the Basics card are the same height. On the original work, Other titles grows to fill the space.
+
 = 0.52.2 =
 * The empty audio box shows an empty player instead of a description. Click it, or drop a file on it, to add audio.
 
