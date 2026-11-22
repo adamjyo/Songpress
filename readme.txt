@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.38.0
+Stable tag: 0.38.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.38.1 =
+* Pitch: removed Spotify for Artists, since only artists who already have access can use it.
 
 = 0.38.0 =
 * Pitch rebuilt around a "Pitch a song" button. A four-step popup walks you through it: pick the work, add the files (upload a WAV, bio or photo, or search the Media Library) and bio, check publisher and rights, then pick where to send it and get the exact words to paste. The page itself now tracks your pitches, follow-ups and outcomes. Plain-language help on every step, drawn from Spotify, college radio and sync-library guidelines.

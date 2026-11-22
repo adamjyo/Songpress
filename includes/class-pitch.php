@@ -65,11 +65,8 @@ class Songpress_Pitch {
 		return $o;
 	}
 
-	/** Which ready-made words a channel gets: spotify, radio, onesheet or email. */
+	/** Which ready-made words a channel gets: radio, onesheet or email. */
 	public static function copy_key( $channel, $group ) {
-		if ( 'spotify' === $channel ) {
-			return 'spotify';
-		}
 		if ( in_array( $group, array( 'terrestrial', 'radio' ), true ) ) {
 			return 'radio';
 		}
@@ -324,24 +321,6 @@ class Songpress_Pitch {
 		return implode( "\n", $lines );
 	}
 
-	/** The 500-character pitch Spotify for Artists asks for. */
-	public static function spotify_copy( array $f ) {
-		$who  = self::who( $f );
-		$head = '"' . $f['title'] . '"' . ( '' !== $who ? ' by ' . $who : '' );
-		$meta = array_filter( array( $f['genre'], '' !== $f['mood'] ? $f['mood'] : '', '' !== $f['tempo'] ? $f['tempo'] . ' BPM' : '', '' !== $f['key'] ? 'key of ' . $f['key'] : '' ) );
-		$bits = array( $head . ( $meta ? ' — ' . implode( ', ', $meta ) : '' ) . '.' );
-		if ( $f['writers'] && '' !== $f['band'] && 0 !== strcasecmp( self::names( $f ), $f['band'] ) ) {
-			$bits[] = 'Written by ' . self::names( $f ) . '.';
-		}
-		$s = self::story( $f );
-		if ( '' !== $s ) {
-			$bits[] = mb_strlen( $s ) > 220 ? mb_substr( $s, 0, 217 ) . '…' : $s;
-		}
-		$bits[] = 'Fits ' . ( '' !== $f['genre'] ? $f['genre'] : 'mood' ) . ' and new-music playlists.';
-		$out = implode( ' ', $bits );
-		return mb_strlen( $out ) > 500 ? mb_substr( $out, 0, 497 ) . '…' : $out;
-	}
-
 	/** A short note to a curator, blogger or contact. */
 	public static function email_copy( array $f ) {
 		$who   = self::who( $f );
@@ -420,7 +399,7 @@ class Songpress_Pitch {
 
 	/** Every ready-made text for one work. */
 	public static function copies( array $f ) {
-		return array( 'spotify' => self::spotify_copy( $f ), 'radio' => self::radio_copy( $f ), 'onesheet' => self::onesheet( $f ), 'email' => self::email_copy( $f ) );
+		return array( 'radio' => self::radio_copy( $f ), 'onesheet' => self::onesheet( $f ), 'email' => self::email_copy( $f ) );
 	}
 
 	/* ---------- the log ---------- */
@@ -793,7 +772,6 @@ function step4(){
  var list='<p class="spe-help">'+h(g.tip)+'</p><ul class="spp-chan">'+g.items.map(function(i){return '<li><button type="button" class="spp-pick'+(S.ch&&S.ch.id===i.id?' on':'')+'" data-c="'+a(i.id)+'"><b>'+h(i.name)+'</b> <span class="spp-cost">'+h(i.cost)+'</span><br><span class="spe-help">'+h(i.blurb)+'</span></button></li>'}).join('')+'</ul>';
  var detail='';
  if(S.ch){var c=S.ch,txt=S.info.copies[c.copy]||'',warn='';
-  if(c.id==='spotify'&&f.release&&f.release<addDays(D.today,7))warn+='<p class="spe-note bad">Spotify needs the song at least 7 days before its release date ('+h(f.release)+'). It may be too late for this one.</p>';
   if(c.copy==='radio'&&f.explicit&&!f.clean)warn+='<p class="spe-note bad">This song is marked explicit and has no clean version. Stations cannot play it in the daytime.</p>';
   if(c.copy==='radio'&&!f.wav)warn+='<p class="spe-note bad">No WAV yet. Go back and add it; stations want a download, not just a stream.</p>';
   detail='<div class="spp-send"><h4>'+h(c.name)+'</h4>'+warn

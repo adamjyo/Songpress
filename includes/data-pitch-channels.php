@@ -6,18 +6,9 @@ return array (
   'playlists' => 
   array (
     'label' => 'Streaming playlists',
-    'tip' => 'Spotify wants the song at least 7 days before release, one unreleased song at a time, and not as a featured artist. Fill in every field you can.',
+    'tip' => 'Start with the free ones. Pick curators who play your genre, and skip any list that asks you to pay for streams.',
     'items' => 
     array (
-      0 => 
-      array (
-        'id' => 'spotify',
-        'name' => 'Spotify for Artists',
-        'cost' => 'Free',
-        'blurb' => 'Official editorial pitch. One unreleased song at a time, at least 7 days before release (2–4 weeks is better), not as a featured artist. Add every detail the form allows.',
-        'url' => 'https://artists.spotify.com/',
-        'cta' => 'Open Spotify for Artists',
-      ),
       1 => 
       array (
         'id' => 'apple',
