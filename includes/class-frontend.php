@@ -165,16 +165,39 @@ class Songpress_Frontend {
 		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
 		$out .= '<ul class="songpress-list">';
 		foreach ( $res['rows'] as $s ) {
-			$by   = Songpress_Songs::authors_line( (int) $s->id, $uid );
-			$link = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
-			$out .= '<li><a class="songpress-row" href="' . $link . '">' . self::art( $s, 'songpress-thumb' ) . '<span class="songpress-meta"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title">' . esc_html( $s->title ) . '</span>'
-				. ( '' !== $by ? '<span class="songpress-by">' . esc_html( $by ) . '</span>' : '' )
-				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</span></span><span class="songpress-chev" aria-hidden="true">&rsaquo;</span></a></li>';
+			$link  = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
+			$audio = Songpress_Media::audio_url( $s );
+			$src   = Songpress_Media::art_url( $s, 'medium' );
+			$art   = '' !== $src ? '<img class="songpress-thumb" src="' . esc_url( $src ) . '" alt="" loading="lazy">' : '<span class="songpress-thumb songpress-noart" aria-hidden="true">&#9835;</span>';
+			if ( '' !== $audio ) {
+				$art = '<button type="button" class="songpress-play" data-src="' . esc_url( $audio ) . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Play %s', 'songpress' ), $s->title ) ) . '">' . $art . '<span class="songpress-playicon" aria-hidden="true"></span></button>';
+			} else {
+				$art = '<span class="songpress-play songpress-play-off">' . $art . '</span>';
+			}
+			$faces = '';
+			$seen  = array();
+			foreach ( Songpress_Songs::credits( (int) $s->id ) as $c ) {
+				$k = Songpress_Profiles::key( $c->name );
+				if ( 'writer' !== $c->role || '' === $k || isset( $seen[ $k ] ) ) {
+					continue;
+				}
+				$seen[ $k ] = 1;
+				$faces     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 28, 'person' ) . '</span>';
+			}
+			$band = '' !== trim( (string) $s->artist ) ? '<span class="songpress-icon songpress-bandicon" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . '</span>' : '';
+			$out .= '<li class="songpress-row">' . $art . '<a class="songpress-rowlink" href="' . $link . '">'
+				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
+				. '<span class="songpress-title">' . esc_html( $s->title ) . '</span>'
+				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
+				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
+				. '<span class="songpress-icons">' . $band . '</span>'
+				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</span>'
+				. '</a></li>';
 		}
 		if ( ! $res['rows'] ) {
 			$out .= '<li class="songpress-empty">' . esc_html__( 'No songs found.', 'songpress' ) . '</li>';
 		}
-		return $out . '</ul>' . wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'catalog' ) . '</div>';
+		return $out . '</ul><script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The logo and page title at the top of every phone screen. */

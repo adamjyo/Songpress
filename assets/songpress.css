@@ -138,13 +138,28 @@
 
 /* Songs are a plain list: one row per song, full width, divided by hairlines. */
 .songpress-list{display:block;gap:0;border-top:1px solid var(--sp-line)}
-.songpress-list a.songpress-row{background:transparent;border:0;border-bottom:1px solid var(--sp-line);border-radius:0;padding:10px 4px}
-.songpress-list a.songpress-row:hover{background:#17181c;border-color:var(--sp-line)}
-.songpress-list .songpress-thumb,.songpress-list .songpress-noart{width:44px;height:44px}
+.songpress-list li.songpress-row{display:flex;align-items:center;gap:14px;padding:10px 4px;border-bottom:1px solid var(--sp-line);margin:0}
+.songpress-list li.songpress-row:hover{background:#17181c}
+.songpress-play{position:relative;flex:none;width:48px;height:48px;padding:0;border:0;background:none;border-radius:10px;overflow:hidden;cursor:pointer;display:block}
+.songpress-play-off{cursor:default}
+.songpress-play .songpress-thumb{width:48px;height:48px;display:flex;border-radius:10px}
+.songpress-playicon{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.38);opacity:0;transition:opacity .12s}
+.songpress-playicon::before{content:"";border-style:solid;border-width:7px 0 7px 12px;border-color:transparent transparent transparent #fff;margin-left:3px}
+.songpress-play:hover .songpress-playicon,.songpress-play:focus-visible .songpress-playicon,.songpress-play.on .songpress-playicon{opacity:1}
+.songpress-play.on .songpress-playicon::before{border-width:0;width:12px;height:14px;margin:0;border-left:4px solid #fff;border-right:4px solid #fff;box-sizing:border-box;background:none}
+a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;grid-template-areas:"title title title status" "serial meta icons band";column-gap:12px;row-gap:2px;align-items:center;color:var(--sp-text)}
+.songpress-rowlink .songpress-title{grid-area:title;margin:0}
+.songpress-rowlink .songpress-sub{grid-area:status;margin:0;text-align:right}
+.songpress-rowlink .songpress-serial{grid-area:serial;font-size:13px}
+.songpress-rowlink .songpress-genre{grid-area:meta;color:var(--sp-mute);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.songpress-rowlink .songpress-icons{display:flex;align-items:center;gap:4px}
+.songpress-rowlink .songpress-writers{grid-area:icons}
+.songpress-rowlink .songpress-icons:not(.songpress-writers){grid-area:band}
+.songpress-icons .sp-face{margin:0!important}
 @container (min-width:620px){
- .songpress-list .songpress-meta{display:grid;grid-template-columns:64px minmax(0,2fr) minmax(0,1.4fr) 110px;align-items:center;column-gap:16px}
- .songpress-list .songpress-meta>span{margin:0}
- .songpress-list .songpress-by{order:0}
+ a.songpress-rowlink{grid-template-columns:56px minmax(0,3fr) minmax(0,1.2fr) minmax(90px,1.2fr) 44px 100px;grid-template-areas:none}
+ .songpress-rowlink>*{grid-area:auto!important}
+ .songpress-rowlink .songpress-sub{text-align:left}
 }
 
 .songpress-searchbar{display:flex;gap:10px;align-items:center;margin:0 0 16px}
