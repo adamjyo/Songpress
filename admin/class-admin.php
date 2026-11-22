@@ -127,7 +127,7 @@ class Songpress_Admin {
 		if ( ! $all ) {
 			echo '<p class="sp-help">' . esc_html__( 'You see the songs you are credited on.', 'songpress' ) . '</p>';
 		}
-		if ( Songpress_Caps::can( 'archive' ) ) {
+		if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 			$n = Songpress_Songs::count_archived();
 			echo '<ul class="subsubsub"><li><a href="' . esc_url( self::url( 'songpress' ) ) . '"' . ( $arch ? '' : ' class="current"' ) . '>' . esc_html__( 'Active', 'songpress' ) . '</a> | </li><li><a href="' . esc_url( self::url( 'songpress', array( 'archived' => 1 ) ) ) . '"' . ( $arch ? ' class="current"' : '' ) . '>' . esc_html__( 'Archived', 'songpress' ) . ' (' . (int) $n . ')</a></li></ul><br class="clear">';
 		}
@@ -236,7 +236,7 @@ class Songpress_Admin {
 			echo '<div class="notice notice-error"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['err'] ) ) ) . '</p></div>';
 		}
 		echo '<p class="sp-help">' . esc_html__( 'The serial number is assigned for you. The original work is just four digits, like 0012. Each version after it adds two more, like 0012-01. The original has no release information: add a version for a recording or a release.', 'songpress' ) . '</p>';
-		if ( $song && $song->archived_at ) {
+		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it to bring it back.', 'songpress' ) . '</p></div>';
 		}
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
@@ -348,7 +348,7 @@ class Songpress_Admin {
 			if ( Songpress_Caps::can_share_song( $id ) ) {
 				self::share_box( $song );
 			}
-			if ( Songpress_Caps::can( 'archive' ) ) {
+			if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 				self::archive_form( $song );
 			}
 			self::history_panel( $id );
@@ -443,7 +443,7 @@ class Songpress_Admin {
 		$on   = ! empty( $song->share_token );
 		$link = $on ? add_query_arg( 'sp_share', $song->share_token, home_url( '/' ) ) : '';
 		echo '<h3 style="margin-top:18px">' . esc_html__( 'Share', 'songpress' ) . '</h3>';
-		if ( ! empty( $song->archived_at ) ) {
+		if ( Songpress_Songs::ARCHIVING && ! empty( $song->archived_at ) ) {
 			echo '<p class="sp-help">' . esc_html__( 'Archived songs cannot be shared.', 'songpress' ) . '</p>';
 			return;
 		}
@@ -470,7 +470,7 @@ class Songpress_Admin {
 		}
 		$do   = sanitize_key( $_POST['do'] ?? '' );
 		$song = Songpress_Songs::get( $id );
-		if ( $song && empty( $song->archived_at ) && in_array( $do, array( 'on', 'new', 'off' ), true ) ) {
+		if ( $song && ( ! Songpress_Songs::ARCHIVING || empty( $song->archived_at ) ) && in_array( $do, array( 'on', 'new', 'off' ), true ) ) {
 			Songpress_Songs::share_set( $id, 'off' !== $do );
 		}
 		self::back( 'songpress-song', array( 'song' => $id, 'saved' => 1 ) );

@@ -134,7 +134,7 @@ class Songpress_Songs {
 		$where = array( '1=1' );
 		$vals  = array();
 		$arch = $args['archived'] ?? 0;
-		if ( 'any' !== $arch ) {
+		if ( self::ARCHIVING && 'any' !== $arch ) {
 			$where[] = $arch ? 's.archived_at IS NOT NULL' : 's.archived_at IS NULL';
 		}
 		if ( ! empty( $args['user_id'] ) ) {
@@ -304,8 +304,14 @@ class Songpress_Songs {
 		return $ok;
 	}
 
+	/** Works are never archived in this catalog: every work is active. The archive code stays, switched off, so nothing else changes. */
+	const ARCHIVING = false;
+
 	/** Songs are archived, never deleted: serial numbers stay taken and the history stays. Archiving an original archives its versions too. */
 	public static function archive( $id ) {
+		if ( ! self::ARCHIVING ) {
+			return false;
+		}
 		return self::set_archived( $id, true );
 	}
 
@@ -354,10 +360,20 @@ class Songpress_Songs {
 			return null;
 		}
 		$t = Songpress_Install::table( 'songs' );
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE share_token = %s AND archived_at IS NULL", $token ) ) ?: null;
+		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE share_token = %s", $token ) ) ?: null;
+	}
+
+	/** One-time: any work marked archived becomes active again. Returns how many were changed. */
+	public static function unarchive_all() {
+		global $wpdb;
+		$t = Songpress_Install::table( 'songs' );
+		return (int) $wpdb->query( "UPDATE {$t} SET archived_at = NULL WHERE archived_at IS NOT NULL" );
 	}
 
 	public static function count_archived() {
+		if ( ! self::ARCHIVING ) {
+			return 0;
+		}
 		global $wpdb;
 		$t = Songpress_Install::table( 'songs' );
 		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$t} WHERE archived_at IS NOT NULL" );

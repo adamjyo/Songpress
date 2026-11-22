@@ -38,10 +38,13 @@ class Songpress_Editor {
 		$version  = $song ? (int) $song->version_no : 0;
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
+		if ( $song && $version > 0 && '' !== trim( (string) $song->release_title ) ) {
+			$title = $song->release_title; // a version is known by its release title; the work's title is the same on all of them
+		}
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
 		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . '</div>';
 		$o       .= self::notices();
-		if ( $song && $song->archived_at ) {
+		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
 		}
 
@@ -74,7 +77,13 @@ class Songpress_Editor {
 		// The original work holds only what every version shares. Everything else is entered on a version.
 		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3>' . ( $root ? '' : '<p class="spe-legend"><i></i>' . esc_html__( 'Tinted fields belong to this version only. Everything else is shared with every version of the song.', 'songpress' ) . '</p>' ) . '<div class="spe-grid">';
-		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script() . ( ! $root ? '<p class="spe-help wide">' . esc_html__( 'This is the name of the work, the same on every version. Renaming it here renames all of them. Give this version its own name under Release title.', 'songpress' ) . '</p>' : '' );
+		if ( $root || ! $song ) {
+			$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
+		} else {
+			// A version is named by its release title. The work's title is the original's, the same on every version.
+			$o .= '<input type="hidden" name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '">';
+			$o .= '<label class="spe-field wide spe-own"><span>' . esc_html__( 'Release title', 'songpress' ) . '</span><input name="release_title" value="' . esc_attr( self::f( $song, 'release_title' ) ) . '" placeholder="' . esc_attr( self::f( $song, 'title' ) ) . '"><small class="spe-help">' . esc_html( sprintf( /* translators: %s: the work title */ __( 'The name of this release, which is often different from the work title. The work title, "%s", is set on the original work.', 'songpress' ), self::f( $song, 'title' ) ) ) . '</small></label>';
+		}
 		$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . ( $root ? $artist_hidden : '' );
 		if ( ! $root ) {
 			$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv spe-own' );
@@ -125,7 +134,7 @@ class Songpress_Editor {
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
-			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_title', __( 'Release title', 'songpress' ), $song ) . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::input( 'artist', __( 'Performing artist or band', 'songpress' ), $song );
+			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::input( 'artist', __( 'Performing artist or band', 'songpress' ), $song );
 			$rel .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' );
 			$rel .= '<datalist id="spe-genres">';
 			foreach ( Songpress_Songs::genres() as $gn ) {
@@ -415,7 +424,7 @@ class Songpress_Editor {
 			$on   = ! empty( $song->share_token );
 			$link = $on ? add_query_arg( 'sp_share', $song->share_token, home_url( '/' ) ) : '';
 			$o   .= '<h4>' . esc_html__( 'Share', 'songpress' ) . '</h4>';
-			if ( ! empty( $song->archived_at ) ) {
+			if ( Songpress_Songs::ARCHIVING && ! empty( $song->archived_at ) ) {
 				$o .= '<p class="spe-help">' . esc_html__( 'Archived songs cannot be shared.', 'songpress' ) . '</p>';
 			} else {
 				$o .= '<p class="spe-help">' . esc_html__( 'Anyone with the link can read this song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money. Turn it off, or make a new link, to stop an old one working.', 'songpress' ) . '</p>';
@@ -427,7 +436,7 @@ class Songpress_Editor {
 				}
 			}
 		}
-		if ( Songpress_Caps::can( 'archive' ) ) {
+		if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 			$archived = ! empty( $song->archived_at );
 			$o       .= '<h4>' . esc_html__( 'Archive', 'songpress' ) . '</h4>';
 			if ( ! $archived ) {

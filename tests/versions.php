@@ -206,20 +206,14 @@ check( 'original links untouched', count( Songpress_Songs::links( $v0 ) ), 1 );
 // archive and history
 $q = function ( $a ) { return array_map( fn( $r ) => $r->id, Songpress_Songs::query( $a )['rows'] ); };
 $before = count( $q( array() ) );
-check( 'archive version only', Songpress_Songs::archive( $v3 ), 1 );
-check( 'archived hidden', in_array( $v3, $q( array() ) ), false );
-check( 'archived listed when asked', in_array( $v3, $q( array( 'archived' => 1 ) ) ), true );
-check( 'family list can include archived', in_array( $v3, $q( array( 'family_id' => Songpress_Songs::get( $v3 )->family_id, 'archived' => 'any' ) ) ), true );
-Songpress_Songs::restore( $v3 );
-check( 'restored shows again', in_array( $v3, $q( array() ) ), true );
-check( 'archive original takes its versions', Songpress_Songs::archive( $v0 ), 4 );
-check( 'nothing of that family left', in_array( $v1, $q( array() ) ), false );
+check( 'works are never archived: archive does nothing', array( Songpress_Songs::archive( $v3 ), in_array( $v3, $q( array() ) ) ), array( false, true ) );
+$wpdb->query( "UPDATE wp_songpress_songs SET archived_at = '2026-01-01 00:00:00' WHERE id = " . (int) $v1 );
+check( 'one-time clean-up makes archived works active again', array( Songpress_Songs::unarchive_all(), in_array( $v1, $q( array() ) ), Songpress_Songs::count_archived() ), array( 1, true, 0 ) );
 $nv = Songpress_Songs::create_version( $v0, 1 );
 check( 'new version gets next number', Songpress_Songs::get( $nv )->serial, '0001-04' );
 $h = array_map( fn( $r ) => $r->action, Songpress_History::for_song( $v3 ) );
 check( 'history has created or version', in_array( 'version', $h ), true );
 check( 'history has edits', in_array( 'edited', $h ), true );
-check( 'history has archive and restore', in_array( 'archived', $h ) && in_array( 'restored', $h ), true );
 $e = array_values( array_filter( Songpress_History::for_song( $v3 ), fn( $r ) => 'edited' === $r->action ) )[0];
 check( 'edit describes the change', Songpress_History::describe( $e ), 'Title: Edited once → Edited twice' );
 Songpress_Songs::update( $v3, array( 'lyrics' => 'secret words' ) );
@@ -238,7 +232,6 @@ check( 'export neutralizes formulas', $row[ array_search( 'notes', $hdr ) ], "'=
 check( 'export has links', false !== strpos( $row[ array_search( 'links', $hdr ) ], 'https://x.test/a' ), true );
 
 // sharing
-Songpress_Songs::restore( $v1 ); // the family was archived by an earlier check
 $tok = Songpress_Songs::share_set( $v1, true );
 check( 'token shape', (bool) preg_match( '/^[A-Za-z0-9]{24}$/', $tok ), true );
 check( 'token finds song', (int) Songpress_Songs::by_token( $tok )->id, $v1 );
@@ -246,9 +239,6 @@ check( 'bad token finds nothing', Songpress_Songs::by_token( 'short' ), null );
 $tok2 = Songpress_Songs::share_set( $v1, true );
 check( 'new link kills old link', Songpress_Songs::by_token( $tok ), null );
 check( 'new link works', (int) Songpress_Songs::by_token( $tok2 )->id, $v1 );
-Songpress_Songs::archive( $v1 );
-check( 'archived song not served', Songpress_Songs::by_token( $tok2 ), null );
-Songpress_Songs::restore( $v1 );
 Songpress_Songs::share_set( $v1, false );
 check( 'sharing off', Songpress_Songs::by_token( $tok2 ), null );
 

@@ -54,6 +54,10 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
+		if ( '48' !== get_option( 'songpress_unarchive' ) ) {
+			Songpress_Songs::unarchive_all();
+			update_option( 'songpress_unarchive', '48' );
+		}
 		if ( '47' !== get_option( 'songpress_titles' ) ) {
 			Songpress_Songs::unify_titles();
 			update_option( 'songpress_titles', '47' );
