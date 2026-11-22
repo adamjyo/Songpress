@@ -665,7 +665,7 @@ $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songp
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
 // Editable statuses and genres
-check( 'statuses default to the built-in six', array_keys( Songpress_Songs::statuses() ), array( 'idea', 'writing', 'finished', 'recorded', 'released', 'retired' ) );
+check( 'statuses default to the built-in list with the old editor options', array_keys( Songpress_Songs::statuses() ), array( 'idea', 'writing', 'finished', 'recorded', 'released', 'retired', 'starter', 'scrapped', 'scratch', 'studio_demo', 'pre_production', 'production', 'post_production', 'taken_down', 'outside' ) );
 check( 'parse statuses: key | label, bare line, repeat dropped', Songpress_Lists::parse_statuses( "idea | Spark\nmastered\nMixing Down | Mixing\nidea | Again\n\n |  " ), array( 'idea' => 'Spark', 'mastered' => 'mastered', 'mixing_down' => 'Mixing' ) );
 check( 'parse genres: no blanks or repeats', Songpress_Lists::parse_genres( "Folk\n\nfolk\nCountry Rock\n" ), array( 'Folk', 'Country Rock' ) );
 update_option( 'songpress_statuses', array( 'idea' => 'Spark', 'writing' => 'Writing', 'released' => 'Out' ) );
@@ -675,9 +675,9 @@ $cs2 = Songpress_Songs::sanitize( array( 'status' => 'retired' ) );
 check( 'a removed status falls back to idea on save, a kept one stays', array( $cs['status'], $cs2['status'] ), array( 'writing', 'idea' ) );
 delete_option_test();
 function delete_option_test() { unset( $GLOBALS['opts']['songpress_statuses'] ); }
-check( 'statuses back to default when the list is cleared', count( Songpress_Songs::statuses() ), 6 );
+check( 'statuses back to default when the list is cleared', count( Songpress_Songs::statuses() ), 15 );
 update_option( 'songpress_genres', array( 'Folk', 'Gospel' ) );
-check( 'genres list', Songpress_Songs::genres(), array( 'Folk', 'Gospel' ) );
+check( 'genres list keeps the Manager list and adds the old editor genres', Songpress_Songs::genres(), array( 'Folk', 'Gospel', 'Country', 'Pop', 'Rock', 'Americana', 'R&B', 'Hip-Hop', 'Jazz', 'Electronic', 'Soundtrack', 'Other' ) );
 
 // Registration start dates
 $rf = Songpress_Songs::get( $of )->family_id;

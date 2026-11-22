@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.48.2
+Stable tag: 0.48.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.48.3 =
+* The Status and Genre dropdowns now also offer the options from the old work editor (Starter, Scrapped, Scratch, Studio Demo, Pre Production, Production, Post Production, Taken Down, Outside; and Folk, Country, Pop, Rock, Americana, R&B, Hip-Hop, Gospel, Jazz, Electronic, Soundtrack, Other). No other dropdown changed.
 
 = 0.48.2 =
 * The heading of a version shows the work title again, not the release title. The release title stays in its own field.

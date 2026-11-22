@@ -11,7 +11,18 @@ class Songpress_Songs {
 		'recorded' => 'Recorded',
 		'released' => 'Released',
 		'retired'  => 'Retired',
+		'starter'         => 'Starter',
+		'scrapped'        => 'Scrapped',
+		'scratch'         => 'Scratch',
+		'studio_demo'     => 'Studio Demo',
+		'pre_production'  => 'Pre Production',
+		'production'      => 'Production',
+		'post_production' => 'Post Production',
+		'taken_down'      => 'Taken Down',
+		'outside'         => 'Outside',
 	);
+	/** Genres from the old work editor, always offered beside any the Manager adds. */
+	const GENRES = array( 'Folk', 'Country', 'Pop', 'Rock', 'Americana', 'R&B', 'Hip-Hop', 'Gospel', 'Jazz', 'Electronic', 'Soundtrack', 'Other' );
 
 	/** Release information. Only versions have it. The original work (version 0) does not. */
 	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date' );
@@ -35,7 +46,13 @@ class Songpress_Songs {
 	/** The genres the Manager listed, offered as suggestions. A song's genre can still be anything. */
 	public static function genres() {
 		$o = get_option( 'songpress_genres', array() );
-		return is_array( $o ) ? array_values( $o ) : array();
+		$o = is_array( $o ) ? array_values( $o ) : array();
+		foreach ( self::GENRES as $g ) {
+			if ( ! in_array( strtolower( $g ), array_map( 'strtolower', $o ), true ) ) {
+				$o[] = $g;
+			}
+		}
+		return $o;
 	}
 
 	/** The statuses a song may have. The original work can never be released. */
