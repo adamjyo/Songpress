@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.44.3
+Stable tag: 0.44.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.44.4 =
+* The left rail stays put while the page scrolls, even when the theme wraps the page in something that would carry it away (a transform or similar): if the rail moves, the app lifts itself out of that wrapper.
 
 = 0.44.3 =
 * The original work's Codes and links card now opens by default, with the publishing numbers (ASCAP, BMI, MLC, CCLI, ISWC, DistroKid, UPC and others). All of them are shared by every version except the ISRC. A DistroKid number found on a version moves up to the original once.

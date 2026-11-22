@@ -150,7 +150,7 @@ class Songpress_Frontend {
 		}
 		$bot  = $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
-		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt=""><span class="sp-side-name"><b>SongPress</b><small>' . esc_html__( 'A songwriting and publishing', 'songpress' ) . '</small></span></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main></div>';
+		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt=""><span class="sp-side-name"><b>SongPress</b><small>' . esc_html__( 'A songwriting and publishing', 'songpress' ) . '</small></span></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main></div>' . '<script>(function(){var s=document.querySelector(".sp-shell > .sp-side");if(!s){return;}var sh=s.parentNode,moved=false;function check(){if(moved||window.innerWidth<760||window.pageYOffset<40){return;}var b=document.getElementById("wpadminbar"),t=b&&getComputedStyle(b).position==="fixed"?b.offsetHeight:0;if(Math.abs(s.getBoundingClientRect().top-t)>2){moved=true;document.body.appendChild(sh);window.removeEventListener("scroll",check);}}window.addEventListener("scroll",check,{passive:true});})();</script>';
 	}
 
 	private static function gate() {
