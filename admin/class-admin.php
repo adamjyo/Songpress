@@ -15,6 +15,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
 		add_action( 'admin_post_songpress_profile_save', array( __CLASS__, 'handle_profile_save' ) );
 		add_action( 'admin_post_songpress_check_update', array( __CLASS__, 'handle_check_update' ) );
+		add_action( 'admin_post_songpress_page_slug', array( __CLASS__, 'handle_page_slug' ) );
 		add_action( 'admin_post_songpress_artist_save', array( __CLASS__, 'handle_artist_save' ) );
 		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
@@ -1297,6 +1298,9 @@ class Songpress_Admin {
 		if ( isset( $_GET['saved'] ) ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Saved.', 'songpress' ) . '</p></div>';
 		}
+		if ( isset( $_GET['err'] ) ) {
+			echo '<div class="notice notice-error"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET['err'] ) ) ) . '</p></div>';
+		}
 		if ( isset( $_GET['checked'] ) ) {
 			echo '<div class="notice notice-info is-dismissible"><p>' . esc_html__( 'Checked GitHub just now.', 'songpress' ) . '</p></div>';
 		}
@@ -1318,7 +1322,15 @@ class Songpress_Admin {
 		foreach ( Songpress_Install::pages() as $opt => $def ) {
 			$pid = (int) get_option( $opt );
 			echo '<tr><td>' . esc_html( $def['title'] ) . ' <code>' . esc_html( $def['code'] ) . '</code></td><td>';
-			echo Songpress_Install::page_ok( $pid ) ? '<a href="' . esc_url( get_permalink( $pid ) ) . '">' . esc_html__( 'View', 'songpress' ) . '</a> · <a href="' . esc_url( get_edit_post_link( $pid ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : esc_html__( 'Missing', 'songpress' );
+			if ( Songpress_Install::page_ok( $pid ) ) {
+				$po = get_post( $pid );
+				echo '<code>' . esc_html( wp_parse_url( get_permalink( $pid ), PHP_URL_PATH ) ) . '</code> &middot; ' . ( 'publish' !== $po->post_status ? '<strong>' . esc_html( $po->post_status ) . '</strong> &middot; ' : '' ) . '<a href="' . esc_url( get_permalink( $pid ) ) . '">' . esc_html__( 'View', 'songpress' ) . '</a> &middot; <a href="' . esc_url( get_edit_post_link( $pid ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>';
+				if ( $po->post_name !== $def['slug'] ) {
+					echo ' &middot; <a href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_page_slug&opt=' . rawurlencode( $opt ) ), 'songpress_page_slug' ) ) . '">' . esc_html( sprintf( /* translators: %s: address like /desktop */ __( 'Use /%s', 'songpress' ), $def['slug'] ) ) . '</a>';
+				}
+			} else {
+				echo esc_html__( 'Missing', 'songpress' );
+			}
 			echo '</td></tr>';
 		}
 		echo '</tbody></table>';
@@ -1373,6 +1385,26 @@ class Songpress_Admin {
 		}
 		delete_site_transient( 'update_plugins' ); // WordPress rebuilds it, with our release if newer
 		self::back( 'songpress-settings', array( 'checked' => 1 ) );
+	}
+
+	/** Put one of SongPress's pages at its standard address (/desktop, /my-songs). Publishes it if it was a draft or in the trash. */
+	public static function handle_page_slug() {
+		check_admin_referer( 'songpress_page_slug' );
+		if ( ! Songpress_Caps::can( 'settings' ) || ! current_user_can( 'edit_pages' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$opt  = sanitize_key( wp_unslash( $_GET['opt'] ?? '' ) );
+		$defs = Songpress_Install::pages();
+		$pid  = isset( $defs[ $opt ] ) ? (int) get_option( $opt ) : 0;
+		if ( $pid && Songpress_Install::page_ok( $pid ) ) {
+			$slug  = $defs[ $opt ]['slug'];
+			$other = get_page_by_path( $slug );
+			if ( $other && (int) $other->ID !== $pid ) {
+				self::back( 'songpress-settings', array( 'err' => rawurlencode( sprintf( /* translators: %s: address */ __( '/%s is already used by another page. Rename or trash that page first.', 'songpress' ), $slug ) ) ) );
+			}
+			wp_update_post( array( 'ID' => $pid, 'post_name' => $slug, 'post_status' => 'publish' ) );
+		}
+		self::back( 'songpress-settings', array( 'saved' => 1 ) );
 	}
 
 	public static function handle_pages() {
