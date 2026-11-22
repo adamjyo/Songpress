@@ -161,12 +161,9 @@ class Songpress_Frontend {
 		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
 		$out    = '<div class="songpress sp-app">' . self::tabs( 'catalog', 'top' ) . self::head( __( 'Songs', 'songpress' ) );
-		$out   .= '<form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '">' . ( '' !== $status ? '<input type="hidden" name="sp_status" value="' . esc_attr( $status ) . '">' : '' ) . '</form>';
-		$out   .= '<div class="songpress-chips"><a class="' . ( '' === $status ? 'on' : '' ) . '" href="' . esc_url( remove_query_arg( 'sp_status' ) ) . '">' . esc_html__( 'All', 'songpress' ) . '</a>';
-		foreach ( Songpress_Songs::STATUSES as $k => $label ) {
-			$out .= '<a class="' . ( $k === $status ? 'on' : '' ) . '" href="' . esc_url( add_query_arg( 'sp_status', $k ) ) . '">' . esc_html( $label ) . '</a>';
-		}
-		$out .= '</div><ul class="songpress-list">';
+		$add    = Songpress_Caps::can( 'create' ) ? '<a class="songpress-add" href="' . esc_url( admin_url( 'admin.php?page=songpress-song' ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
+		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
+		$out .= '<ul class="songpress-list">';
 		foreach ( $res['rows'] as $s ) {
 			$by   = Songpress_Songs::authors_line( (int) $s->id, $uid );
 			$link = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
