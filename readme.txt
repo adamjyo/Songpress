@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.58.0 =
+* Work view: ChordPro, Chords and lyrics and Lyrics are tabs that switch the chart in place; a share icon sits at the far right of the top bar.
+
 = 0.57.1 =
 * Work view: nothing is shown under the chart any more (the donate link no longer follows it).
 

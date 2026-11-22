@@ -690,3 +690,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-authors::-webkit-scrollbar{display:none}
 .songpress-authors .songpress-icon{flex:none;display:inline-flex}
 .songpress-authors .sp-face{width:32px!important;height:32px!important;font-size:12px!important;margin:0!important}
+
+.songpress-userbar{justify-content:space-between}
+.songpress-sharebtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:auto;border:0;border-radius:50%;background:transparent;color:var(--sp-text);cursor:pointer}
+.songpress-sharebtn:hover{background:var(--sp-card,rgba(127,127,127,.15))}
+.songpress-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 10px}
+.songpress-tab{border:1px solid var(--sp-line);background:transparent;color:var(--sp-mute);text-transform:uppercase;letter-spacing:.06em;font-size:11px;padding:7px 12px;border-radius:999px;cursor:pointer;font-family:inherit}
+.songpress-tab.on{background:var(--sp-text);color:var(--sp-bg,#0f1012);border-color:var(--sp-text)}
+.songpress-panel[hidden]{display:none}

@@ -280,7 +280,7 @@ class Songpress_Frontend {
 	 * The top of every phone screen: the person's picture and name, which open their profile. On the profile itself it is a way back
 	 * to the works. The profile shows only when this is tapped.
 	 */
-	private static function userbar( $on ) {
+	private static function userbar( $on, $share_id = 0 ) {
 		$c = self::main_id( 'catalog' );
 		$p = self::main_id( 'profile' );
 		if ( 'profile' === $on ) {
@@ -294,7 +294,23 @@ class Songpress_Frontend {
 			$face = (string) get_avatar_url( $u->ID, array( 'size' => 72 ) );
 		}
 		$pic = '' !== $face ? '<img class="songpress-userpic" src="' . esc_url( $face ) . '" width="36" height="36" alt="">' : '<span class="songpress-userpic songpress-userpic-ini" aria-hidden="true">' . esc_html( function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $name, 0, 1 ) ) : strtoupper( substr( $name, 0, 1 ) ) ) . '</span>';
-		return '<nav class="songpress-userbar" aria-label="SongPress"><a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a></nav>';
+		return '<nav class="songpress-userbar" aria-label="SongPress"><a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a>' . ( $share_id ? self::share_icon( $share_id ) : '' ) . '</nav>';
+	}
+
+	/** A share icon for the phone top bar: opens a popup with the song's public link. */
+	private static function share_icon( $id ) {
+		$s = Songpress_Songs::get( $id );
+		if ( ! $s ) {
+			return '';
+		}
+		$link  = add_query_arg( 'sp_share', Songpress_Songs::token_for( (int) $id ), home_url( '/' ) );
+		$title = Songpress_Songs::display_title( $s );
+		$o     = '<button type="button" class="songpress-sharebtn" id="sp-sh-open" aria-label="' . esc_attr__( 'Share', 'songpress' ) . '"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button>';
+		$o    .= '<dialog class="spe-dialog" id="sp-sh-dlg"><form method="dialog"><h3>' . esc_html( sprintf( /* translators: %s: song title */ __( 'Share %s', 'songpress' ), $title ) ) . '</h3>';
+		$o    .= '<input type="text" readonly id="sp-sh-link" value="' . esc_attr( $link ) . '" onfocus="this.select()" data-title="' . esc_attr( $title ) . '">';
+		$o    .= '<div class="spe-dlgbar"><button type="button" class="spe-save" id="sp-sh-copy">' . esc_html__( 'Copy link', 'songpress' ) . '</button><button type="button" class="spe-btn" id="sp-sh-send" hidden>' . esc_html__( 'Share with an app', 'songpress' ) . '</button><button class="spe-link" value="close">' . esc_html__( 'Close', 'songpress' ) . '</button></div></form></dialog>';
+		$o    .= '<script>(function(){var d=document.getElementById("sp-sh-dlg"),o=document.getElementById("sp-sh-open"),i=document.getElementById("sp-sh-link"),c=document.getElementById("sp-sh-copy"),s=document.getElementById("sp-sh-send");if(!d||!o)return;o.addEventListener("click",function(){if(d.showModal){d.showModal();}else{d.setAttribute("open","");}i.select();});c.addEventListener("click",function(){i.select();var done=function(){c.textContent="Copied";setTimeout(function(){c.textContent="Copy link";},1800);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(i.value).then(done,function(){document.execCommand("copy");done();});}else{document.execCommand("copy");done();}});if(navigator.share){s.hidden=false;s.addEventListener("click",function(){navigator.share({title:i.getAttribute("data-title"),url:i.value}).catch(function(){});});}d.addEventListener("click",function(e){if(e.target===d){d.close();}});})();</script>';
+		return $o;
 	}
 
 	/** The logo and page title at the top of every phone screen. */
@@ -321,7 +337,7 @@ class Songpress_Frontend {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
 		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
-		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog' ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . ( wp_is_mobile() ? '' : self::tabs( 'catalog' ) ) . '</div>';
+		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . ( wp_is_mobile() ? '' : self::tabs( 'catalog' ) ) . '</div>';
 	}
 
 	/** The song itself: cover, audio, title, writers, chart. Shared by the logged-in view and the public share page. */
@@ -366,14 +382,18 @@ class Songpress_Frontend {
 			if ( ! isset( $lv[ $want ] ) || '' === $lv[ $want ][0] ) {
 				$want = $kind;
 			}
-			$text = $lv[ $want ][0];
-			$out .= '<p class="songpress-chartlabel">' . esc_html( $labels[ $want ] );
+			// every level that has text is a tab; tapping one swaps the chart without leaving the page
+			$out .= '<div class="songpress-tabs" role="tablist">';
+			$pan  = '';
 			foreach ( $labels as $lk => $ll ) {
-				if ( 'none' !== $lk && $lk !== $want && '' !== $lv[ $lk ][0] ) {
-					$out .= ' &middot; <a href="' . esc_url( add_query_arg( 'sp_level', $lk ) ) . '">' . esc_html( $ll ) . '</a>';
+				if ( 'none' === $lk || '' === $lv[ $lk ][0] ) {
+					continue;
 				}
+				$on   = $lk === $want;
+				$out .= '<button type="button" role="tab" class="songpress-tab' . ( $on ? ' on' : '' ) . '" data-lv="' . esc_attr( $lk ) . '" aria-selected="' . ( $on ? 'true' : 'false' ) . '">' . esc_html( $ll ) . '</button>';
+				$pan .= '<div class="songpress-panel" data-lv="' . esc_attr( $lk ) . '"' . ( $on ? '' : ' hidden' ) . '>' . ( 'chordpro' === $lk ? wp_kses_post( Songpress_ChordPro::render( $lv[ $lk ][0] ) ) : '<pre class="songpress-chart">' . esc_html( $lv[ $lk ][0] ) . '</pre>' ) . '</div>';
 			}
-			$out .= '</p>' . ( 'chordpro' === $want ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
+			$out .= '</div>' . $pan . '<script>(function(){var m=document.currentScript.parentNode,t=m.querySelectorAll(".songpress-tab");t.forEach(function(b){b.addEventListener("click",function(){t.forEach(function(x){var o=x===b;x.classList.toggle("on",o);x.setAttribute("aria-selected",o?"true":"false");});m.querySelectorAll(".songpress-panel").forEach(function(p){p.hidden=p.getAttribute("data-lv")!==b.getAttribute("data-lv");});});});})();</script>';
 		}
 		return $out . '</div></article>';
 	}
