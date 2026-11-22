@@ -265,3 +265,16 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
  .spe-pairs .spe-pair{max-width:760px}
  .spe-panel{max-width:960px}
 }
+
+/* Members */
+.spe-classes{list-style:none;margin:0 0 18px;padding:0;color:var(--sp-soft);font-size:13px}
+.spe-classes li{padding:4px 0}
+.sp-members h3{margin:22px 0 10px;font:600 16px "Space Grotesk",Inter,system-ui,sans-serif}
+.spe-invite{border:1px solid var(--sp-accent);border-radius:12px;padding:14px;margin:0 0 16px;display:flex;flex-direction:column;gap:8px;max-width:640px}
+.spe-member,.spe-mhead{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--sp-line)}
+.spe-mhead{border-bottom:0;padding:0 0 4px}
+.spe-member small{color:var(--sp-mute)}
+.sp-members .spe-save{margin-top:6px}
+@media (max-width:719px){.spe-member,.spe-mhead{grid-template-columns:1fr}.spe-mhead{display:none}}
+@container (min-width:720px){.spe-addmember .spe-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.sp-forgot{font-size:13px;text-align:center;color:var(--sp-mute);margin:0}

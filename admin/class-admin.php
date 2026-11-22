@@ -1090,13 +1090,10 @@ class Songpress_Admin {
 				continue;
 			}
 			$class = Songpress_Caps::class_of( $uid );
-			echo '<tr><td>' . esc_html( $u->display_name ) . ' <span class="sp-help">' . esc_html( $u->user_login . ' · ' . $u->user_email ) . '</span></td><td>';
+			echo '<tr><td>' . esc_html( $u->display_name ) . ' <span class="sp-help">' . esc_html( $u->user_login ) . '</span></td><td>';
 			if ( Songpress_Caps::is_wp_admin( $uid ) ) {
 				echo '<strong>' . esc_html__( 'Manager', 'songpress' ) . '</strong> <span class="sp-help">' . esc_html__( '(WordPress administrator)', 'songpress' ) . '</span>';
 			} else {
-				if ( '' === (string) $u->user_email ) {
-					echo '<input type="email" name="email[' . (int) $uid . ']" size="24" placeholder="' . esc_attr__( 'add email so they can sign in', 'songpress' ) . '"> ';
-				}
 				echo '<select name="class[' . (int) $uid . ']"><option value="">' . esc_html__( 'No access (remove)', 'songpress' ) . '</option>';
 				foreach ( Songpress_Caps::assignable() as $k => $c ) {
 					echo '<option value="' . esc_attr( $k ) . '"' . selected( $class, $k, false ) . '>' . esc_html( $c[0] ) . '</option>';
@@ -1117,14 +1114,8 @@ class Songpress_Admin {
 		submit_button( __( 'Add', 'songpress' ), 'secondary', 'submit', false );
 		echo '</p></form>';
 
-		echo '<h2>' . esc_html__( 'Invite a new person', 'songpress' ) . '</h2>';
-		echo '<p class="sp-help">' . esc_html__( 'Creates a login for them and emails a link to choose a password. They get no WordPress powers beyond reading, only the SongPress class you pick.', 'songpress' ) . '</p>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		wp_nonce_field( 'songpress_members' );
-		echo '<input type="hidden" name="action" value="songpress_members"><input type="hidden" name="do" value="invite">';
-		echo '<p><input name="name" size="22" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '" required> <input type="email" name="email" size="28" placeholder="' . esc_attr__( 'Email', 'songpress' ) . '" required> ' . self::class_select( 'class_new', 'viewer' ) . ' ';
-		submit_button( __( 'Send invitation', 'songpress' ), 'secondary', 'submit', false );
-		echo '</p></form>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+		echo '<p class="sp-help">' . esc_html__( 'To add a new person, open the SongPress app and choose Members. You set their password and send them a link. Nobody is emailed.', 'songpress' ) . '</p>';
+		echo wp_kses_post( songpress_donate_link() ) . '</div>';
 	}
 
 	private static function class_select( $name, $selected ) {
@@ -1156,15 +1147,6 @@ class Songpress_Admin {
 					++$n;
 				}
 			}
-			$emails = isset( $_POST['email'] ) && is_array( $_POST['email'] ) ? wp_unslash( $_POST['email'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- sanitize_email below.
-			foreach ( $emails as $uid => $email ) {
-				$uid   = absint( $uid );
-				$email = sanitize_email( $email );
-				if ( $uid && is_email( $email ) && ! email_exists( $email ) && '' === (string) get_userdata( $uid )->user_email ) {
-					wp_update_user( array( 'ID' => $uid, 'user_email' => $email ) );
-					++$n;
-				}
-			}
 			self::back( 'songpress-members', array( 'saved' => rawurlencode( sprintf( /* translators: %d: people changed */ _n( '%d person changed.', '%d people changed.', $n, 'songpress' ), $n ) ) ) );
 		}
 		$class = sanitize_key( $_POST['class_new'] ?? '' );
@@ -1174,36 +1156,13 @@ class Songpress_Admin {
 		if ( 'add' === $do ) {
 			$u = self::find_user( sanitize_text_field( wp_unslash( $_POST['who'] ?? '' ) ) );
 			if ( ! $u ) {
-				self::back( 'songpress-members', array( 'err' => rawurlencode( __( 'No login with that username or email. Use Invite a new person instead.', 'songpress' ) ) ) );
+				self::back( 'songpress-members', array( 'err' => rawurlencode( __( 'No login with that username. Add them from Members in the app instead.', 'songpress' ) ) ) );
 			}
 			if ( Songpress_Caps::is_wp_admin( $u->ID ) ) {
 				self::back( 'songpress-members', array( 'err' => rawurlencode( __( 'That person is a WordPress administrator, so they are already a Manager.', 'songpress' ) ) ) );
 			}
 			Songpress_Caps::assign( $u->ID, $class );
 			self::back( 'songpress-members', array( 'saved' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s added.', 'songpress' ), $u->display_name ) ) ) );
-		}
-		if ( 'invite' === $do ) {
-			$email = sanitize_email( wp_unslash( $_POST['email'] ?? '' ) );
-			$name  = sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) );
-			if ( ! is_email( $email ) || '' === $name ) {
-				self::back( 'songpress-members', array( 'err' => rawurlencode( __( 'Enter a name and a valid email.', 'songpress' ) ) ) );
-			}
-			$existing = get_user_by( 'email', $email );
-			if ( $existing ) {
-				self::back( 'songpress-members', array( 'err' => rawurlencode( __( 'That email already has a login. Use "Add someone who already has a login".', 'songpress' ) ) ) );
-			}
-			$login = sanitize_user( strstr( $email, '@', true ), true );
-			$base  = '' !== $login ? $login : 'member';
-			for ( $i = 2; username_exists( $login ); $i++ ) {
-				$login = $base . $i;
-			}
-			$uid = wp_insert_user( array( 'user_login' => $login, 'user_email' => $email, 'display_name' => $name, 'user_pass' => wp_generate_password( 24 ), 'role' => 'subscriber' ) );
-			if ( is_wp_error( $uid ) ) {
-				self::back( 'songpress-members', array( 'err' => rawurlencode( $uid->get_error_message() ) ) );
-			}
-			Songpress_Caps::assign( $uid, $class );
-			wp_new_user_notification( $uid, null, 'user' );
-			self::back( 'songpress-members', array( 'saved' => rawurlencode( sprintf( /* translators: %s: email */ __( 'Invitation sent to %s.', 'songpress' ), $email ) ) ) );
 		}
 		self::back( 'songpress-members' );
 	}

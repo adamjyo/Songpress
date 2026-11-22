@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.1.22
+Stable tag: 0.1.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.1.23 =
+* Members moved into the SongPress app and no email is used anywhere for logins: a Manager creates the login (firstname.lastname), sets or changes the password, and copies a ready-made invitation with a link, username and password. The login screen asks for a username only and has no email password reset. SongPress never sends email to members.
 
 = 0.1.22 =
 * Song editor now lives in the SongPress app (+ button, and an Edit button on every song). Phones get a short form: title, status, cover art, audio, lyrics, writers. Wide screens get every section as a tab: basics (genre, stage, key, tempo, time signature, other titles), people and splits, art and audio, lyrics and chords, release, codes and links, story and notes, and versions, sharing, archive and history.

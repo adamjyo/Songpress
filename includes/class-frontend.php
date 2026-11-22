@@ -89,14 +89,14 @@ class Songpress_Frontend {
 		$o .= '<img class="sp-login-logo" src="' . esc_url( SONGPRESS_URL . 'assets/stacked-amber.svg' ) . '" alt="SongPress, a song catalog manager">';
 		$o .= '<section class="sp-card"><h1>' . esc_html__( 'Log in', 'songpress' ) . '</h1><p class="sp-sub">' . esc_html__( 'Your songs, releases and earnings in one place.', 'songpress' ) . '</p>';
 		if ( $failed ) {
-			$o .= '<p class="sp-err" role="alert">' . esc_html__( 'That username or password did not work. Try again, or reset your password.', 'songpress' ) . '</p>';
+			$o .= '<p class="sp-err" role="alert">' . esc_html__( 'That username or password did not work. Check them and try again.', 'songpress' ) . '</p>';
 		}
 		$o .= '<form method="post" action="' . esc_url( site_url( 'wp-login.php', 'login_post' ) ) . '">';
-		$o .= '<label for="sp-u">' . esc_html__( 'Username or email', 'songpress' ) . '</label><input id="sp-u" name="log" type="text" autocomplete="username" autocapitalize="none" required>';
+		$o .= '<label for="sp-u">' . esc_html__( 'Username', 'songpress' ) . '</label><input id="sp-u" name="log" type="text" value="' . esc_attr( isset( $_GET['sp_user'] ) ? sanitize_user( wp_unslash( $_GET['sp_user'] ) ) : '' ) . '" autocomplete="username" autocapitalize="none" required>';
 		$o .= '<label for="sp-p">' . esc_html__( 'Password', 'songpress' ) . '</label><input id="sp-p" name="pwd" type="password" autocomplete="current-password" required>';
 		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $here ) ) . '">';
 		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
-		$o .= '<a class="sp-forgot" href="' . esc_url( wp_lostpassword_url( $here ) ) . '">' . esc_html__( 'Forgot your password?', 'songpress' ) . '</a></section>';
+		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to set a new one.', 'songpress' ) . '</p></section>';
 		$o .= wp_kses_post( songpress_public_donate_link() ) . '</main></div>';
 		return $o;
 	}
@@ -116,9 +116,9 @@ class Songpress_Frontend {
 		$out     = ' <a href="' . esc_url( wp_logout_url( $here ) ) . '">' . $svg( '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>' ) . esc_html__( 'Log out', 'songpress' ) . '</a>';
 		$cat_url = self::main_id( 'catalog' ) ? get_permalink( self::main_id( 'catalog' ) ) : $here;
 		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
-		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
+		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && empty( $_GET['sp_members'] ) ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
 		if ( Songpress_Caps::can( 'members' ) ) {
-			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( admin_url( 'admin.php?page=songpress-people' ), __( 'People', 'songpress' ), $people, false );
+			$nav .= '<span class="sp-navgap"></span>' . self::nav_item( add_query_arg( 'sp_members', '1', $cat_url ), __( 'Members', 'songpress' ), $me, ! empty( $_GET['sp_members'] ) ) . self::nav_item( admin_url( 'admin.php?page=songpress-people' ), __( 'People', 'songpress' ), $people, false );
 			$nav .= self::nav_item( admin_url( 'admin.php?page=songpress' ), __( 'Manage', 'songpress' ), $manage, false );
 		}
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
@@ -150,6 +150,9 @@ class Songpress_Frontend {
 	public static function catalog( $atts = array() ) {
 		if ( $msg = self::gate() ) {
 			return $msg;
+		}
+		if ( isset( $_GET['sp_members'] ) ) {
+			return Songpress_Members::render();
 		}
 		if ( isset( $_GET['sp_edit'] ) ) {
 			$e = sanitize_text_field( wp_unslash( $_GET['sp_edit'] ) );
