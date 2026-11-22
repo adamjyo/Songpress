@@ -85,6 +85,13 @@ class Songpress_Frontend {
 
 	private static function login_screen( $here ) {
 		$failed = isset( $_GET['sp_login'] ) && 'failed' === $_GET['sp_login'];
+		// Signing in lands on the works list, unless the visitor came by a link to something specific.
+		$dest = $here;
+		$args = $_GET; // phpcs:ignore WordPress.Security.NonceVerification
+		unset( $args['sp_login'], $args['sp_user'] );
+		if ( ! $args && self::main_id( 'catalog' ) ) {
+			$dest = get_permalink( self::main_id( 'catalog' ) );
+		}
 		$o  = '<div class="sp-login"><main>';
 		$o .= '<img class="sp-login-logo" src="' . esc_url( SONGPRESS_URL . 'assets/stacked-amber.svg' ) . '" alt="SongPress, a song catalog manager">';
 		$o .= '<section class="sp-card"><h1>' . esc_html__( 'Log in', 'songpress' ) . '</h1><p class="sp-sub">' . esc_html__( 'Your songs, releases and earnings in one place.', 'songpress' ) . '</p>';
@@ -94,7 +101,7 @@ class Songpress_Frontend {
 		$o .= '<form method="post" action="' . esc_url( site_url( 'wp-login.php', 'login_post' ) ) . '">';
 		$o .= '<label for="sp-u">' . esc_html__( 'Username', 'songpress' ) . '</label><input id="sp-u" name="log" type="text" value="' . esc_attr( isset( $_GET['sp_user'] ) ? sanitize_user( wp_unslash( $_GET['sp_user'] ) ) : '' ) . '" autocomplete="username" autocapitalize="none" required>';
 		$o .= '<label for="sp-p">' . esc_html__( 'Password', 'songpress' ) . '</label><input id="sp-p" name="pwd" type="password" autocomplete="current-password" required>';
-		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $here ) ) . '">';
+		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $dest ) ) . '">';
 		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
 		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to set a new one.', 'songpress' ) . '</p></section>';
 		$o .= '<p class="sp-forgot">' . sprintf( /* translators: %s: link to the ChordPro tool */ esc_html__( 'Looking for a chord-sheet program like Songpress (Skeed / Lallulli)? Use the %s, free, no login.', 'songpress' ), '<a href="' . esc_url( Songpress_ChordTool::url() ) . '">' . esc_html__( 'web ChordPro tool', 'songpress' ) . '</a>' ) . '</p>';
