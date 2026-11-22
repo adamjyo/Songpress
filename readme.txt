@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.52.0 =
+* Cover art is a drop box: drop an image on it or click it to pick one. Audio is a player box: drop a file on it or click it to choose from the WordPress Media Library. The upload buttons and link boxes are gone.
+
 = 0.51.0 =
 * Cover art and an audio player now sit at the top left, beside Basics, on every work, the original work included. On a phone they stack above Basics.
 

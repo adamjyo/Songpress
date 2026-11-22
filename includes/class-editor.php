@@ -58,6 +58,10 @@ class Songpress_Editor {
 		$o .= '<form method="post" class="spe-form" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_save', '_wpnonce', true, false );
 		$o .= '<input type="hidden" name="action" value="songpress_save"><input type="hidden" name="song_id" value="' . $id . '"><input type="hidden" name="revision" value="' . (int) ( $song->revision ?? 0 ) . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">';
 
+		if ( function_exists( 'wp_enqueue_media' ) && Songpress_Caps::can( 'upload' ) ) {
+			wp_enqueue_media(); // the audio box opens the WordPress Media Library
+		}
+
 		/* Basics */
 		$statuses = Songpress_Songs::statuses_for( $version );
 		if ( $song && isset( Songpress_Songs::statuses()[ $song->status ] ) ) {
@@ -361,17 +365,22 @@ class Songpress_Editor {
 
 	/* ---------- media ---------- */
 
+	/**
+	 * One drop target. Cover art: drop an image on it or click it to pick one from the computer. Audio: a player; drop a file
+	 * on it or click it to choose from the WordPress Media Library. No upload buttons and no link boxes.
+	 */
 	private static function media_box( $field, $label, $accept, $id, $url ) {
 		$is_img = 'art' === $field;
 		$src    = $id ? ( $is_img ? (string) wp_get_attachment_image_url( $id, 'medium' ) : (string) wp_get_attachment_url( $id ) ) : '';
 		if ( '' === $src && '' !== $url ) {
 			$src = $url;
 		}
-		$o  = '<div class="spe-media" data-field="' . esc_attr( $field ) . '"><span class="spe-label">' . esc_html( $label ) . '</span>';
-		$o .= '<input type="hidden" name="' . esc_attr( $field ) . '_id" value="' . (int) $id . '"><input type="hidden" class="spe-clr" name="' . esc_attr( $field ) . '_clear" value="0">';
-		$o .= '<div class="spe-prev">' . ( '' !== $src ? ( $is_img ? '<img src="' . esc_url( $src ) . '" alt="">' : '<audio controls preload="none" src="' . esc_url( $src ) . '"></audio>' ) : '' ) . '</div>';
-		$o .= '<label class="spe-btn">' . esc_html( $is_img ? __( 'Upload image', 'songpress' ) : __( 'Upload audio', 'songpress' ) ) . '<input type="file" accept="' . esc_attr( $accept ) . '" hidden></label> <button type="button" class="spe-link spe-rm"' . ( '' === $src ? ' hidden' : '' ) . '>' . esc_html__( 'Remove', 'songpress' ) . '</button>';
-		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'or paste a link', 'songpress' ) . '</span><input name="' . esc_attr( $field ) . '_url" value="' . esc_attr( $url ) . '" placeholder="https://"></label></div>';
+		$ph  = $is_img ? __( 'Drop cover art here, or click to choose an image', 'songpress' ) : __( 'Drop an audio file here, or click to choose from the Media Library', 'songpress' );
+		$o   = '<div class="spe-media" data-field="' . esc_attr( $field ) . '"><span class="spe-label">' . esc_html( $label ) . '</span>';
+		$o  .= '<input type="hidden" name="' . esc_attr( $field ) . '_id" value="' . (int) $id . '"><input type="hidden" class="spe-clr" name="' . esc_attr( $field ) . '_clear" value="0"><input type="hidden" name="' . esc_attr( $field ) . '_url" value="' . esc_attr( $url ) . '">';
+		$o  .= '<div class="spe-prev' . ( $is_img ? ' spe-dz' : ' spe-player' ) . '" data-ph="' . esc_attr( $ph ) . '" tabindex="0" role="button">' . ( '' !== $src ? ( $is_img ? '<img src="' . esc_url( $src ) . '" alt="">' : '<audio controls preload="none" src="' . esc_url( $src ) . '"></audio>' ) : '' ) . '</div>';
+		$o  .= '<input type="file" class="spe-pick" accept="' . esc_attr( $accept ) . '" hidden>';
+		$o  .= '<span class="spe-mact"><button type="button" class="spe-link spe-change"' . ( '' === $src || $is_img ? ' hidden' : '' ) . '>' . esc_html__( 'Choose another', 'songpress' ) . '</button> <button type="button" class="spe-link spe-rm"' . ( '' === $src ? ' hidden' : '' ) . '>' . esc_html__( 'Remove', 'songpress' ) . '</button></span></div>';
 		return $o;
 	}
 
@@ -457,11 +466,13 @@ root.addEventListener("click",function(e){
 var a=e.target.closest(".spe-add");
 if(a){var g=a.closest(".spe-group"),t=g.querySelector("template"),n=parseInt(g.getAttribute("data-next")||"0",10);var d=document.createElement("div");d.innerHTML=t.innerHTML.replace(/__I__/g,n);g.querySelector(".spe-rows").appendChild(d.firstElementChild);g.setAttribute("data-next",n+1);var f=g.querySelector(".spe-rows").lastElementChild.querySelector("input");if(f)f.focus();return;}
 var x=e.target.closest(".spe-x");if(x){var r=x.parentNode;r.parentNode.removeChild(r);total();return;}
-var rm=e.target.closest(".spe-rm");if(rm){var b=rm.closest(".spe-media");b.querySelector("input[type=hidden]").value="0";b.querySelector(".spe-clr").value="1";var u=b.querySelector("input[name$='_url']");if(u)u.value="";b.querySelector(".spe-prev").innerHTML="";rm.hidden=true;return;}
+var rm=e.target.closest(".spe-rm");if(rm){var b=rm.closest(".spe-media");b.querySelector("input[type=hidden]").value="0";b.querySelector(".spe-clr").value="1";var u=b.querySelector("input[name$='_url']");if(u)u.value="";b.querySelector(".spe-prev").innerHTML="";rm.hidden=true;var ch=b.querySelector(".spe-change");if(ch)ch.hidden=true;return;}
 var c=e.target.closest("#spe-copy");if(c){var i=document.getElementById("spe-share");i.select();try{navigator.clipboard.writeText(i.value);c.textContent="Copied";}catch(err){document.execCommand("copy");}}
 });
 function msg(t){var m=document.getElementById("spe-msg");if(m)m.textContent=t;}
-function show(d){var b=root.querySelector(".spe-media[data-field="+d.field+"]");if(!b)return;b.querySelector("input[type=hidden]").value=d.id;b.querySelector(".spe-clr").value="0";var p=b.querySelector(".spe-prev");p.innerHTML="";if(d.field==="art"&&d.thumb){var im=document.createElement("img");im.src=d.thumb;im.alt="";p.appendChild(im);}else{p.textContent=d.name||"Uploaded";}b.querySelector(".spe-rm").hidden=false;msg("Added "+(d.name||"file")+". Press Save to keep it.");}
+function show(d){var b=root.querySelector(".spe-media[data-field="+d.field+"]");if(!b)return;b.querySelector("input[type=hidden]").value=d.id;b.querySelector(".spe-clr").value="0";var u=b.querySelector("input[name$='_url']");if(u)u.value="";var p=b.querySelector(".spe-prev");p.innerHTML="";if(d.field==="art"&&d.thumb){var im=document.createElement("img");im.src=d.thumb;im.alt="";p.appendChild(im);}else if(d.field==="audio"&&d.url){var au=document.createElement("audio");au.controls=true;au.preload="none";au.src=d.url;p.appendChild(au);var ch=b.querySelector(".spe-change");if(ch)ch.hidden=false;}else{p.textContent=d.name||"Uploaded";}b.querySelector(".spe-rm").hidden=false;msg("Added "+(d.name||"file")+". Press Save to keep it.");}
+function lib(b){if(!window.wp||!wp.media){b.querySelector(".spe-pick").click();return;}var fr=wp.media({title:"Choose audio",library:{type:"audio"},multiple:false});fr.on("select",function(){var a=fr.state().get("selection").first().toJSON();show({field:"audio",id:a.id,url:a.url,name:a.filename||a.title});});fr.open();}
+root.addEventListener("click",function(e){var pv=e.target.closest(".spe-prev");if(pv&&!e.target.closest("audio")){var b=pv.closest(".spe-media");if(!b)return;if(b.getAttribute("data-field")==="art"){b.querySelector(".spe-pick").click();}else if(!pv.querySelector("audio")){lib(b);}return;}var c=e.target.closest(".spe-change");if(c){lib(c.closest(".spe-media"));}});
 function send(file){var fd=new FormData();fd.append("action","songpress_upload");fd.append("nonce",CFG.nonce);fd.append("file",file);msg("Uploading "+file.name+"...");return fetch(CFG.url,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){if(j&&j.success){show(j.data);}else{msg((j&&j.data&&j.data.message)||"That file could not be added.");}}).catch(function(){msg("Upload failed.");});}
 root.addEventListener("change",function(e){var i=e.target;if(i.type==="file"&&i.files&&i.files[0]){send(i.files[0]);i.value="";}});
 var n=0;function files(e){return e.dataTransfer&&e.dataTransfer.types&&[].indexOf.call(e.dataTransfer.types,"Files")>-1;}
