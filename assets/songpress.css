@@ -746,3 +746,14 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spn-aui{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 10px;border:1px solid #34302b;border-radius:10px;background:#1c1916;font:13px system-ui,sans-serif;color:#d9d2c8}.spn-aui audio{height:32px;max-width:100%}
 .spn-pos-end{margin-top:auto}#spn-map{height:220px;margin:6px 0 0}
 #spn-map{background:#17140f;border:1px solid #26221e}
+
+/* Notes: the page stays put; only the columns scroll */
+@media (min-width:801px){
+ html:has(.spn),body:has(.spn){overflow:hidden;height:100%}
+ .sp-main:has(.spn){padding:0;height:100vh;height:100dvh;overflow:hidden}
+ .sp-main:has(.spn) .sp-app{height:100%}
+ .spn{height:100vh;height:100dvh;min-height:0}
+ body.admin-bar .sp-main:has(.spn){height:calc(100dvh - 32px)}
+ body.admin-bar .spn{height:calc(100dvh - 32px)}
+ .spn-wrap{height:100%}
+}
