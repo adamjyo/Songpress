@@ -52,6 +52,7 @@ class Songpress_Uploads {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_notes_import', array( __CLASS__, 'handle_notes_import' ) );
+		add_action( 'wp_ajax_songpress_notes_chunk', array( __CLASS__, 'ajax_notes_chunk' ) );
 		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
 		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
 		add_action( 'admin_post_songpress_statement', array( __CLASS__, 'handle_statement' ) );
@@ -497,6 +498,56 @@ class Songpress_Uploads {
 		self::back( $args + array( 'nj_go' => 1 ) );
 	}
 
+	/** Ajax: import one small batch of files sent by the browser (it sends a few at a time, so the number of files never hits a server limit). */
+	public static function ajax_notes_chunk() {
+		self::watch( 'notes import (batch)' );
+		check_ajax_referer( 'songpress_notes_import', 'nonce' );
+		if ( ! Songpress_Caps::can( 'journal' ) ) {
+			wp_send_json( array( 'ok' => false, 'error' => 'Not allowed.' ), 403 );
+		}
+		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$added = 0;
+		$skip  = 0;
+		$tmps  = isset( $_FILES['files']['tmp_name'] ) && is_array( $_FILES['files']['tmp_name'] ) ? $_FILES['files']['tmp_name'] : array();
+		foreach ( $tmps as $i => $tmp ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			if ( ! $tmp || ! is_uploaded_file( $tmp ) ) {
+				continue;
+			}
+			$name = sanitize_file_name( wp_unslash( $_FILES['files']['name'][ $i ] ) );
+			$one  = array();
+			if ( preg_match( '/\.zip$/i', $name ) ) {
+				$z = class_exists( 'ZipArchive' ) ? new ZipArchive() : null;
+				if ( $z && true === $z->open( $tmp ) ) {
+					for ( $k = 0; $k < $z->numFiles; $k++ ) {
+						$n = $z->getNameIndex( $k );
+						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) && 'info.json' !== basename( $n ) && false === strpos( $n, '__MACOSX/' ) ) {
+							$bn = basename( $n );
+							if ( 'text.md' === $bn && false !== strpos( dirname( $n ), '.textbundle' ) ) {
+								$bn = basename( dirname( $n ), '.textbundle' ) . '.md';
+							}
+							$one[] = array( $bn, (string) $z->getFromIndex( $k ) );
+						}
+					}
+					$z->close();
+				}
+			} elseif ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $name ) ) {
+				$one[] = array( $name, (string) file_get_contents( $tmp ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions
+			}
+			foreach ( $one as $t ) {
+				$text = $t[1];
+				if ( ! preg_match( '//u', $text ) ) {
+					$text = function_exists( 'mb_convert_encoding' ) ? mb_convert_encoding( $text, 'UTF-8', 'Windows-1252' ) : $text;
+				}
+				try {
+					self::import_one( $t[0], $text, $added, $skip );
+				} catch ( \Throwable $e ) {
+					++$skip;
+				}
+			}
+		}
+		wp_send_json( array( 'ok' => true, 'added' => $added, 'skip' => $skip ) );
+	}
+
 	/** One step of the staged import: a few seconds of work, then back to the page, which carries on by itself. */
 	public static function handle_notes_step() {
 		self::watch( 'notes import (step)' );
@@ -648,7 +699,7 @@ class Songpress_Uploads {
 					$njhtml .= '<script>setTimeout(function(){location.href=' . wp_json_encode( $next ) . ';},300);</script>';
 				}
 			}
-			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button></form>' );
+			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button><div id="spu-nprog" hidden><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden;margin:10px 0 4px"><div id="spu-nbar" style="height:8px;width:0;background:#f5a524"></div></div><small id="spu-ntxt"></small></div></form><script>(function(){var f=document.querySelector("form input[name=songpress_dummy],form input[value=songpress_notes_import]");if(!f||!window.fetch)return;f=f.form;var inp=f.querySelector("input[type=file]"),box=document.getElementById("spu-nprog"),bar=document.getElementById("spu-nbar"),tx=document.getElementById("spu-ntxt"),NONCE=' . wp_json_encode( wp_create_nonce( 'songpress_notes_import' ) ) . ',AJ=' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ';f.addEventListener("submit",function(e){var fl=Array.prototype.slice.call(inp.files||[]);if(!fl.length)return;e.preventDefault();var chunks=[],cur=[],sz=0;fl.forEach(function(x){if(cur.length&&(cur.length>=20||sz+x.size>4000000)){chunks.push(cur);cur=[];sz=0}cur.push(x);sz+=x.size});if(cur.length)chunks.push(cur);box.hidden=false;var i=0,added=0,skip=0,sent=0,btn=f.querySelector("button");btn.disabled=true;function done(m,err){var u=new URL(location.href);u.searchParams.set(err?"m_err":"m_ok",m);u.searchParams.set("sp_page","uploads");u.searchParams.set("type","notes_files");location.href=u.toString()}function next(){if(i>=chunks.length){done("Added "+added+" notes. "+skip+" were empty or already here.");return}var fd=new FormData();fd.append("action","songpress_notes_chunk");fd.append("nonce",NONCE);chunks[i].forEach(function(x){fd.append("files[]",x,x.name)});fetch(AJ,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.text()}).then(function(t){var j;try{j=JSON.parse(t)}catch(x){throw new Error("The server answered with a blank or broken page at file "+(sent+1)+" (the batch had "+chunks[i].length+" files).")}if(!j.ok)throw new Error(j.error||"The server refused a batch.");added+=j.added;skip+=j.skip;sent+=chunks[i].length;i++;bar.style.width=Math.floor(100*sent/fl.length)+"%";tx.textContent="Sent "+sent+" of "+fl.length+" files · "+added+" notes added";next()}).catch(function(er){btn.disabled=false;tx.textContent="Stopped after "+added+" notes: "+er.message+" Notes already added are kept; choose the files again and the ones already in are skipped."})}next()})})();</script>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
