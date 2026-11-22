@@ -461,5 +461,15 @@ check( 'person report totals by source', array( $rp['total'], $rp['sources']['ml
 check( 'person report quarters newest first', array_keys( $rp['quarters'] ), array( '2026-Q2', '2026-Q1' ) );
 check( 'earned total for a person', Songpress_Persons::total_for( 'Zed Tester' ), 10.0 );
 
+$pl = Songpress_Persons::tidy_plan( array(
+	1 => array( 'login' => 'abby.russ2', 'display' => 'Abby Russ', 'admin' => false ),
+	2 => array( 'login' => 'bob.lee', 'display' => 'Bob Lee', 'admin' => false ),
+	3 => array( 'login' => 'bob.lee2', 'display' => 'Bob Lee', 'admin' => false ),
+	4 => array( 'login' => 'cy.wu', 'display' => 'Cy Wu', 'admin' => false ),
+	5 => array( 'login' => 'cy.wu2', 'display' => 'Cy Wu Jr', 'admin' => false ),
+	6 => array( 'login' => 'sam.kim2', 'display' => 'Sam Kim', 'admin' => true ),
+) );
+check( 'tidy: rename when free, merge same person, leave different person and admins', $pl, array( array( 'rename', 1, 'abby.russ', 0 ), array( 'merge', 3, 'bob.lee', 2 ) ) );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

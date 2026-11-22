@@ -61,6 +61,12 @@ class Songpress_People {
 		if ( $found ) {
 			return (int) $found[0];
 		}
+		// An account already named for this very person is theirs: use it rather than make "name2".
+		$same = get_user_by( 'login', $login );
+		if ( $same && self::key_for( $same->display_name ) === $key ) {
+			update_user_meta( $same->ID, self::KEY_META, $key );
+			return (int) $same->ID;
+		}
 		// Never take over an account that already exists under that name: it may be a different person.
 		$try = $login;
 		for ( $i = 2; username_exists( $try ); $i++ ) {

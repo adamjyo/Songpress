@@ -30,6 +30,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.7.1 =
+* People shows a "Tidy logins" button when logins end in a number (abby.russ2). It renames them to the plain first.last, or merges them into the plain account when it is the same person. Different people with the same name, and administrators, are left alone.
+* New writers whose plain login already belongs to the same person now use that account instead of getting a number.
+
 = 0.7.0 =
 * Members and People are now one: a single People screen (and rail item). A person is a profile and a login together: photo, bio and IPI, plus class and password. People without a login can be given one; logins show on the list.
 * Each person has an earnings report: all time and per source (ASCAP, MLC, DistroKid as a performer, CCLI), per quarter, and top songs. The list shows what each person has earned.

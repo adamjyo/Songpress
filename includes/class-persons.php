@@ -10,6 +10,7 @@ class Songpress_Persons {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
+		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
 	}
 
 	public static function url( $args = array() ) {
@@ -86,6 +87,83 @@ class Songpress_Persons {
 		}
 		krsort( $q );
 		return array( 'total' => $all, 'sources' => $src, 'quarters' => $q, 'songs' => '' === $key ? array() : Songpress_Money::my_songs( $key, 10 ) );
+	}
+
+	/**
+	 * Logins like abby.russ2 that should be abby.russ. $users: id => array( login, display, admin ).
+	 * Rename when the plain login is free; merge into the plain account when it is the same person; leave
+	 * it alone when the plain login belongs to someone else. Pure. Returns a list of array( action, id, to, into ).
+	 */
+	public static function tidy_plan( array $users ) {
+		$taken = array();
+		foreach ( $users as $id => $u ) {
+			$taken[ $u['login'] ] = $id;
+		}
+		$plan = array();
+		foreach ( $users as $id => $u ) {
+			if ( ! empty( $u['admin'] ) ) {
+				continue;
+			}
+			$base = Songpress_People::username_for( $u['display'] );
+			if ( '' === $base || ! preg_match( '/^' . preg_quote( $base, '/' ) . '\d+$/', $u['login'] ) ) {
+				continue;
+			}
+			if ( ! isset( $taken[ $base ] ) ) {
+				$plan[]         = array( 'rename', $id, $base, 0 );
+				$taken[ $base ] = $id;
+				unset( $taken[ $u['login'] ] );
+			} elseif ( $taken[ $base ] !== $id && isset( $users[ $taken[ $base ] ] ) && Songpress_People::key_for( $users[ $taken[ $base ] ]['display'] ) === Songpress_People::key_for( $u['display'] ) ) {
+				$plan[] = array( 'merge', $id, $base, $taken[ $base ] );
+			}
+		}
+		return $plan;
+	}
+
+	private static function tidy_users() {
+		$users = array();
+		$ids   = array_map( 'intval', get_users( array( 'meta_key' => Songpress_Caps::META, 'meta_compare' => 'EXISTS', 'fields' => 'ID' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
+		foreach ( get_users( array( 'fields' => 'ID' ) ) as $i ) {
+			$ids[] = (int) $i;
+		}
+		foreach ( array_unique( $ids ) as $id ) {
+			$u = get_userdata( $id );
+			if ( $u ) {
+				$users[ $id ] = array( 'login' => $u->user_login, 'display' => $u->display_name, 'admin' => Songpress_Caps::is_wp_admin( $id ) );
+			}
+		}
+		return $users;
+	}
+
+	public static function handle_tidy() {
+		check_admin_referer( 'songpress_person_tidy' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		global $wpdb;
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+		$ren = 0;
+		$mer = 0;
+		foreach ( self::tidy_plan( self::tidy_users() ) as $a ) {
+			list( $act, $id, $to, $into ) = $a;
+			if ( 'rename' === $act ) {
+				if ( username_exists( $to ) ) {
+					continue;
+				}
+				$wpdb->update( $wpdb->users, array( 'user_login' => $to, 'user_nicename' => sanitize_title( $to ) ), array( 'ID' => $id ) );
+				clean_user_cache( $id );
+				++$ren;
+			} else {
+				$ct = Songpress_Install::table( 'credits' );
+				$wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET user_id = %d WHERE user_id = %d", $into, $id ) ); // phpcs:ignore WordPress.DB
+				$key = get_user_meta( $id, Songpress_People::KEY_META, true );
+				if ( $key && ! get_user_meta( $into, Songpress_People::KEY_META, true ) ) {
+					update_user_meta( $into, Songpress_People::KEY_META, $key );
+				}
+				wp_delete_user( $id, $into );
+				++$mer;
+			}
+		}
+		self::go( array( 'sp_saved' => rawurlencode( sprintf( /* translators: 1: renamed 2: merged */ __( 'Tidied logins: %1$d renamed, %2$d duplicates merged into the account with the plain login.', 'songpress' ), $ren, $mer ) ) ) );
 	}
 
 	/* ---------- rename ---------- */
@@ -184,6 +262,10 @@ class Songpress_Persons {
 		// the invitation boxes and the add form are the old Members screen, still used for the login side
 		$o = Songpress_Members::render( true );
 		$o = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . esc_html__( 'People', 'songpress' ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a person without a login', 'songpress' ) . '</a></div>' . self::notes() . $o;
+		$plan = self::tidy_plan( self::tidy_users() );
+		if ( $plan ) {
+			$o .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-tidy">' . wp_nonce_field( 'songpress_person_tidy', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_person_tidy"><p class="spe-help">' . esc_html( sprintf( /* translators: %d: logins */ _n( '%d login ends in a number (like abby.russ2).', '%d logins end in a number (like abby.russ2).', count( $plan ), 'songpress' ), count( $plan ) ) ) . ' ' . esc_html__( 'Tidy them to the plain first.last. If the plain login already belongs to the same person, the two accounts are merged into it.', 'songpress' ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Tidy logins', 'songpress' ) . '</button></form>';
+		}
 		$o .= '<h3>' . esc_html__( 'Everyone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_member_update', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_update">';
 		$o .= '<div class="spe-head spe-mhead"><span>' . esc_html__( 'Person', 'songpress' ) . '</span><span>' . esc_html__( 'Class', 'songpress' ) . '</span><span>' . esc_html__( 'New password', 'songpress' ) . '</span><span>' . esc_html__( 'Earned', 'songpress' ) . '</span></div>';
 		foreach ( $all as $k => $r ) {
