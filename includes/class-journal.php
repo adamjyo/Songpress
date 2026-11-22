@@ -220,6 +220,13 @@ class Songpress_Journal {
 			'tempo'    => mb_substr( sanitize_text_field( $in['tempo'] ?? '' ), 0, 16 ),
 			'authors'  => mb_substr( sanitize_text_field( $in['authors'] ?? '' ), 0, 255 ),
 		);
+		if ( array_key_exists( 'lat', $in ) ) {
+			$la = is_numeric( $in['lat'] ?? '' ) ? (float) $in['lat'] : null;
+			$lo = is_numeric( $in['lng'] ?? '' ) ? (float) $in['lng'] : null;
+			$ok = null !== $la && null !== $lo && abs( $la ) <= 90 && abs( $lo ) <= 180;
+			$row['latitude']  = $ok ? (string) round( $la, 6 ) : '';
+			$row['longitude'] = $ok ? (string) round( $lo, 6 ) : '';
+		}
 		if ( ! $sid ) {
 			$byser = array();
 			foreach ( self::serials_in( $notes ) as $sr ) {
@@ -232,6 +239,7 @@ class Songpress_Journal {
 			if ( '' !== $cr ) {
 				$row['created_at'] = $cr;
 			}
+			self::keep_version( $id, $row['title'], $row['notes'] );
 			$wpdb->update( self::t(), $row, array( 'id' => $id ) );
 			return array( $id, '' );
 		}
@@ -250,6 +258,29 @@ class Songpress_Journal {
 	}
 
 	/** The shape the Notes screen works with. */
+	const VERSION_GAP = 300;
+	const VERSION_KEEP = 30;
+
+	/** Before a note is overwritten, keep what it said (at most one copy every five minutes; the newest 30 stay). */
+	public static function keep_version( $id, $new_title, $new_notes ) {
+		global $wpdb;
+		$old = self::row( $id );
+		if ( ! $old || ( (string) $old->title === (string) $new_title && (string) $old->notes === (string) $new_notes ) ) {
+			return false;
+		}
+		$vt   = Songpress_Install::table( 'note_versions' );
+		$last = $wpdb->get_var( $wpdb->prepare( "SELECT saved_at FROM {$vt} WHERE entry_id = %d ORDER BY id DESC LIMIT 1", $id ) ); // phpcs:ignore WordPress.DB
+		if ( $last && ( strtotime( current_time( 'mysql' ) ) - strtotime( (string) $last ) ) < self::VERSION_GAP ) {
+			return false;
+		}
+		$wpdb->insert( $vt, array( 'entry_id' => $id, 'title' => (string) $old->title, 'notes' => (string) $old->notes, 'user_id' => get_current_user_id(), 'saved_at' => current_time( 'mysql' ) ) );
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$vt} WHERE entry_id = %d ORDER BY id DESC", $id ) ); // phpcs:ignore WordPress.DB
+		foreach ( array_slice( (array) $ids, self::VERSION_KEEP ) as $gone ) {
+			$wpdb->delete( $vt, array( 'id' => (int) $gone ) );
+		}
+		return true;
+	}
+
 	public static function shape( $e ) {
 		return array(
 			'id'       => (int) $e->id,
@@ -261,6 +292,8 @@ class Songpress_Journal {
 			'key'      => (string) $e->song_key,
 			'tempo'    => (string) $e->tempo,
 			'authors'  => (string) $e->authors,
+			'lat'      => (string) $e->latitude,
+			'lng'      => (string) $e->longitude,
 			'created'  => $e->created_at ? str_replace( ' ', 'T', substr( (string) $e->created_at, 0, 16 ) ) : '',
 			'pinned'   => (int) $e->pinned,
 			'archived' => (int) $e->archived,
@@ -295,8 +328,17 @@ class Songpress_Journal {
 		if ( 'delete' === $op && $id ) {
 			$gone = self::row( $id );
 			$wpdb->delete( self::t(), array( 'id' => $id ) );
+			$wpdb->delete( Songpress_Install::table( 'note_versions' ), array( 'entry_id' => $id ) );
 			Songpress_Audit::log( 'notes', 'Deleted a note', $gone ? (string) $gone->title : '', array( 'entry_id' => $id ) );
 			return array( 'ok' => true, 'deleted' => $id );
+		}
+		if ( 'versions' === $op && $id ) {
+			$vt  = Songpress_Install::table( 'note_versions' );
+			$out = array();
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, title, notes, saved_at FROM {$vt} WHERE entry_id = %d ORDER BY id DESC", $id ) ) as $v ) { // phpcs:ignore WordPress.DB
+				$out[] = array( 'id' => (int) $v->id, 'at' => str_replace( ' ', 'T', substr( (string) $v->saved_at, 0, 16 ) ), 'title' => (string) $v->title, 'notes' => (string) $v->notes );
+			}
+			return array( 'ok' => true, 'versions' => $out );
 		}
 		if ( 'songs' === $op ) {
 			$out = array();
@@ -371,6 +413,9 @@ class Songpress_Journal {
 			'today' => gmdate( 'Y-m-d' ),
 			'ajax'  => admin_url( 'admin-post.php' ),
 			'nonce' => wp_create_nonce( 'songpress_journal_ajax' ),
+			'aj'    => admin_url( 'admin-ajax.php' ),
+			'upnon' => wp_create_nonce( 'songpress_upload' ),
+			'canup' => Songpress_Caps::can( 'upload' ),
 			'kinds' => self::KINDS,
 			'urls'  => array(
 				'import' => add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ),
@@ -386,7 +431,7 @@ class Songpress_Journal {
 		$o    = '<div class="songpress sp-app spn-wrap"><div class="spn" id="spn">';
 		$o   .= '<div class="spn-tags" id="spn-tags"></div>';
 		$o   .= '<div class="spn-side"><div class="spn-top">';
-		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
+		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'foc' => array( '⛶', __( 'Focus: hide everything but the note', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
 			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
 		}
 		$o .= '<input class="spn-search" id="spn-search" type="search" placeholder="' . esc_attr__( 'Search', 'songpress' ) . '"></div><div class="spn-list" id="spn-list"></div></div>';
@@ -404,13 +449,16 @@ class Songpress_Journal {
 			array( 'place', __( 'Location', 'songpress' ), 'text' ),
 			array( 'authors', __( 'Authors', 'songpress' ), 'text' ),
 		) as $f ) {
-			$o .= '<label><span>' . esc_html( $f[1] ) . '</span><input type="' . esc_attr( $f[2] ) . '" id="spn-f-' . esc_attr( $f[0] ) . '"></label>';
+			$o .= '<label><span>' . esc_html( $f[1] ) . '</span><input type="' . esc_attr( $f[2] ) . '" id="spn-f-' . esc_attr( $f[0] ) . '"' . ( 'authors' === $f[0] ? ' list="spn-authors"' : '' ) . '></label>';
 		}
 		$o .= '<div class="spn-two"><label><span>' . esc_html__( 'Key', 'songpress' ) . '</span><input id="spn-f-key"></label><label><span>' . esc_html__( 'Tempo', 'songpress' ) . '</span><input id="spn-f-tempo"></label></div>';
 		$o .= '<label><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select id="spn-f-kind"></select></label>';
 		$o .= '<div class="spn-songs"><span>' . esc_html__( 'Songs mentioned', 'songpress' ) . '</span><div id="spn-songs"></div></div>';
+		$o .= '<div class="spn-chips" id="spn-chips"></div><datalist id="spn-authors"></datalist>';
+		$o .= '<div class="spn-pos"><span>' . esc_html__( 'Position', 'songpress' ) . ' <a href="#" id="spn-pos-show">' . esc_html__( 'map', 'songpress' ) . '</a> <a href="#" id="spn-pos-here">' . esc_html__( 'here', 'songpress' ) . '</a> <a href="#" id="spn-pos-clear">' . esc_html__( 'clear', 'songpress' ) . '</a></span><div id="spn-map" hidden></div><small id="spn-pos-txt"></small></div>';
+		$o .= '<div class="spn-hist"><span>' . esc_html__( 'Earlier versions', 'songpress' ) . ' <a href="#" id="spn-hist-show">' . esc_html__( 'show', 'songpress' ) . '</a></span><div id="spn-hist" hidden></div></div>';
 		$o .= '<label><span>' . esc_html( "#'s" ) . '</span><input id="spn-f-tag" placeholder="' . esc_attr__( '# then a tag, Enter to add', 'songpress' ) . '"></label>';
-		$o .= '<div class="spn-links"><a href="#" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</a><a href="#" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</a><a href="#" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</a><a href="#" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</a><a href="#" data-go="tb">' . esc_html__( 'All for Bear (.textbundle)', 'songpress' ) . '</a></div>';
+		$o .= '<div class="spn-links"><a href="#" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</a><a href="#" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</a>' . ( class_exists( 'Songpress_ChordTool' ) ? '<a href="#" data-go="tool">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</a>' : '' ) . '<a href="#" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</a><a href="#" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</a><a href="#" data-go="tb">' . esc_html__( 'All for Bear (.textbundle)', 'songpress' ) . '</a></div>';
 		$o .= '</aside></div>';
 		$o .= '<script type="application/json" id="spn-data">' . $json . '</script>' . self::script() . '</div></div>';
 		return $o;
@@ -460,7 +508,7 @@ function renderList(){
  $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>'}
 function setStatus(s){$('spn-status').textContent=s||''}
 function fill(n){
- cur=n;
+ cur=n;pos=(n.lat!==''&&n.lat!=null&&n.lng!=='')?{lat:+n.lat,lng:+n.lng}:null;
  $('spn-title').value=n.title||'';$('spn-body').value=n.notes||'';
  $('spn-f-date').value=n.date||D.today;$('spn-f-created').value=n.created||'';
  $('spn-f-place').value=n.place||'';$('spn-f-authors').value=n.authors||'';
@@ -469,14 +517,14 @@ function fill(n){
  root.querySelector('[data-t=pin]').classList.toggle('on',!!n.pinned);
  root.querySelector('[data-t=arch]').classList.toggle('on',!!n.archived);
  sizeBody();showPrev=false;$('spn-prev').hidden=true;$('spn-body').hidden=false;
- songs();renderList()}
-function blank(){return {id:0,date:D.today,kind:'day',title:'',notes:'',place:'',key:'',tempo:'',authors:'',created:'',pinned:0,archived:0}}
+ songs();renderList();chips();showPos();$('spn-hist').hidden=true}
+function blank(){return {id:0,date:D.today,kind:'day',title:'',notes:'',place:'',key:'',tempo:'',authors:'',lat:'',lng:'',created:'',pinned:0,archived:0}}
 function sizeBody(){var t=$('spn-body');t.style.height='auto';t.style.height=Math.max(t.scrollHeight,300)+'px'}
 function post(f){
  var fd=new FormData();fd.append('action','songpress_journal_ajax');fd.append('_wpnonce',D.nonce);
  Object.keys(f).forEach(function(k){fd.append(k,f[k])});
  return fetch(D.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
-function collect(){return {op:'save',entry_id:cur?cur.id:0,title:$('spn-title').value,notes:$('spn-body').value,log_date:$('spn-f-date').value,created_at:$('spn-f-created').value,place:$('spn-f-place').value,authors:$('spn-f-authors').value,song_key:$('spn-f-key').value,tempo:$('spn-f-tempo').value,kind:$('spn-f-kind').value}}
+function collect(){return {op:'save',entry_id:cur?cur.id:0,title:$('spn-title').value,notes:$('spn-body').value,log_date:$('spn-f-date').value,created_at:$('spn-f-created').value,place:$('spn-f-place').value,authors:$('spn-f-authors').value,song_key:$('spn-f-key').value,tempo:$('spn-f-tempo').value,kind:$('spn-f-kind').value,lat:pos?pos.lat:'',lng:pos?pos.lng:''}}
 function merge(n){
  var i=notes.findIndex(function(x){return x.id===n.id});
  if(i<0)notes.unshift(n);else notes[i]=n;return n}
@@ -518,6 +566,26 @@ function inl(s){
   .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*]+)\*/g,'$1<i>$2</i>')
   .replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,'$1<span class="spn-hash">#$2</span>')
   .replace(/([\^#])(\d{3,5}(?:-\d{1,2})?)/g,'<span class="spn-hash">$1$2</span>')}
+
+var pos=null,lmap=null,lmark=null,lload=null;
+function chips(){var a=$('spn-f-authors').value.split(',').map(function(x){return x.trim()}).filter(Boolean);$('spn-chips').innerHTML=a.map(function(x){return '<button type="button" class="spn-chip" data-au="'+esc(x)+'">'+esc(x)+'</button>'}).join('');
+ var seen={};notes.forEach(function(n){String(n.authors||'').split(',').forEach(function(x){x=x.trim();if(x)seen[x]=1})});$('spn-authors').innerHTML=Object.keys(seen).sort().map(function(x){return '<option value="'+esc(x)+'">'}).join('')}
+$('spn-chips').addEventListener('click',function(e){var b=e.target.closest('[data-au]');if(!b)return;q=b.getAttribute('data-au');$('spn-search').value=q;tag='';renderTags();renderList()});
+$('spn-f-authors').addEventListener('input',chips);
+function showPos(){$('spn-pos-txt').textContent=pos?pos.lat.toFixed(4)+', '+pos.lng.toFixed(4):'No position';if(lmap){if(pos){lmark.setLatLng([pos.lat,pos.lng]);lmark.addTo(lmap);lmap.setView([pos.lat,pos.lng],Math.max(lmap.getZoom(),10))}else lmark.remove()}}
+function loadMap(){return lload||(lload=new Promise(function(res,rej){if(window.L){res();return}var c=document.createElement('link');c.rel='stylesheet';c.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(c);var s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=res;s.onerror=function(){lload=null;rej()};document.head.appendChild(s)}))}
+function openMap(){$('spn-map').hidden=false;loadMap().then(function(){if(!lmap){lmap=L.map('spn-map').setView(pos?[pos.lat,pos.lng]:[39,-98],pos?10:3);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(lmap);lmark=L.marker([0,0]);lmap.on('click',function(e){pos={lat:e.latlng.lat,lng:e.latlng.lng};showPos();touch()})}showPos();setTimeout(function(){lmap.invalidateSize()},50)},function(){setStatus('The map could not load')})}
+$('spn-pos-show').addEventListener('click',function(e){e.preventDefault();openMap()});
+$('spn-pos-clear').addEventListener('click',function(e){e.preventDefault();pos=null;showPos();touch()});
+$('spn-pos-here').addEventListener('click',function(e){e.preventDefault();if(!navigator.geolocation){setStatus('Location is not available here');return}navigator.geolocation.getCurrentPosition(function(p){pos={lat:p.coords.latitude,lng:p.coords.longitude};showPos();touch()},function(){setStatus('Location was not shared')})});
+$('spn-hist-show').addEventListener('click',function(e){e.preventDefault();var h=$('spn-hist');if(!h.hidden){h.hidden=true;return}
+ if(!cur||!cur.id){h.hidden=false;h.innerHTML='<em>Save the note first.</em>';return}
+ post({op:'versions',entry_id:cur.id}).then(function(r){h.hidden=false;if(!r.versions||!r.versions.length){h.innerHTML='<em>No earlier versions yet. One is kept each time you change a note (at most every five minutes).</em>';return}
+  h.innerHTML=r.versions.map(function(v,i){return '<div class="spn-ver"><span>'+esc(longDate(v.at)+' '+v.at.slice(11))+'<small>'+esc((v.title||v.notes).replace(/\s+/g,' ').slice(0,60))+'</small></span><button type="button" data-v="'+i+'">Restore</button></div>'}).join('');
+  h.onclick=function(ev){var b=ev.target.closest('[data-v]');if(!b)return;var v=r.versions[+b.getAttribute('data-v')];$('spn-title').value=v.title;$('spn-body').value=v.notes;sizeBody();touch();setStatus('Restored. The version you replaced is kept too.')}})});
+function upload(file,kind){if(!D.canup){setStatus('You cannot upload files');return}setStatus('Uploading…');var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',D.upnon);fd.append('file',file);
+ fetch(D.aj,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){setStatus((j.data&&j.data.message)||'Upload failed');return}setStatus('');var nm=file.name.replace(/\.[^.]+$/,'');wrap(kind==='img'?'![':'[♪ ',']('+j.data.url+')',nm)}).catch(function(){setStatus('Upload failed')})}
+function pickFile(kind,accept){var i=document.createElement('input');i.type='file';i.accept=accept;i.onchange=function(){if(i.files[0])upload(i.files[0],kind)};i.click()}
 function mdFile(n){return '# '+head(n)+'\n\n'+(n.notes||'')+'\n'}
 function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
 function pick(id){var n=notes.find(function(x){return x.id===id});if(!n)return;(dirty?save(true):Promise.resolve()).then(function(){fill(n);if(window.innerWidth<=800)root.classList.remove('m-list')})}
@@ -538,9 +606,10 @@ root.querySelector('.spn-top').addEventListener('click',function(e){
   download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
  else if(a==='sel'){selMode=!selMode;b.classList.toggle('on',selMode);if(!selMode)sel={};renderList()}
  else if(a==='sort'){asc=!asc;renderList()}
- else if(a==='lay')root.classList.toggle('no-tags')});
+ else if(a==='lay')root.classList.toggle('no-tags');else if(a==='foc')root.classList.toggle('focus')});
 root.querySelector('.spn-main').addEventListener('click',function(e){
  var g=e.target.closest('[data-act]');if(!g)return;
+ if(root.classList.contains('focus')){root.classList.remove('focus');return}
  if(g.getAttribute('data-act')==='list')root.classList.toggle('no-list');
  if(g.getAttribute('data-act')==='info')root.classList.toggle('no-info')});
 root.querySelector('.spn-links').addEventListener('click',function(e){var a=e.target.closest('[data-go]');if(!a)return;e.preventDefault();location.href=D.urls[a.getAttribute('data-go')]});
@@ -549,8 +618,8 @@ $('spn-bar').addEventListener('click',function(e){
  if(t==='b')wrap('**','**','bold');else if(t==='i')wrap('*','*','italic');else if(t==='h')lineStart('## ');else if(t==='ul')lineStart('- ');
  else if(t==='a'){u=window.prompt('Link address (https://…)');if(u)wrap('[',']('+u+')','link')}
  else if(t==='cp')wrap('\n```chordpro\n','\n```\n','[C]Words with [G]chords');
- else if(t==='img'){u=window.prompt('Image address (Media Library link)');if(u)wrap('![',']('+u+')','image')}
- else if(t==='aud'){u=window.prompt('Audio address (Media Library link)');if(u)wrap('[♪ ',']('+u+')','audio')}
+ else if(t==='img'){if(e.shiftKey||!D.canup){u=window.prompt('Image address');if(u)wrap('![',']('+u+')','image')}else pickFile('img','image/*')}
+ else if(t==='aud'){if(e.shiftKey||!D.canup){u=window.prompt('Audio address');if(u)wrap('[♪ ',']('+u+')','audio')}else pickFile('aud','audio/*')}
  else if(t==='eye'){showPrev=!showPrev;$('spn-prev').hidden=!showPrev;$('spn-body').hidden=showPrev;if(showPrev)$('spn-prev').innerHTML=md($('spn-body').value);b.classList.toggle('on',showPrev)}
  else if(t==='pin'||t==='arch'){
   if(!cur||!cur.id){setStatus('Save the note first');return}
@@ -565,6 +634,7 @@ $('spn-f-tag').addEventListener('keydown',function(e){
  var t=$('spn-body');t.value=t.value.replace(/\s*$/,'')+(t.value.trim()?'\n\n':'')+'#'+v;this.value='';sizeBody();touch()});
 $('spn-save').addEventListener('click',function(){save()});
 $('spn-body').addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save()}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')root.classList.remove('focus')});
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
 var ks=$('spn-f-kind');Object.keys(D.kinds).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=D.kinds[k];ks.appendChild(o)});
 var secs=document.createElement('div');

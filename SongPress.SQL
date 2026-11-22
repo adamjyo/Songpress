@@ -426,3 +426,15 @@ CREATE TABLE {prefix}songpress_audit (
   KEY user_id (user_id),
   KEY created_at (created_at)
 ) {charset};
+
+-- Earlier saved copies of a note, so a note can be put back.
+CREATE TABLE {prefix}songpress_note_versions (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  entry_id bigint(20) unsigned NOT NULL,
+  title varchar(255) NOT NULL DEFAULT '',
+  notes longtext NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  saved_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY entry_id (entry_id)
+) {charset};

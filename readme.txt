@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.24.0
+Stable tag: 0.25.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.25.0 =
+* Notes: earlier versions (a copy of the note is kept before changes, at most every five minutes, newest 30; Restore puts it back in the editor); a position for each note, set on a small map by clicking, with "here" for your current location; author chips that filter the list, with the known authors suggested as you type; the image and audio buttons upload from your computer into the Media Library (Shift-click to paste an address instead); a Focus button (Esc to leave) that hides everything but the note; a link to the ChordPro tool.
 
 = 0.24.0 =
 * Art studio: Fill (bucket), Gradient, Rectangle, Ellipse (filled or outline), Select (drag a box; Delete clears it and later strokes stay inside it) and Pick colour join the Brush and Eraser. All work on drawing or picture layers and can be undone.

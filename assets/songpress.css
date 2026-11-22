@@ -473,3 +473,14 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spa-aipic:hover{border-color:#c9a24a}.spa-aipic:disabled{opacity:.5}
 .spa-aipic img{width:100%;height:100%;object-fit:cover;display:block}
 @media(max-width:600px){.spa-aigrid{grid-template-columns:repeat(2,1fr)}}
+
+/* notes: chips, position, history, focus */
+.spn-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:-6px}
+.spn-chip{background:#1c1a17;border:1px solid #2c2823;border-radius:999px;color:#e8e4dc;padding:3px 10px;font-size:12px;cursor:pointer}.spn-chip:hover{border-color:var(--acc)}
+.spn-pos>span,.spn-hist>span{display:block;font-size:13px;color:#a09890;margin-bottom:4px}
+.spn-pos a,.spn-hist a{color:#a09890;font-size:12px;margin-left:6px}
+#spn-map{height:170px;border-radius:8px;margin-bottom:4px}#spn-map[hidden],#spn-hist[hidden]{display:none}
+.spn-pos small{color:#8a8279;font-size:12px}
+.spn-ver{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #26221e;font-size:12px}
+.spn-ver small{display:block;color:#8a8279}.spn-ver button{background:#1c1a17;border:1px solid #2c2823;color:#e8e4dc;border-radius:6px;padding:3px 8px;cursor:pointer}
+.spn.focus{--det:0px}.spn.focus .spn-side,.spn.focus .spn-tags,.spn.focus .spn-info{display:none}

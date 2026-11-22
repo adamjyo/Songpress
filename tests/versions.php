@@ -57,6 +57,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, session_date TEXT, session_time TEXT, title TEXT, song_id INT DEFAULT 0, location TEXT, notes TEXT, lyrics TEXT, audio_url TEXT, owner_user_id INT DEFAULT 0, source_key TEXT DEFAULT \'\', created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_people (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, name TEXT, person_key TEXT, user_id INT DEFAULT 0, ipi TEXT DEFAULT \'\', share TEXT DEFAULT \'\')' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, author TEXT, user_id INT DEFAULT 0, kind TEXT DEFAULT \'text\', body TEXT, audio_url TEXT, source_key TEXT DEFAULT \'\', created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_note_versions (id INTEGER PRIMARY KEY AUTOINCREMENT, entry_id INT, title TEXT DEFAULT \'\', notes TEXT, user_id INT DEFAULT 0, saved_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT DEFAULT 0, area TEXT, action TEXT, subject TEXT DEFAULT \'\', detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
@@ -708,6 +709,21 @@ check( 'AI reply: https url and base64 kept, junk dropped', $pi, array( 'https:/
 check( 'AI reply: garbage gives nothing', Songpress_Art::parse_images( 'nope' ), array() );
 $xb = Songpress_Art::xai_bodies( 'a cat', 4 );
 check( 'AI request tries two models, four pictures', array( count( $xb ), $xb[0]['n'], $xb[1]['model'] ), array( 2, 4, 'grok-imagine-image' ) );
+
+list( $nv, $nerr ) = Songpress_Journal::persist( array( 'title' => 'Versioned', 'notes' => 'first draft', 'log_date' => '2026-01-01', 'lat' => '36.1627', 'lng' => '-86.7816' ) );
+$nrow = $wpdb->get_row( 'SELECT * FROM ' . Songpress_Install::table( 'journal' ) . ' WHERE id = ' . (int) $nv );
+check( 'note keeps a position', array( Songpress_Journal::shape( $nrow )['lat'], Songpress_Journal::shape( $nrow )['lng'] ), array( '36.1627', '-86.7816' ) );
+Songpress_Journal::persist( array( 'entry_id' => $nv, 'title' => 'Versioned', 'notes' => 'second draft', 'lat' => '999', 'lng' => '5' ) );
+$vs = Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'];
+check( 'first edit keeps the old text', array( count( $vs ), $vs[0]['notes'] ), array( 1, 'first draft' ) );
+check( 'a bad position is cleared', Songpress_Journal::shape( $wpdb->get_row( 'SELECT * FROM ' . Songpress_Install::table( 'journal' ) . ' WHERE id = ' . (int) $nv ) )['lat'], '' );
+Songpress_Journal::persist( array( 'entry_id' => $nv, 'title' => 'Versioned', 'notes' => 'third draft' ) );
+check( 'a quick second edit does not add another copy', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 1 );
+$wpdb->query( 'UPDATE ' . Songpress_Install::table( 'note_versions' ) . " SET saved_at = '2025-12-31 00:00:00'" );
+Songpress_Journal::persist( array( 'entry_id' => $nv, 'title' => 'Versioned', 'notes' => 'fourth draft' ) );
+check( 'after the gap another copy is kept', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 2 );
+Songpress_Journal::ajax_op( array( 'op' => 'delete', 'entry_id' => $nv ) );
+check( 'deleting a note deletes its versions', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 0 );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
