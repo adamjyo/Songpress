@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.56.0 =
+* Phones: the works list is a stack of cards. Each card has the cover art on the right, and on the left the work number, then the release title (the work title if there is none), then the artist, with the style at the far right of the artist line.
+
 = 0.55.0 =
 * The work view has the title, the artist and the audio player on the left and the cover art in the top right corner. Under it comes the best chart the work has: ChordPro, then chords and lyrics, then lyrics (the other levels stay one tap away). Credits move below the chart.
 

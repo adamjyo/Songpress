@@ -254,6 +254,11 @@ class Songpress_Frontend {
 				$faces     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 75, 'person' ) . '</span>';
 			}
 			$band = '' !== trim( (string) $s->artist ) ? '<span class="songpress-icon songpress-bandicon" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 75, 'band' ) . '</span>' : '';
+			if ( ! $desktop ) { // phones: a card with the cover art on the right; number, release title and artist on the left, style at the far right
+				$rel   = '' !== trim( (string) $s->release_title ) ? $s->release_title : $s->title;
+				$out  .= '<li class="songpress-card"><a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title">' . esc_html( $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->style ) ? '<span class="songpress-cardstyle">' . esc_html( $s->style ) . '</span>' : '' ) . '</span></span></a>' . $art . '</li>';
+				continue;
+			}
 			$out .= '<li class="songpress-row">' . $art . '<a class="songpress-rowlink" href="' . $link . '">'
 				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
 				. '<span class="songpress-title">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</span>'
