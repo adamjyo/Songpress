@@ -50,6 +50,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -77,6 +78,7 @@ require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
 require __DIR__ . '/../includes/class-journal.php';
+require __DIR__ . '/../includes/class-art.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -298,6 +300,14 @@ $mp->exec( 'CREATE TABLE work_log (id INT, log_date TEXT, notes TEXT, kind TEXT,
 $mp->exec( "INSERT INTO work_log VALUES (1,'2026-10-26','worked on archives','day','',0,0,''),(2,'2007-08-04','verse','note','0001 Harbor Lights',1,0,'Church'),(3,'bad','x','day','',0,0,'')" );
 $mp->exec( 'CREATE TABLE song_ratings (id INT, song_id INT, voter TEXT, stars INT, created_at TEXT)' );
 $mp->exec( "INSERT INTO song_ratings VALUES (1,11,'a',5,'2026-09-01T23:25:46+00:00'),(2,11,'b',4,''),(3,99,'a',5,''),(4,11,'c',9,'')" );
+$mp->exec( 'CREATE TABLE art_projects (id INT, name TEXT, layers_json TEXT, preview TEXT, updated_at TEXT, serial TEXT)' );
+$mp->exec( "INSERT INTO art_projects VALUES (5,'0001 Harbor Lights art','" . str_replace( "'", "''", json_encode( array(
+	array( 'type' => 'canvas', 'name' => 'Canvas', 'x' => 0, 'y' => 0, 'w' => 100, 'h' => 100, 'meta' => array( 'color' => '#123456' ) ),
+	array( 'type' => 'image', 'name' => 'Pic', 'src' => 'https://site.test/uploads/p.png', 'x' => 1.5, 'y' => 2, 'w' => 50, 'h' => 40, 'crop' => array( 'x' => 0, 'y' => 0, 'w' => 1, 'h' => 1 ), 'visible' => 1, 'opacity' => 0.5, 'meta' => array() ),
+	array( 'type' => 'text', 'name' => 'Text', 'x' => 5, 'y' => 70, 'w' => 40, 'h' => 8, 'meta' => array( 'text' => 'HELLO', 'font' => 'Impact', 'size' => 14, 'color' => '#ff0000', 'bold' => true, 'align' => 'left', 'rotate' => 5 ) ),
+	array( 'type' => 'paint', 'name' => 'Unknown kind' ),
+	array( 'type' => 'text', 'x' => 9999, 'meta' => array( 'color' => 'javascript:evil', 'size' => 99999 ) ),
+) ) ) . "','https://site.test/uploads/prev.jpg','2026-11-18 23:28:39','0001'),(6,'No serial',"."'[]'".",'','2026-11-01 10:00:00','')" );
 unset( $mp );
 $r = Songpress_Money::import_sqlite( $mf );
 check( 'money import earnings lines', $r['earnings'], 3 );
@@ -337,6 +347,16 @@ check( 'journal search', array( $js['total'], count( $js['rows'] ) ), array( 1, 
 check( 'pinned entries come first', Songpress_Journal::search( '', 'live', 1 )['rows'][0]->title, '0001 Harbor Lights' );
 check( 'top rated average', array( round( (float) Songpress_Journal::top_rated( 3 )[0]->avg_stars, 1 ), (int) Songpress_Journal::top_rated( 3 )[0]->votes ), array( 4.5, 2 ) );
 check( 'serial parsed from a journal title', array( Songpress_Journal::serial_in( '#0258-01 The Lord' ), Songpress_Journal::serial_in( 'hello' ) ), array( '0258-01', '' ) );
+check( 'art projects imported', $r['art'], 2 );
+$ap = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_art WHERE source_key = 'old:5'" );
+$al = json_decode( $ap->layers, true );
+check( 'art project linked to its song by serial', (int) $ap->song_id, $v0 );
+check( 'art keeps layers, drops unknown kinds', array_map( function ( $l ) { return $l['type']; }, $al ), array( 'canvas', 'image', 'text', 'text' ) );
+check( 'art canvas colour read from old meta', $al[0]['color'], '#123456' );
+check( 'art text settings read from old meta', array( $al[2]['text'], $al[2]['font'], $al[2]['size'], $al[2]['color'], $al[2]['bold'], $al[2]['align'], $al[2]['rotate'] ), array( 'HELLO', 'Impact', 14, '#ff0000', 1, 'left', 5 ) );
+check( 'art layer values are clamped and colours checked', array( $al[3]['x'], $al[3]['size'], $al[3]['color'] ), array( 500, 400, '#ffffff' ) );
+check( 'art preview link kept', $ap->preview_url, 'https://site.test/uploads/prev.jpg' );
+check( 'art second import adds nothing', $r2['art'], 0 );
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 

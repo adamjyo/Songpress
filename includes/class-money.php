@@ -119,7 +119,7 @@ class Songpress_Money {
 	 */
 	public static function import_sqlite( $path ) {
 		global $wpdb;
-		$out = array( 'earnings' => 0, 'person' => 0, 'payments' => 0, 'streams' => 0, 'stats' => 0, 'journal' => 0, 'ratings' => 0, 'error' => '' );
+		$out = array( 'earnings' => 0, 'person' => 0, 'payments' => 0, 'streams' => 0, 'stats' => 0, 'journal' => 0, 'ratings' => 0, 'art' => 0, 'error' => '' );
 		try {
 			$pdo = new PDO( 'sqlite:' . $path, null, null, array( PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ) );
 		} catch ( Exception $e ) {
@@ -252,6 +252,7 @@ class Songpress_Money {
 		$j = Songpress_Journal::import_pdo( $pdo );
 		$out['journal'] = $j['journal'];
 		$out['ratings'] = $j['ratings'];
+		$out['art']     = Songpress_Art::import_pdo( $pdo );
 		return $out;
 	}
 
@@ -465,7 +466,7 @@ class Songpress_Money {
 		if ( '' !== $r['error'] ) {
 			self::go( 'money', array( 'm_err' => $r['error'] ) );
 		}
-		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: statement lines, 2: people lines, 3: payouts, 4: stream days, 5: store lines, 6: journal entries, 7: ratings */ __( 'Loaded %1$d earnings lines, %2$d per-person lines, %3$d new payouts, %4$d days of streams, %5$d store lines, %6$d journal entries and %7$d ratings.', 'songpress' ), $r['earnings'], $r['person'], $r['payments'], $r['streams'], $r['stats'], $r['journal'], $r['ratings'] ) ) );
+		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: statement lines, 2: people lines, 3: payouts, 4: stream days, 5: store lines, 6: journal entries, 7: ratings, 8: art projects */ __( 'Loaded %1$d earnings lines, %2$d per-person lines, %3$d new payouts, %4$d days of streams, %5$d store lines, %6$d journal entries, %7$d ratings and %8$d art projects.', 'songpress' ), $r['earnings'], $r['person'], $r['payments'], $r['streams'], $r['stats'], $r['journal'], $r['ratings'], $r['art'] ) ) );
 	}
 
 
@@ -671,7 +672,7 @@ class Songpress_Money {
 		}
 
 		// import
-		$o .= '<h3>' . esc_html__( 'Load money from the old catalog file', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. The work journal and song ratings come across too (entries already here are kept). Statements, per-person earnings, streams and store figures are replaced by what the file holds. Payouts and expenses you entered here are kept. Songs must already be imported.', 'songpress' ) . '</p>';
+		$o .= '<h3>' . esc_html__( 'Load money from the old catalog file', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. The work journal, song ratings and art projects come across too (entries already here are kept). Statements, per-person earnings, streams and store figures are replaced by what the file holds. Payouts and expenses you entered here are kept. Songs must already be imported.', 'songpress' ) . '</p>';
 		$o .= str_replace( '<form ', '<form enctype="multipart/form-data" ', self::form_open( 'songpress_money_import', 'spm-imp' ) ) . '<input type="file" name="catalog" accept=".sqlite,.db,.sqlite3" required> <button class="spe-save" type="submit">' . esc_html__( 'Load money', 'songpress' ) . '</button></form></div>';
 		return $o;
 	}

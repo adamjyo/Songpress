@@ -266,3 +266,20 @@ CREATE TABLE {prefix}songpress_ratings (
   PRIMARY KEY  (id),
   UNIQUE KEY song_voter (song_id,voter)
 ) {charset};
+
+-- Art studio: layered cover-art projects. Layers are kept as one JSON list (images, text, shapes, a canvas colour).
+CREATE TABLE {prefix}songpress_art (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  name varchar(191) NOT NULL DEFAULT '',
+  layers longtext NULL,
+  preview_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  preview_url varchar(500) NOT NULL DEFAULT '',
+  source_key varchar(64) NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY source_key (source_key),
+  KEY song_id (song_id)
+) {charset};

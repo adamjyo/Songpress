@@ -79,6 +79,7 @@ class Songpress_Media {
 			'field' => $field,
 			'id'    => (int) $id,
 			'thumb' => 'art' === $field ? (string) wp_get_attachment_image_url( $id, 'thumbnail' ) : '',
+			'url'   => (string) wp_get_attachment_url( $id ),
 			'name'  => wp_basename( (string) wp_get_attachment_url( $id ) ),
 		) );
 	}

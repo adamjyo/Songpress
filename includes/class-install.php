@@ -105,7 +105,7 @@ class Songpress_Install {
 	}
 
 	public static function table_names() {
-		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history', 'artists', 'profiles', 'earnings', 'person_earnings', 'payments', 'streams', 'stats', 'expenses', 'journal', 'ratings' );
+		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history', 'artists', 'profiles', 'earnings', 'person_earnings', 'payments', 'streams', 'stats', 'expenses', 'journal', 'ratings', 'art' );
 	}
 
 	/** Where the schema lives. Edit SongPress.SQL, not this file, to change the database. */
