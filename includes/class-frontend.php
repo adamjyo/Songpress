@@ -97,6 +97,7 @@ class Songpress_Frontend {
 		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $here ) ) . '">';
 		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
 		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to set a new one.', 'songpress' ) . '</p></section>';
+		$o .= '<p class="sp-forgot">' . sprintf( /* translators: %s: link to the ChordPro tool */ esc_html__( 'Looking for a chord-sheet program like Songpress (Skeed / Lallulli)? Use the %s, free, no login.', 'songpress' ), '<a href="' . esc_url( Songpress_ChordTool::url() ) . '">' . esc_html__( 'web ChordPro tool', 'songpress' ) . '</a>' ) . '</p>';
 		$o .= wp_kses_post( songpress_public_donate_link() ) . '</main></div>';
 		return $o;
 	}
@@ -119,6 +120,9 @@ class Songpress_Frontend {
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
 		$in_app  = '' === $page;
 		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && $in_app ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
+		if ( ! wp_is_mobile() ) {
+			$nav .= '<a href="' . esc_url( Songpress_ChordTool::url() ) . '" target="_blank" rel="noopener">' . $svg( '<path d="M9 18V5l12-2v13"/><path d="M3 21h18"/>' ) . esc_html__( 'ChordPro tool', 'songpress' ) . '</a>';
+		}
 		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $page === $slug ) : '';
 		};

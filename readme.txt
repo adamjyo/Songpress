@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.11.0 =
+* New ChordPro tool, a standalone page that anyone can open without logging in (yoursite/?sp_chordpro=1), linked from the rail and from the login screen. Write or paste ChordPro and see the chart with chords above the words. Transpose up or down (sharps or flats), turn chords-over-words text into ChordPro or back, insert verse/chorus/bridge sections, see guitar chord diagrams, set size and columns, open and save .pro, .txt and .html files, and print. It works in the browser only and never touches the catalog database. It also stands in for the desktop Songpress chord-sheet program as a web page, and the login screen points people looking for that program to it.
+
 = 0.10.0 =
 * Notes keeps the old notes app's other views: Days (what you wrote, worked on and released each day, with links to the songs, from the old catalog's activity history) and Map (notes that have a position, on an OpenStreetMap map).
 
