@@ -17,9 +17,21 @@ class Songpress_Songs {
 	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date' );
 	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid' );
 
+	/** The statuses in use: the Manager's own list (Lists screen) or the built-in six. key => label. */
+	public static function statuses() {
+		$o = get_option( 'songpress_statuses', array() );
+		return ( is_array( $o ) && $o ) ? $o : self::STATUSES;
+	}
+
+	/** The genres the Manager listed, offered as suggestions. A song's genre can still be anything. */
+	public static function genres() {
+		$o = get_option( 'songpress_genres', array() );
+		return is_array( $o ) ? array_values( $o ) : array();
+	}
+
 	/** The statuses a song may have. The original work can never be released. */
 	public static function statuses_for( $version_no ) {
-		$s = self::STATUSES;
+		$s = self::statuses();
 		if ( 0 === (int) $version_no ) {
 			unset( $s['released'] );
 		}
@@ -181,7 +193,7 @@ class Songpress_Songs {
 			} elseif ( in_array( $f, array( 'art_id', 'audio_id' ), true ) ) {
 				$out[ $f ] = absint( $v ) ?: null;
 			} elseif ( 'status' === $f ) {
-				$out[ $f ] = isset( self::STATUSES[ $v ] ) ? $v : 'idea';
+				$out[ $f ] = isset( self::statuses()[ $v ] ) ? $v : 'idea';
 			} else {
 				$out[ $f ] = sanitize_text_field( $v );
 			}

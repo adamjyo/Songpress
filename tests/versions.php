@@ -80,6 +80,7 @@ require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-audit.php';
+require __DIR__ . '/../includes/class-lists.php';
 if ( ! defined( 'SONGPRESS_TESTING' ) ) { define( 'SONGPRESS_TESTING', 1 ); }
 require_once __DIR__ . '/../includes/class-import-analyzer.php';
 require __DIR__ . '/../includes/class-artists.php';
@@ -610,6 +611,31 @@ $ov = Songpress_Songs::create_version( $of, 1 );
 check( 'new version keeps style and copyright but not the production date', array( Songpress_Songs::get( $ov )->style, Songpress_Songs::get( $ov )->copyright_date, Songpress_Songs::get( $ov )->production_date ), array( 'Typed style', '2019-05-05', '' ) );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
+
+// Editable statuses and genres
+check( 'statuses default to the built-in six', array_keys( Songpress_Songs::statuses() ), array( 'idea', 'writing', 'finished', 'recorded', 'released', 'retired' ) );
+check( 'parse statuses: key | label, bare line, repeat dropped', Songpress_Lists::parse_statuses( "idea | Spark\nmastered\nMixing Down | Mixing\nidea | Again\n\n |  " ), array( 'idea' => 'Spark', 'mastered' => 'mastered', 'mixing_down' => 'Mixing' ) );
+check( 'parse genres: no blanks or repeats', Songpress_Lists::parse_genres( "Folk\n\nfolk\nCountry Rock\n" ), array( 'Folk', 'Country Rock' ) );
+update_option( 'songpress_statuses', array( 'idea' => 'Spark', 'writing' => 'Writing', 'released' => 'Out' ) );
+check( 'custom statuses are used', array( Songpress_Songs::statuses()['idea'], array_keys( Songpress_Songs::statuses_for( 0 ) ) ), array( 'Spark', array( 'idea', 'writing' ) ) );
+$cs = Songpress_Songs::sanitize( array( 'status' => 'writing' ) );
+$cs2 = Songpress_Songs::sanitize( array( 'status' => 'retired' ) );
+check( 'a removed status falls back to idea on save, a kept one stays', array( $cs['status'], $cs2['status'] ), array( 'writing', 'idea' ) );
+delete_option_test();
+function delete_option_test() { unset( $GLOBALS['opts']['songpress_statuses'] ); }
+check( 'statuses back to default when the list is cleared', count( Songpress_Songs::statuses() ), 6 );
+update_option( 'songpress_genres', array( 'Folk', 'Gospel' ) );
+check( 'genres list', Songpress_Songs::genres(), array( 'Folk', 'Gospel' ) );
+
+// Registration start dates
+$rf = Songpress_Songs::get( $of )->family_id;
+$u0 = Songpress_Registrations::undated_count();
+Songpress_Registrations::mark( $rf, 'mlc', true, '2026-01-05', '', '' );
+$wpdb->insert( 'wp_songpress_registrations', array( 'family_id' => $rf, 'society' => 'ascap', 'in_progress' => 1, 'started_on' => null, 'reference' => '', 'note' => '', 'updated_at' => '2026-01-01 00:00:00', 'updated_by' => 0 ) );
+check( 'one more undated in-progress registration counted', Songpress_Registrations::undated_count(), $u0 + 1 );
+check( 'bad date changes nothing', array( Songpress_Registrations::date_undated( 'soon' ), Songpress_Registrations::undated_count() ), array( 0, $u0 + 1 ) );
+check( 'dating undated fills it', array( Songpress_Registrations::date_undated( '2026-02-02' ), Songpress_Registrations::undated_count() ), array( $u0 + 1, 0 ) );
+check( 'a date you entered is kept', $wpdb->get_var( "SELECT started_on FROM wp_songpress_registrations WHERE family_id = $rf AND society = 'mlc'" ), '2026-01-05' );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

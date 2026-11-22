@@ -18,6 +18,7 @@ class Songpress_Registrations {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_registration_save', array( __CLASS__, 'handle_save' ) );
+		add_action( 'admin_post_songpress_registration_undated', array( __CLASS__, 'handle_undated' ) );
 	}
 
 	private static function t() {
@@ -161,6 +162,35 @@ class Songpress_Registrations {
 		return $n;
 	}
 
+	/** How many in-progress registrations have no start date (the old catalog did not keep them). */
+	public static function undated_count() {
+		global $wpdb;
+		return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::t() . ' WHERE in_progress = 1 AND started_on IS NULL' ); // phpcs:ignore WordPress.DB
+	}
+
+	/** Give every undated in-progress registration one start date. Dated ones are never touched. Returns how many. */
+	public static function date_undated( $date ) {
+		global $wpdb;
+		if ( ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $date ) ) {
+			return 0;
+		}
+		$n = self::undated_count();
+		if ( $n ) {
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::t() . ' SET started_on = %s WHERE in_progress = 1 AND started_on IS NULL', $date ) ); // phpcs:ignore WordPress.DB
+		}
+		return $n;
+	}
+
+	public static function handle_undated() {
+		check_admin_referer( 'songpress_registration_undated' );
+		if ( ! Songpress_Caps::can( 'registrations' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$n = self::date_undated( sanitize_text_field( wp_unslash( $_POST['started_on'] ?? '' ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		wp_safe_redirect( add_query_arg( array( 'sp_page' => 'registrations', 'rf' => 'progress', 'r_ok' => rawurlencode( sprintf( /* translators: %d: number of registrations */ _n( 'Set the start date on %d registration.', 'Set the start date on %d registrations.', $n, 'songpress' ), $n ) ) ), Songpress_Editor::list_url() ) );
+		exit;
+	}
+
 	/* ---------- handler ---------- */
 
 	public static function handle_save() {
@@ -221,6 +251,10 @@ class Songpress_Registrations {
 		$o = '<div class="songpress sp-app sp-editor sp-reg"><div class="spe-top"><h2>' . esc_html__( 'Registrations', 'songpress' ) . '</h2></div>';
 		if ( ! empty( $_GET['r_ok'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['r_ok'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		$undated = self::undated_count();
+		if ( $undated ) {
+			$o .= '<form method="post" class="spr-undated" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_registration_undated', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_registration_undated"><p class="spe-help">' . esc_html( sprintf( /* translators: %d: number of registrations */ _n( '%d in-progress registration has no start date, so it never shows as waiting.', '%d in-progress registrations have no start date, so they never show as waiting.', $undated, 'songpress' ), $undated ) ) . '</p><label>' . esc_html__( 'Started on', 'songpress' ) . ' <input type="date" name="started_on" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '"></label> <button class="spe-btn" type="submit">' . esc_html__( 'Set for all undated', 'songpress' ) . '</button> <small class="spe-help">' . esc_html__( 'Dates you already entered are not changed. You can still set each one by hand below.', 'songpress' ) . '</small></form>';
 		}
 		$o .= '<ul class="songpress-stats spr-tot">';
 		foreach ( self::SOCIETIES as $k => $d ) {

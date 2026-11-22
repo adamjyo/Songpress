@@ -98,7 +98,7 @@ class Songpress_Admin {
 		$all    = Songpress_Caps::can( 'view_all' );
 		$q      = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 		$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
-		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
+		$status = isset( Songpress_Songs::statuses()[ $status ] ) ? $status : '';
 		$paged  = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
 		$artist = isset( $_GET['artist'] ) ? absint( $_GET['artist'] ) : 0;
 		$arch   = Songpress_Caps::can( 'archive' ) && ! empty( $_GET['archived'] ) ? 1 : 0;
@@ -154,7 +154,7 @@ class Songpress_Admin {
 			echo '</select> ';
 		}
 		echo '<select name="status"><option value="">' . esc_html__( 'All statuses', 'songpress' ) . '</option>';
-		foreach ( Songpress_Songs::STATUSES as $k => $label ) {
+		foreach ( Songpress_Songs::statuses() as $k => $label ) {
 			echo '<option value="' . esc_attr( $k ) . '"' . selected( $status, $k, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select> <button class="button">' . esc_html__( 'Search', 'songpress' ) . '</button></p></form>';
@@ -174,7 +174,7 @@ class Songpress_Admin {
 				$ao = Songpress_Artists::get( (int) $s->artist_id );
 				echo $ao ? '<br><span class="sp-help">' . esc_html( $ao->name ) . '</span>' : '';
 			}
-			echo '</td><td>' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</td></tr>';
+			echo '</td><td>' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</td></tr>';
 		}
 		echo '</tbody></table>';
 		echo '<div class="tablenav"><div class="tablenav-pages">' . wp_kses_post( paginate_links( array(
@@ -248,8 +248,8 @@ class Songpress_Admin {
 		$opts     = '';
 		$version  = $song ? (int) $song->version_no : 0;
 		$statuses = Songpress_Songs::statuses_for( $version );
-		if ( $song && isset( Songpress_Songs::STATUSES[ $song->status ] ) ) {
-			$statuses[ $song->status ] = Songpress_Songs::STATUSES[ $song->status ]; // keep an imported value instead of silently changing it
+		if ( $song && isset( Songpress_Songs::statuses()[ $song->status ] ) ) {
+			$statuses[ $song->status ] = Songpress_Songs::statuses()[ $song->status ]; // keep an imported value instead of silently changing it
 		}
 		foreach ( $statuses as $k => $label ) {
 			$opts .= '<option value="' . esc_attr( $k ) . '"' . selected( $g( 'status' ) ?: 'idea', $k, false ) . '>' . esc_html( $label ) . '</option>';

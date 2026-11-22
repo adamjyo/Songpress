@@ -69,8 +69,8 @@ class Songpress_Editor {
 
 		/* Basics */
 		$statuses = Songpress_Songs::statuses_for( $version );
-		if ( $song && isset( Songpress_Songs::STATUSES[ $song->status ] ) ) {
-			$statuses[ $song->status ] = Songpress_Songs::STATUSES[ $song->status ];
+		if ( $song && isset( Songpress_Songs::statuses()[ $song->status ] ) ) {
+			$statuses[ $song->status ] = Songpress_Songs::statuses()[ $song->status ];
 		}
 		$opts = '';
 		foreach ( $statuses as $k => $label ) {
@@ -89,7 +89,12 @@ class Songpress_Editor {
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3><div class="spe-grid">';
 		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required></label>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . $artist_html;
-		$o .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, '', 'adv' );
+		$o .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"', 'adv' );
+		$o .= '<datalist id="spe-genres">';
+		foreach ( Songpress_Songs::genres() as $gn ) {
+			$o .= '<option value="' . esc_attr( $gn ) . '">';
+		}
+		$o .= '</datalist>';
 		$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv' );
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song, '', 'adv' );

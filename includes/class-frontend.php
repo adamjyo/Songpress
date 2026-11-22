@@ -152,6 +152,7 @@ class Songpress_Frontend {
 			};
 			$nav .= $kn( 'band', __( 'Bands', 'songpress' ) ) . $kn( 'label', __( 'Labels', 'songpress' ) ) . $kn( 'publisher', __( 'Publishers', 'songpress' ) );
 			$nav .= $mk( 'artists', __( 'Artists', 'songpress' ), $svg( '<path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.5 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/>' ), 'artists' );
+			$nav .= $mk( 'lists', __( 'Lists', 'songpress' ), $svg( '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>' ), 'settings' );
 			$nav .= $mk( 'activity', __( 'Activity log', 'songpress' ), $svg( '<path d="M3 12h4l3-8 4 16 3-8h4"/>' ), 'activity' );
 			$nav .= $mk( 'uploads', __( 'Upload / Download', 'songpress' ), $svg( '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>' ), 'import' );
 			$nav .= $mk( 'link', __( 'Link writers', 'songpress' ), $svg( '<path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1-1"/>' ), 'link' );
@@ -211,7 +212,7 @@ class Songpress_Frontend {
 		}
 		$q      = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : '';
 		$status = isset( $_GET['sp_status'] ) ? sanitize_key( wp_unslash( $_GET['sp_status'] ) ) : '';
-		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
+		$status = isset( Songpress_Songs::statuses()[ $status ] ) ? $status : '';
 		$order  = isset( $_GET['sp_sort'] ) ? sanitize_key( wp_unslash( $_GET['sp_sort'] ) ) : '';
 		$order  = in_array( $order, array( 'serial', 'title', 'genre', 'writer', 'artist', 'label', 'status' ), true ) ? $order : '';
 		$dir    = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc';
@@ -261,7 +262,7 @@ class Songpress_Frontend {
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'
 				. '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>'
-				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</span>'
+				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</span>'
 				. '</a></li>';
 		}
 		if ( ! $res['rows'] ) {
@@ -308,7 +309,7 @@ class Songpress_Frontend {
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
 		}
-		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</p>';
+		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</p>';
 		$out .= '<h2>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
 		if ( '' !== trim( (string) $s->artist ) ) {
 			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
