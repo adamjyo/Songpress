@@ -374,3 +374,13 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spag-st{float:right;color:var(--sp-mute);font-size:13px}.spag-st.done{color:#7ee2a0}
 .spag-link{width:min(100%,420px);font-size:13px}
 .spag-body{white-space:pre-wrap;background:#16181c;border:1px solid var(--sp-line);border-radius:12px;padding:14px;color:var(--sp-soft);font:13px/1.55 ui-monospace,monospace}
+
+/* Registrations */
+.spr-tot strong{font-size:16px}.spr-g{color:#7ee2a0}.spr-y{color:#f5c460}.spr-r{color:#ff8a8f}
+.spr-tabs{display:flex;gap:6px;flex-wrap:wrap}.spr-tabs .on{border-color:var(--sp-accent);color:var(--sp-accent)}
+.spr-row{border-bottom:1px solid var(--sp-line);padding:8px 0}.spr-row summary{display:flex;gap:10px;justify-content:space-between;align-items:center;cursor:pointer;flex-wrap:wrap}
+.spr-name{min-width:0;overflow:hidden;text-overflow:ellipsis}.spr-chips{display:flex;gap:4px;flex-wrap:wrap}
+.spr-chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;border:1px solid transparent}
+.spr-chip.green{background:#12301c;color:#7ee2a0}.spr-chip.gold{background:#35290c;color:#f5c460}.spr-chip.red{background:#3d1517;color:#ff8a8f}
+.spr-edit{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.spr-edit b{width:56px}
+.spr-edit input[name^=ref_],.spr-edit input[name^=note_]{width:170px}

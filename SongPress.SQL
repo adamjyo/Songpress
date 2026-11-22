@@ -317,3 +317,19 @@ CREATE TABLE {prefix}songpress_signers (
   UNIQUE KEY token (token),
   KEY agreement_id (agreement_id)
 ) {charset};
+
+-- Registrations: where each work stands at each registry (MLC, ASCAP, BMI, CCLI, ISWC). A registry is "registered" when the song
+-- has its code; otherwise it is "in progress" when marked here (with the date it was started), or "not filed". One row per work family.
+CREATE TABLE {prefix}songpress_registrations (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  family_id bigint(20) unsigned NOT NULL,
+  society varchar(12) NOT NULL,
+  in_progress tinyint(1) NOT NULL DEFAULT 0,
+  started_on date NULL,
+  reference varchar(191) NOT NULL DEFAULT '',
+  note text NULL,
+  updated_at datetime NOT NULL,
+  updated_by bigint(20) unsigned NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY family_society (family_id,society)
+) {charset};

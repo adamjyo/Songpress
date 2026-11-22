@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.5.0 =
+* New Registrations in the rail (Managers, desktop): for every work, where it stands at MLC, ASCAP, BMI, CCLI and for its ISWC. Green when the work has the code, gold when you mark it in progress (with the day it started, a reference number and a note), red when not filed.
+* Filters: In progress, Waiting 30+ days, Released but not filed, All works. Marking never changes the song.
+* "Load money" also brings across the old catalog's in-progress chips (about 380 on your file). The old catalog did not keep the dates they started, so those show no day count until you add one.
 
 = 0.4.0 =
 * New Agreements in the rail (Managers, desktop): cowriter split confirmations and publishing agreements, written from the song's writers, IPIs, splits, publisher, ISWC and copyright number.

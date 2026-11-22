@@ -125,6 +125,9 @@ class Songpress_Frontend {
 		if ( Songpress_Caps::can( 'money' ) && ! wp_is_mobile() ) {
 			$nav .= '<span class="sp-navgap"></span>' . $mk( 'money', __( 'Money', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
 		}
+		if ( Songpress_Caps::can( 'registrations' ) && ! wp_is_mobile() ) {
+			$nav .= $mk( 'registrations', __( 'Registrations', 'songpress' ), $svg( '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7zM9 12l2 2 4-4"/>' ), 'registrations' );
+		}
 		if ( Songpress_Caps::can( 'agreements' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'agreements', __( 'Agreements', 'songpress' ), $svg( '<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5"/>' ), 'agreements' );
 		}

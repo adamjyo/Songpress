@@ -53,6 +53,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_signers (id INTEGER PRIMARY KEY AUTOINCREMENT, agreement_id INT, name TEXT, role TEXT, share TEXT, token TEXT UNIQUE, signed_as TEXT, signed_at TEXT, ip TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -82,6 +83,7 @@ require __DIR__ . '/../includes/class-money.php';
 require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
 require __DIR__ . '/../includes/class-agreements.php';
+require __DIR__ . '/../includes/class-registrations.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -311,6 +313,8 @@ $mp->exec( "INSERT INTO art_projects VALUES (5,'0001 Harbor Lights art','" . str
 	array( 'type' => 'paint', 'name' => 'Unknown kind' ),
 	array( 'type' => 'text', 'x' => 9999, 'meta' => array( 'color' => 'javascript:evil', 'size' => 99999 ) ),
 ) ) ) . "','https://site.test/uploads/prev.jpg','2026-11-18 23:28:39','0001'),(6,'No serial',"."'[]'".",'','2026-11-01 10:00:00','')" );
+$mp->exec( 'CREATE TABLE song_catalog (id INT, progress TEXT)' );
+$mp->exec( "INSERT INTO song_catalog VALUES (11,'{\"mlc\":1,\"ascap\":1,\"iswc\":1,\"bogus\":1}'),(12,''),(99,'{\"mlc\":1}')" );
 $mp->exec( 'CREATE TABLE publishing_agreements (id INT, song_id INT, serial TEXT, title TEXT, body TEXT, status TEXT, kind TEXT, created_at TEXT, print_token TEXT, catalog_stem TEXT)' );
 $mp->exec( "INSERT INTO publishing_agreements VALUES (1,11,'0001','Harbor Lights','COWRITER SPLIT CONFIRMATION\n\nbody','sent','split','2026-09-20T04:27:59+00:00','OLDPRINT123','0001')" );
 $mp->exec( 'CREATE TABLE agreement_signers (id INT, agreement_id INT, writer_name TEXT, email TEXT, share TEXT, token TEXT, signed_at TEXT, signed_as TEXT, ip TEXT, status TEXT)' );
@@ -385,6 +389,26 @@ check( 'signing works', Songpress_Agreements::sign( $sg[0]->token, 'A Writer', t
 check( 'a signature is never changed', array( Songpress_Agreements::sign( $sg[0]->token, 'Someone Else', true, '2.2.2.2' ) !== '', Songpress_Agreements::signers( $ag )[0]->signed_as ), array( true, 'A Writer' ) );
 check( 'unknown token is refused', Songpress_Agreements::sign( 'nope', 'X', true, '' ) !== '', true );
 check( 'list counts signers', array_map( function ( $r ) { return $r->signed . '/' . $r->total; }, array_slice( Songpress_Agreements::all(), 0, 2 ) ), array( '0/' . count( Songpress_Agreements::signers( $agp ) ), '1/3' ) );
+check( 'registrations: old in-progress chips imported (unknown society and unknown song skipped)', $r['registrations'], 3 );
+check( 'registrations: second import adds nothing', $r2['registrations'], 0 );
+check( 'registration state rules', array( Songpress_Registrations::state( true, true ), Songpress_Registrations::state( false, true ), Songpress_Registrations::state( false, false ) ), array( 'green', 'gold', 'red' ) );
+check( 'days since', array( Songpress_Registrations::days_since( '2026-01-01', strtotime( '2026-01-31 12:00:00 UTC' ) ), Songpress_Registrations::days_since( '', 0 ) ), array( 30, null ) );
+$rw = null;
+foreach ( Songpress_Registrations::works() as $w ) { if ( $w->family_id === 1 ) { $rw = $w; } }
+check( 'work gathers codes from any version of its family', isset( $rw->codes['isrc'] ) || isset( $rw->codes['iswc'] ), true );
+$now = time();
+check( 'ISWC is green because the work has the code', Songpress_Registrations::status( $rw, 'iswc', $now )['state'], 'green' );
+check( 'MLC is gold from the old chip, undated', array( Songpress_Registrations::status( $rw, 'mlc', $now )['state'], Songpress_Registrations::status( $rw, 'mlc', $now )['days'] ), array( 'gold', null ) );
+check( 'BMI is red', Songpress_Registrations::status( $rw, 'bmi', $now )['state'], 'red' );
+Songpress_Registrations::mark( $rw->family_id, 'bmi', true, '2026-01-01', 'REF-9', 'sent form' );
+$rw2 = null;
+foreach ( Songpress_Registrations::works() as $w ) { if ( $w->family_id === 1 ) { $rw2 = $w; } }
+$b = Songpress_Registrations::status( $rw2, 'bmi', $now );
+check( 'marking in progress keeps date, reference and note', array( $b['state'], $b['started'], $b['ref'], $b['note'] ), array( 'gold', '2026-01-01', 'REF-9', 'sent form' ) );
+Songpress_Registrations::mark( $rw->family_id, 'bmi', false, '', 'REF-9', '' );
+$rw3 = null;
+foreach ( Songpress_Registrations::works() as $w ) { if ( $w->family_id === 1 ) { $rw3 = $w; } }
+check( 'clearing goes back to red, reference kept', array( Songpress_Registrations::status( $rw3, 'bmi', $now )['state'], Songpress_Registrations::status( $rw3, 'bmi', $now )['ref'] ), array( 'red', 'REF-9' ) );
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 
