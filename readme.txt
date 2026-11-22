@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.28
+Stable tag: 0.63.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.29 =
+* Notes import from a folder on the server: put the notes (or a zip) in the incoming folder shown on the Notes upload panel with FTP or the host's file manager, and press Import. No browser upload involved.
 
 = 0.63.28 =
 * Notes import: choose one zip of all the notes. A zip is one file for the browser, so there is no limit on how many files it can open at once, and the server reads it 150 notes at a time.

@@ -54,6 +54,7 @@ class Songpress_Uploads {
 		add_action( 'admin_post_songpress_notes_import', array( __CLASS__, 'handle_notes_import' ) );
 		add_action( 'wp_ajax_songpress_notes_chunk', array( __CLASS__, 'ajax_notes_chunk' ) );
 		add_action( 'wp_ajax_songpress_notes_text', array( __CLASS__, 'ajax_notes_text' ) );
+		add_action( 'admin_post_songpress_notes_folder', array( __CLASS__, 'handle_notes_folder' ) );
 		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
 		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
 		add_action( 'admin_post_songpress_statement', array( __CLASS__, 'handle_statement' ) );
@@ -442,6 +443,57 @@ class Songpress_Uploads {
 		if ( ! $files ) {
 			self::back( $args + array( 'm_err' => __( 'No files were received. If you chose many files, put them in one zip and choose that instead (servers usually accept only 20 files at a time).', 'songpress' ) ) );
 		}
+		self::stage_files( $files, $args );
+	}
+
+	/** Where a site owner can drop notes with FTP or the host's file manager and import them without the browser reading them. */
+	public static function incoming_dir() {
+		$dir = Songpress_Import::private_dir();
+		if ( '' === $dir ) {
+			return '';
+		}
+		$in = trailingslashit( $dir ) . 'incoming';
+		if ( ! is_dir( $in ) && ! wp_mkdir_p( $in ) ) {
+			return '';
+		}
+		return $in;
+	}
+
+	/** Note files waiting in the incoming folder. */
+	public static function incoming_files() {
+		$in  = self::incoming_dir();
+		$out = array();
+		if ( '' === $in ) {
+			return $out;
+		}
+		$it = new RecursiveIteratorIterator( new RecursiveDirectoryIterator( $in, FilesystemIterator::SKIP_DOTS ) );
+		foreach ( $it as $f ) {
+			if ( $f->isFile() && preg_match( '/\.(bear|md|txt|markdown|json|zip)$/i', $f->getFilename() ) && 0 !== strpos( $f->getFilename(), '.' ) && false === strpos( $f->getPathname(), '__MACOSX' ) ) {
+				$out[] = array( 'name' => sanitize_file_name( $f->getFilename() ), 'tmp' => $f->getPathname() );
+			}
+			if ( count( $out ) >= 20000 ) {
+				break;
+			}
+		}
+		return $out;
+	}
+
+	public static function handle_notes_folder() {
+		check_admin_referer( 'songpress_notes_folder' );
+		if ( ! Songpress_Caps::can( 'journal' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		self::watch( 'notes import (folder)' );
+		$files = self::incoming_files();
+		if ( ! $files ) {
+			self::back( array( 'type' => 'notes_files', 'm_err' => __( 'There are no note files in the incoming folder.', 'songpress' ) ) );
+		}
+		self::stage_files( $files, array( 'type' => 'notes_files' ) );
+	}
+
+	/** Write the notes of these files (paths on this server) into the staging file, then hand over to the step-by-step importer. */
+	private static function stage_files( array $files, array $args ) {
+		@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$dir = Songpress_Import::private_dir();
 		if ( '' === $dir ) {
 			self::back( $args + array( 'm_err' => __( 'The uploads folder cannot be written to.', 'songpress' ) ) );
@@ -735,6 +787,9 @@ class Songpress_Uploads {
 					$njhtml .= '<script>setTimeout(function(){location.href=' . wp_json_encode( $next ) . ';},300);</script>';
 				}
 			}
+			$inc    = self::incoming_files();
+			$incdir = self::incoming_dir();
+			$njhtml .= '<div class="notice notice-info"><p><strong>' . esc_html__( 'Import from a folder on the server', 'songpress' ) . '</strong> ' . esc_html__( 'If your browser cannot read the files, put them (or a zip of them) in this folder with your host\'s file manager or FTP, then press the button.', 'songpress' ) . '</p><p><code>' . esc_html( $incdir ? str_replace( ABSPATH, '', $incdir ) : '' ) . '</code></p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_folder', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_folder"><input type="hidden" name="sp_return" value="' . $ret . '"><button class="spe-save" type="submit"' . ( $inc ? '' : ' disabled' ) . '>' . esc_html( sprintf( /* translators: %d: files waiting */ _n( 'Import %d file waiting in the folder', 'Import %d files waiting in the folder', count( $inc ), 'songpress' ), count( $inc ) ) ) . '</button></form></div>';
 			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" data-cfg="' . esc_attr( wp_json_encode( array( 'nonce' => wp_create_nonce( 'songpress_notes_import' ), 'ajax' => admin_url( 'admin-ajax.php' ) ) ) ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button><div id="spu-nprog" hidden><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden;margin:10px 0 4px"><div id="spu-nbar" style="height:8px;width:0;background:#f5a524"></div></div><small id="spu-ntxt"></small></div></form><script src="' . esc_url( SONGPRESS_URL . 'assets/notes-import.js?ver=' . SONGPRESS_VERSION ) . '"></script>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
