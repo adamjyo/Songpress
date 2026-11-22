@@ -15,6 +15,9 @@ class Songpress_Songs {
 
 	/** Release information. Only versions have it. The original work (version 0) does not. */
 	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date' );
+	/** What every version shares. Edited on any of them, it is copied to all the others. */
+	const SHARED_FIELDS = array( 'title', 'alt_titles', 'writing_date', 'copyright_date', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'themes' );
+	const SHARED_ROLES  = array( 'writer', 'publisher', 'label' );
 	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid' );
 
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
@@ -414,6 +417,58 @@ class Songpress_Songs {
 			$changed += $set ? 1 : 0;
 		}
 		return $changed;
+	}
+
+	/**
+	 * Copy the shared fields, the shared people (writers, publishers, labels) and the work-level codes from one song to every
+	 * other song in its family. Per-version fields, performers, producers, links and ISRC/DistroKid codes are never touched.
+	 * Returns the number of songs updated.
+	 */
+	public static function sync_shared( $from_id ) {
+		global $wpdb;
+		$from = self::get( $from_id );
+		if ( ! $from ) {
+			return 0;
+		}
+		$t     = Songpress_Install::table( 'songs' );
+		$cr    = Songpress_Install::table( 'credits' );
+		$idt   = Songpress_Install::table( 'identifiers' );
+		$ids   = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$t} WHERE family_id = %d AND id <> %d", (int) $from->family_id, (int) $from->id ) );
+		$roles = "'" . implode( "','", self::SHARED_ROLES ) . "'";
+		$kinds = "'" . implode( "','", self::RELEASE_IDENTIFIERS ) . "'";
+		$shared = function ( $rows ) {
+			return array_filter( $rows, function ( $c ) {
+				return in_array( $c->role, self::SHARED_ROLES, true );
+			} );
+		};
+		$sig_a = self::credit_signature( $shared( self::credits( (int) $from->id ) ) );
+		$n     = 0;
+		foreach ( (array) $ids as $to ) {
+			$to  = (int) $to;
+			$set = array();
+			foreach ( self::SHARED_FIELDS as $f ) {
+				$set[ $f ] = $from->$f;
+			}
+			$old  = self::get( $to );
+			$same = $old;
+			foreach ( $set as $f => $v ) {
+				if ( $old && (string) $old->$f !== (string) $v ) {
+					$same = false;
+				}
+			}
+			if ( $same && $sig_a === self::credit_signature( $shared( self::credits( $to ) ) ) ) {
+				continue;
+			}
+			$wpdb->update( $t, $set, array( 'id' => $to ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$cr} WHERE song_id = %d AND role IN ({$roles})", $to ) );
+			$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d AND role IN ({$roles})", $to, (int) $from->id ) );
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$idt} WHERE song_id = %d AND kind NOT IN ({$kinds})", $to ) );
+			$wpdb->query( $wpdb->prepare( "INSERT INTO {$idt} (song_id, kind, value) SELECT %d, kind, value FROM {$idt} WHERE song_id = %d AND kind NOT IN ({$kinds})", $to, (int) $from->id ) );
+			$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET revision = revision + 1, updated_at = %s WHERE id = %d", current_time( 'mysql', true ), $to ) );
+			Songpress_History::log( $to, 'synced', array( 'from' => $from->serial ) );
+			++$n;
+		}
+		return $n;
 	}
 
 	private static function copy_children( $from, $to ) {

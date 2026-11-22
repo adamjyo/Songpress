@@ -57,6 +57,8 @@ class Songpress_History {
 				return __( 'Created', 'songpress' );
 			case 'version':
 				return __( 'Created as a version of an earlier song', 'songpress' );
+			case 'synced':
+				return sprintf( /* translators: %s: serial number */ __( 'Shared details updated from %s', 'songpress' ), (string) ( $d['from'] ?? '' ) );
 			case 'archived':
 				return __( 'Archived', 'songpress' );
 			case 'restored':

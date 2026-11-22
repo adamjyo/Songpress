@@ -73,7 +73,11 @@ class Songpress_Editor {
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3><div class="spe-grid">';
 		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . $artist_html;
-		$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv' );
+		// The original work holds only what every version shares. Everything else is entered on a version.
+		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
+		if ( ! $root ) {
+			$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv' );
+		}
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'Other titles', 'songpress' ) . '</span><textarea name="alt_titles" rows="2">' . esc_textarea( self::f( $song, 'alt_titles' ) ) . '</textarea></label>';
@@ -99,8 +103,12 @@ class Songpress_Editor {
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true, true );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, false );
 		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, false );
-		$o .= self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
-		$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false );
+		if ( ! $root ) {
+			$o .= self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
+			$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false );
+		} else {
+			$o .= '<p class="spe-help">' . esc_html__( 'Performers and producers are added on each version. Changes here to the title, lyrics, chords, story, writers, publishers and labels are copied to every version.', 'songpress' ) . '</p>';
+		}
 		$o .= '</section>';
 
 		/* Release: everything that belongs to one recording or release, so only versions have it. */
@@ -127,10 +135,12 @@ class Songpress_Editor {
 		$o .= $rel;
 
 		/* Art and audio */
+		if ( ! $root ) {
 		$o .= '<section class="spe-panel simple" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Drag an image or an audio file anywhere onto this page, or use the buttons. Files are saved to the WordPress Media Library.', 'songpress' ) . '</p><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
 		$o .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ) );
 		$o .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
 		$o .= '</div></section>';
+		}
 
 		/* Lyrics and chords */
 		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Each work has three levels: ChordPro, then chords and lyrics, then lyrics. A level you leave blank falls back to the highest level that is filled in, with the chords taken off. Phones show the highest level.', 'songpress' ) . '</p>';
@@ -152,16 +162,21 @@ class Songpress_Editor {
 		/* Codes and links */
 		$o .= '<section class="spe-panel adv" data-panel="codes"><h3>' . esc_html__( 'Codes and links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Add any codes this song has (ISWC, CCLI, MLC, ISRC and so on) and any links (streaming, store, video). There is no limit. ISRC and DistroKid codes belong on versions.', 'songpress' ) . '</p>';
 		$o .= self::pair_group( 'codes', __( 'Codes', 'songpress' ), __( 'Add a code', 'songpress' ), $song ? Songpress_Songs::identifiers( $id ) : array(), 'kind', 'value', Songpress_Songs::CODE_KINDS, __( 'code', 'songpress' ) );
+		if ( ! $root ) {
 		$o .= self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, 'https://' );
+		}
 		$o .= '</section>';
 
 		/* Story and notes */
 		$o .= '<section class="spe-panel adv" data-panel="story"><h3>' . esc_html__( 'Story and notes', 'songpress' ) . '</h3>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'The story behind the song', 'songpress' ) . '</span><textarea name="story" rows="8">' . esc_textarea( self::f( $song, 'story' ) ) . '</textarea></label>';
-		$o .= '<div class="spe-grid">' . self::input( 'style', __( 'Style', 'songpress' ), $song ) . self::input( 'themes', __( 'Themes', 'songpress' ), $song ) . '</div>';
+		$o .= '<div class="spe-grid">' . ( $root ? '' : self::input( 'style', __( 'Style', 'songpress' ), $song ) ) . self::input( 'themes', __( 'Themes', 'songpress' ), $song ) . '</div>';
+		if ( ! $root ) {
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'AI prompt (lyrics or music)', 'songpress' ) . '</span><textarea name="ai_prompt" rows="3">' . esc_textarea( self::f( $song, 'ai_prompt' ) ) . '</textarea></label>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Art prompt', 'songpress' ) . '</span><textarea name="art_prompt" rows="3">' . esc_textarea( self::f( $song, 'art_prompt' ) ) . '</textarea></label>';
-		$o .= '<label class="spe-field"><span>' . esc_html__( 'Private notes', 'songpress' ) . '</span><textarea name="notes" rows="6">' . esc_textarea( self::f( $song, 'notes' ) ) . '</textarea></label></section>';
+		$o .= '<label class="spe-field"><span>' . esc_html__( 'Private notes', 'songpress' ) . '</span><textarea name="notes" rows="6">' . esc_textarea( self::f( $song, 'notes' ) ) . '</textarea></label>';
+		}
+		$o .= '</section>';
 
 		$o .= '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</button><a href="' . esc_url( self::list_url() ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a><span class="sp-total" aria-live="polite"></span></div>';
 		$o .= '</form>';

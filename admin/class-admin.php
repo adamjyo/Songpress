@@ -613,6 +613,16 @@ class Songpress_Admin {
 				);
 			}
 		}
+		// The original work is not shown performers, producers or links, so keep any it already has.
+		$cur      = Songpress_Songs::get( $id );
+		$keep_own = $cur && 0 === (int) $cur->version_no && ! isset( $posted['performer'] ) && ! isset( $posted['producer'] );
+		if ( $keep_own ) {
+			foreach ( Songpress_Songs::credits( $id ) as $c ) {
+				if ( ! in_array( $c->role, Songpress_Songs::SHARED_ROLES, true ) ) {
+					$rows[] = array( 'role' => $c->role, 'name' => $c->name, 'ipi' => $c->ipi, 'share' => $c->share, 'user_id' => (int) $c->user_id );
+				}
+			}
+		}
 		Songpress_Songs::replace_credits( $id, $rows );
 		$ver     = (int) ( Songpress_Songs::get( $id )->version_no ?? 0 );
 		$codes   = isset( $_POST['codes'] ) && is_array( $_POST['codes'] ) ? array_values( array_filter( wp_unslash( $_POST['codes'] ), 'is_array' ) ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- sanitized in replace_identifiers().
@@ -622,7 +632,10 @@ class Songpress_Admin {
 			$l = array( 'kind' => $l['kind'] ?? '', 'url' => $l['value'] ?? '' );
 		}
 		unset( $l );
-		Songpress_Songs::replace_links( $id, $links );
+		if ( ! $keep_own || isset( $_POST['links'] ) ) {
+			Songpress_Songs::replace_links( $id, $links );
+		}
+		Songpress_Songs::sync_shared( $id );
 		$sum = 0.0;
 		$any = false;
 		foreach ( $rows as $r ) {

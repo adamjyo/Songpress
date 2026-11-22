@@ -638,6 +638,23 @@ $rn = Songpress_Songs::apply_version_rules();
 $rg = Songpress_Songs::get( $rv );
 check( 'catch-up clears untouched copies, keeps edits and shared fields', array( $rn >= 1, $rg->style, $rg->tempo, $rg->notes, $rg->lyrics, Songpress_Songs::get( $ro )->style ), array( true, '', '99', '', 'x', 'S' ) );
 check( 'catch-up twice changes nothing', Songpress_Songs::apply_version_rules(), 0 );
+$sa = Songpress_Songs::create( array( 'title' => 'Sync Song', 'status' => 'writing', 'lyrics' => 'one', 'themes' => 'a', 'tempo' => '100' ), 1 );
+Songpress_Songs::replace_credits( $sa, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 100 ), array( 'role' => 'performer', 'name' => 'Pat' ) ) );
+$sb = Songpress_Songs::create_version( $sa, 1 );
+Songpress_Songs::replace_credits( $sb, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 100 ), array( 'role' => 'performer', 'name' => 'Vee' ) ) );
+Songpress_Songs::update( $sb, array( 'tempo' => '77' ) );
+Songpress_Songs::update( $sa, array( 'title' => 'Sync Song II', 'lyrics' => 'two' ) );
+Songpress_Songs::replace_credits( $sa, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 60 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 40 ), array( 'role' => 'label', 'name' => 'Lab' ) ) );
+$sn = Songpress_Songs::sync_shared( $sa );
+$sg = Songpress_Songs::get( $sb );
+$sw = array(); $sp = array();
+foreach ( Songpress_Songs::credits( $sb ) as $c ) { if ( 'performer' === $c->role ) { $sp[] = $c->name; } else { $sw[] = $c->role . ':' . $c->name; } }
+sort( $sw );
+check( 'editing the original copies shared fields to versions, keeps their own', array( $sn, $sg->title, $sg->lyrics, $sg->tempo, $sw, $sp ), array( 1, 'Sync Song II', 'two', '77', array( 'label:Lab', 'writer:Ann', 'writer:Bo' ), array( 'Vee' ) ) );
+check( 'sync twice changes nothing', Songpress_Songs::sync_shared( $sa ), 0 );
+Songpress_Songs::update( $sb, array( 'story' => 'from version' ) );
+Songpress_Songs::sync_shared( $sb );
+check( 'editing a version also updates the original', Songpress_Songs::get( $sa )->story, 'from version' );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
