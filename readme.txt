@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.40.1
+Stable tag: 0.41.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.41.0 =
+* Work editor simplified to one scrolling page of cards, like the old catalog: Basics, People and splits, Art and audio and Lyrics and chords are open; Release, Codes and links, Story and notes and Versions and sharing fold away until you click them. The side tabs are gone and the tools (Registrations, Agreements, Pitch, Art studio, ChordPro) sit in one row under the title.
 
 = 0.40.1 =
 * "Songs" is now "Works" everywhere (list heading, tabs, back links, Activity). The Works list has All registrations and All agreements buttons.

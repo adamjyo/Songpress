@@ -39,30 +39,14 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'registrations' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'registrations', 'work' => $id ), self::list_url() ) ) . '">' . esc_html__( 'Registrations', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'agreements' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'agreements', 'song' => $id ), self::list_url() ) ) . '">' . esc_html__( 'Agreements', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'pitch' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'pitch', 'song' => $id, 'wizard' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'Pitch', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'art' ) ? '<a class="spe-btn spe-arttop" href="' . esc_url( self::art_url( $id ) ) . '">' . esc_html__( 'Art studio', 'songpress' ) . '</a>' : '' ) . ( wp_is_mobile() ? '' : '<button type="button" class="spe-btn spe-cptop" id="spe-cp-top">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' ) . '</div>';
+		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . '<div class="spe-tools">' . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'registrations' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'registrations', 'work' => $id ), self::list_url() ) ) . '">' . esc_html__( 'Registrations', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'agreements' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'agreements', 'song' => $id ), self::list_url() ) ) . '">' . esc_html__( 'Agreements', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'pitch' ) ? '<a class="spe-btn spe-toplink" href="' . esc_url( add_query_arg( array( 'sp_page' => 'pitch', 'song' => $id, 'wizard' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'Pitch', 'songpress' ) . '</a>' : '' ) . ( $song && ! wp_is_mobile() && Songpress_Caps::can( 'art' ) ? '<a class="spe-btn spe-arttop" href="' . esc_url( self::art_url( $id ) ) . '">' . esc_html__( 'Art studio', 'songpress' ) . '</a>' : '' ) . ( wp_is_mobile() ? '' : '<button type="button" class="spe-btn spe-cptop" id="spe-cp-top">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' ) . '</div>' . '</div>';
 		$o       .= self::notices();
 		if ( $song && $song->archived_at ) {
-			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing tab.', 'songpress' ) . '</p>';
+			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
 		}
 
-		$tabs = array(
-			'basics'  => __( 'Basics', 'songpress' ),
-			'people'  => __( 'People and splits', 'songpress' ),
-			'media'   => __( 'Art and audio', 'songpress' ),
-			'chart'   => __( 'Lyrics and chords', 'songpress' ),
-			'release' => __( 'Release', 'songpress' ),
-			'codes'   => __( 'Codes and links', 'songpress' ),
-			'story'   => __( 'Story and notes', 'songpress' ),
-		);
-		if ( $song ) {
-			$tabs['versions'] = __( 'Versions and sharing', 'songpress' );
-		}
-		$on = isset( $_GET['sp_tab'] ) && isset( $tabs[ sanitize_key( wp_unslash( $_GET['sp_tab'] ) ) ] ) ? sanitize_key( wp_unslash( $_GET['sp_tab'] ) ) : 'basics';
-		$o .= '<div class="spe-layout"><nav class="spe-tabs" aria-label="' . esc_attr__( 'Sections', 'songpress' ) . '">';
-		foreach ( $tabs as $k => $label ) {
-			$o .= '<button type="button" data-tab="' . esc_attr( $k ) . '"' . ( $k === $on ? ' class="on"' : '' ) . '>' . esc_html( $label ) . '</button>';
-		}
-		$o .= '</nav><div class="spe-panels" data-on="' . esc_attr( $on ) . '">';
+		$on = isset( $_GET['sp_tab'] ) ? sanitize_key( wp_unslash( $_GET['sp_tab'] ) ) : 'basics'; // phpcs:ignore WordPress.Security.NonceVerification
+		$o .= '<div class="spe-layout"><div class="spe-panels" data-on="' . esc_attr( $on ) . '">';
 
 		$o .= '<form method="post" class="spe-form" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_save', '_wpnonce', true, false );
 		$o .= '<input type="hidden" name="action" value="songpress_save"><input type="hidden" name="song_id" value="' . $id . '"><input type="hidden" name="revision" value="' . (int) ( $song->revision ?? 0 ) . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">';
@@ -380,10 +364,8 @@ class Songpress_Editor {
 		$js  = <<<'JS'
 (function(){
 var root=document.getElementById("spe");if(!root)return;
-var panels=root.querySelector(".spe-panels"),tabs=root.querySelectorAll(".spe-tabs button");
-function openTab(k){panels.setAttribute("data-on",k);tabs.forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===k);});}
-tabs.forEach(function(b){b.addEventListener("click",function(){openTab(b.getAttribute("data-tab"));});});
-openTab(panels.getAttribute("data-on")||"basics");
+var panels=root.querySelector(".spe-panels"),want=panels.getAttribute("data-on")||"";
+root.querySelectorAll(".spe-panel.adv").forEach(function(p){if(p.getAttribute("data-panel")!==want)p.classList.add("closed");var h=p.querySelector("h3");if(h)h.addEventListener("click",function(){p.classList.toggle("closed");});});
 function total(){var g=root.querySelector(".spe-group[data-role=writer]"),o=root.querySelector(".sp-total");if(!g||!o)return;var s=0,any=false;g.querySelectorAll("input[name$='[share]']").forEach(function(i){var v=parseFloat(i.value);if(!isNaN(v)){s+=v;any=true;}});o.textContent=any?"Writer shares: "+(Math.round(s*100)/100)+"%"+(Math.abs(s-100)>0.05?" (should be 100)":""):"";}
 root.addEventListener("input",function(e){if(e.target.name&&/\[share\]$/.test(e.target.name))total();});
 root.addEventListener("click",function(e){
