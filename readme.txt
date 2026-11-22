@@ -30,6 +30,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.59.0 =
+* Profile: a quarterly income chart under the Works and Released cards, and a list of the songs the person wrote or performed with what each has made on DistroKid.
+* Shared songs stay readable without logging in; the works list and profile still need a login.
+
 = 0.58.0 =
 * Work view: ChordPro, Chords and lyrics and Lyrics are tabs that switch the chart in place; a share icon sits at the far right of the top bar.
 

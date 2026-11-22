@@ -383,7 +383,8 @@ class Songpress_Frontend {
 				$want = $kind;
 			}
 			// every level that has text is a tab; tapping one swaps the chart without leaving the page
-			$out .= '<div class="songpress-tabs" role="tablist">';
+			$many = count( array_filter( array_column( $lv, 0 ) ) ) > 1;
+			$out .= '<div class="songpress-tabs" role="tablist"' . ( $many ? '' : ' hidden' ) . '>';
 			$pan  = '';
 			foreach ( $labels as $lk => $ll ) {
 				if ( 'none' === $lk || '' === $lv[ $lk ][0] ) {
@@ -477,7 +478,38 @@ class Songpress_Frontend {
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
-		$out .= Songpress_Money::my_earnings_html( $u->display_name );
+		$out .= Songpress_Money::quarterly_html( $u->display_name );
+		// the songs this person wrote or performed, each with what it has made on DistroKid
+		$mine = array();
+		$role = array();
+		foreach ( $res['rows'] as $s ) {
+			foreach ( Songpress_Songs::credits( (int) $s->id ) as $c ) {
+				if ( in_array( $c->role, array( 'writer', 'performer' ), true ) && ( (int) $c->user_id === (int) $u->ID || Songpress_Profiles::key( $c->name ) === Songpress_Profiles::key( $u->display_name ) ) ) {
+					$role[ (int) $s->id ][ $c->role ] = 1;
+				}
+			}
+			if ( ! empty( $role[ (int) $s->id ] ) ) {
+				$mine[] = $s;
+			}
+		}
+		if ( $mine ) {
+			$dk   = Songpress_Money::song_dk( array_map( function ( $m ) { return (int) $m->id; }, $mine ) );
+			$cat  = self::main_id( 'catalog' );
+			$base = $cat ? get_permalink( $cat ) : home_url( '/' );
+			$out .= '<h3>' . esc_html__( 'Songs', 'songpress' ) . '</h3><ul class="songpress-mysongs">';
+			foreach ( $mine as $s ) {
+				$id    = (int) $s->id;
+				$r     = array();
+				foreach ( array( 'writer' => __( 'Writer', 'songpress' ), 'performer' => __( 'Performer', 'songpress' ) ) as $k => $l ) {
+					if ( isset( $role[ $id ][ $k ] ) ) {
+						$r[] = $l;
+					}
+				}
+				$title = Songpress_Songs::display_title( $s );
+				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle">' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk" title="DistroKid">' . ( isset( $dk[ $id ] ) ? esc_html( Songpress_Money::money( $dk[ $id ] ) ) : '&ndash;' ) . '</span></li>';
+			}
+			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what each song has made on DistroKid.', 'songpress' ) . '</p>';
+		}
 		$out .= wp_kses_post( songpress_public_donate_link() ) . ( wp_is_mobile() ? '' : self::tabs( 'profile' ) ) . '</div>';
 		return $out;
 	}

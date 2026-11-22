@@ -855,4 +855,51 @@ JS;
 		}
 		return $o;
 	}
+
+	/** A column chart of what one person earned each quarter, oldest on the left. Empty when nothing is recorded for them. */
+	public static function quarterly_html( $display_name, $max_q = 12 ) {
+		$key = self::person_key( $display_name );
+		if ( '' === $key ) {
+			return '';
+		}
+		$by = array();
+		foreach ( self::my_rows( $key ) as $r ) {
+			$by[ $r->quarter ] = ( $by[ $r->quarter ] ?? 0 ) + (float) $r->total;
+		}
+		if ( ! $by ) {
+			return '';
+		}
+		ksort( $by );
+		$by  = array_slice( $by, -$max_q, null, true );
+		$top = max( $by );
+		$n   = count( $by );
+		$w   = 100 / max( 1, $n );
+		$svg = '<svg class="songpress-qchart" viewBox="0 0 100 52" preserveAspectRatio="none" role="img" aria-label="' . esc_attr__( 'Income by quarter', 'songpress' ) . '">';
+		$lab = '<div class="songpress-qlabs">';
+		$i   = 0;
+		foreach ( $by as $q => $v ) {
+			$h    = $top > 0 ? max( 0.6, round( 48 * $v / $top, 2 ) ) : 0.6;
+			$svg .= '<rect x="' . round( $i * $w + $w * 0.14, 2 ) . '" y="' . round( 50 - $h, 2 ) . '" width="' . round( $w * 0.72, 2 ) . '" height="' . $h . '" rx="0.8"><title>' . esc_html( $q . ': ' . self::money( $v ) ) . '</title></rect>';
+			$lab .= '<span>' . esc_html( preg_replace( '/^\d{4}-Q(\d)$/', 'Q$1', $q ) ) . ( ( 0 === $i || str_ends_with( $q, 'Q1' ) ) ? '<small>' . esc_html( '’' . substr( $q, 2, 2 ) ) . '</small>' : '<small>&nbsp;</small>' ) . '</span>';
+			$i++;
+		}
+		$all = array_sum( $by );
+		return '<h3>' . esc_html__( 'Quarterly income', 'songpress' ) . '</h3><div class="songpress-qwrap"><p class="songpress-qtotal"><strong>' . esc_html( self::money( $all ) ) . '</strong> ' . esc_html( sprintf( /* translators: %d: number of quarters */ _n( 'in %d quarter', 'over %d quarters', $n, 'songpress' ), $n ) ) . '</p>' . $svg . '</svg>' . $lab . '</div></div>';
+	}
+
+	/** DistroKid earnings per song (song id => total). */
+	public static function song_dk( array $ids ) {
+		global $wpdb;
+		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
+		if ( ! $ids ) {
+			return array();
+		}
+		$t   = self::t( 'earnings' );
+		$in  = implode( ',', $ids );
+		$out = array();
+		foreach ( $wpdb->get_results( "SELECT song_id, SUM(amount) AS total FROM {$t} WHERE src = 'distrokid' AND song_id IN ({$in}) GROUP BY song_id" ) as $r ) { // phpcs:ignore WordPress.DB
+			$out[ (int) $r->song_id ] = (float) $r->total;
+		}
+		return $out;
+	}
 }
