@@ -119,14 +119,19 @@ class Songpress_Frontend {
 		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
 		$in_app  = '' === $page;
-		$nav     = self::nav_item( $cat_url, __( 'Songs', 'songpress' ), $songs, 'catalog' === $which && $in_app ) . self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $me, 'profile' === $which );
-		if ( ! wp_is_mobile() ) {
-			$nav .= '<a href="' . esc_url( Songpress_ChordTool::url() ) . '" target="_blank" rel="noopener">' . $svg( '<path d="M9 18V5l12-2v13"/><path d="M3 21h18"/>' ) . esc_html__( 'ChordPro tool', 'songpress' ) . '</a>';
-		}
+		$avatar  = get_avatar_url( get_current_user_id(), array( 'size' => 36 ) );
+		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
+		$nav     = self::nav_item( $pro_url, __( 'Profile', 'songpress' ), $face, 'profile' === $which ) . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
 		$mk = function ( $slug, $label, $icon, $cap ) use ( $cat_url, $page ) {
 			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'lists', 'backups', 'health' ), true ) );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on ) : '';
 		};
+		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
+			$nav .= $mk( 'notes', __( 'Notes', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
+		}
+		if ( ! wp_is_mobile() ) {
+			$nav .= '<a href="' . esc_url( Songpress_ChordTool::url() ) . '" target="_blank" rel="noopener">' . $svg( '<path d="M9 18V5l12-2v13"/><path d="M3 21h18"/>' ) . esc_html__( 'ChordPro tool', 'songpress' ) . '</a>';
+		}
 		if ( Songpress_Caps::can( 'money' ) && ! wp_is_mobile() ) {
 			$nav .= '<span class="sp-navgap"></span>' . $mk( 'money', __( 'Money', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
 		}
@@ -141,9 +146,6 @@ class Songpress_Frontend {
 		}
 		if ( Songpress_Caps::can( 'sessions' ) && ! wp_is_mobile() ) {
 			$nav .= $mk( 'sessions', __( 'Sessions', 'songpress' ), $svg( '<path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/>' ), 'sessions' );
-		}
-		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
-			$nav .= $mk( 'notes', __( 'Notes', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
