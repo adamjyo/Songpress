@@ -16,7 +16,8 @@ delete_option( 'songpress_donate_prompt' );
 delete_option( 'songpress_classes_migrated' );
 delete_option( 'songpress_classes_v2' );
 delete_option( 'songpress_accounts_ready' );
-delete_option( 'songpress_default_artist', 'songpress_main_moved' );
+delete_option( 'songpress_default_artist' );
+delete_option( 'songpress_main_moved' );
 delete_option( 'songpress_pages_done' ); // the pages themselves are left in place: they are yours
 delete_option( 'songpress_page_catalog' );
 delete_option( 'songpress_page_profile' );
