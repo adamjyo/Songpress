@@ -45,9 +45,6 @@ class Songpress_Editor {
 		$version  = $song ? (int) $song->version_no : 0;
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
-		if ( $song && $version > 0 && '' !== trim( (string) $song->release_title ) ) {
-			$title = $song->release_title; // a version is known by its release title; the work's title is the same on all of them
-		}
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
 		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? '<a class="spe-viewlink" href="' . esc_url( add_query_arg( array( 'sp_song' => $id, 'sp_view' => 1 ), self::list_url() ) ) . '">' . esc_html__( 'View song', 'songpress' ) . '</a>' : '' ) . '</div>';
 		$o       .= self::notices();
