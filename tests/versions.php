@@ -53,6 +53,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_signers (id INTEGER PRIMARY KEY AUTOINCREMENT, agreement_id INT, name TEXT, role TEXT, share TEXT, token TEXT UNIQUE, signed_as TEXT, signed_at TEXT, ip TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_activity (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, kind TEXT, song_id INT DEFAULT 0, serial TEXT, title TEXT, detail TEXT, source_key TEXT DEFAULT \'\', created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, session_date TEXT, session_time TEXT, title TEXT, song_id INT DEFAULT 0, location TEXT, notes TEXT, lyrics TEXT, audio_url TEXT, owner_user_id INT DEFAULT 0, source_key TEXT DEFAULT \'\', created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_people (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, name TEXT, person_key TEXT, user_id INT DEFAULT 0, ipi TEXT DEFAULT \'\', share TEXT DEFAULT \'\')' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_session_chat (id INTEGER PRIMARY KEY AUTOINCREMENT, session_id INT, author TEXT, user_id INT DEFAULT 0, kind TEXT DEFAULT \'text\', body TEXT, audio_url TEXT, source_key TEXT DEFAULT \'\', created_at TEXT)' );
@@ -510,6 +511,13 @@ $nr2 = Songpress_Journal::import_pdo( $np );
 $ne2 = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_journal WHERE source_key='old:9001'" );
 check( 'second load adds none but fills blanks', array( $nr2['journal'], $ne2->song_key, $ne2->tempo ), array( 0, 'G', '120bpm' ) );
 unlink( $nf );
+
+$np2 = new PDO( 'sqlite::memory:' );
+$np2->exec( "CREATE TABLE work_activity (id INTEGER PRIMARY KEY, work_id INT, serial_number TEXT, song_title TEXT, day TEXT, kind TEXT, detail TEXT, created_at TEXT)" );
+$np2->exec( "INSERT INTO work_activity VALUES (1,2002,'1578-00','One Third','2026-11-05','worked','','2026-11-05 00:21:21'),(2,2003,'1578-06','One Third','2026-11-05','wrote','','2026-11-05 00:22:11')" );
+$na = Songpress_Journal::import_pdo( $np2 );
+check( 'activity import and repeat', array( $na['activity'], Songpress_Journal::import_pdo( $np2 )['activity'] ), array( 2, 0 ) );
+check( 'activity serials normalized', $GLOBALS['wpdb']->get_col( "SELECT serial FROM wp_songpress_activity ORDER BY id" ), array( '1578', '1578-06' ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

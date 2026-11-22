@@ -386,3 +386,21 @@ CREATE TABLE {prefix}songpress_session_chat (
   PRIMARY KEY  (id),
   KEY session_id (session_id)
 ) {charset};
+
+-- What was done on which song on which day (wrote, worked on, released). Feeds the Days view in Notes.
+CREATE TABLE {prefix}songpress_activity (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  day date NOT NULL,
+  kind varchar(12) NOT NULL DEFAULT 'worked',
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  serial varchar(16) NOT NULL DEFAULT '',
+  title varchar(255) NOT NULL DEFAULT '',
+  detail text,
+  source_key varchar(32) NOT NULL DEFAULT '',
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  KEY day (day),
+  KEY song_id (song_id),
+  KEY source_key (source_key)
+) {charset};
+

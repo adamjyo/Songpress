@@ -88,7 +88,7 @@ check( 'numbers helper', Songpress_Import_Analyzer::numbers( array( 'writer2_nam
 define( 'ABSPATH', '/x/' );
 require __DIR__ . '/../includes/class-install.php';
 $st = Songpress_Install::statements( file_get_contents( __DIR__ . '/../SongPress.SQL' ), 'wp_', 'DEFAULT CHARSET=utf8mb4' );
-check( 'sql statements', count( $st ), 23 );
+check( 'sql statements', count( $st ), 24 );
 check( 'sql prefix', strpos( $st[2], 'CREATE TABLE wp_songpress_credits' ) === 0, true );
 check( 'sql no placeholder', strpos( implode( '', $st ), '{' ), false );
 

@@ -70,7 +70,7 @@ class Songpress_Journal {
 	/** Load the old journal and ratings. $pdo is an open connection to the old catalog file. Safe to run again. */
 	public static function import_pdo( PDO $pdo ) {
 		global $wpdb;
-		$out = array( 'journal' => 0, 'ratings' => 0 );
+		$out = array( 'journal' => 0, 'ratings' => 0, 'activity' => 0 );
 		$has = function ( $table ) use ( $pdo ) {
 			$q = $pdo->prepare( "SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?" );
 			$q->execute( array( $table ) );
@@ -119,6 +119,21 @@ class Songpress_Journal {
 				}
 				$wpdb->insert( $j, array( 'source_key' => $r[0], 'log_date' => $r[1], 'kind' => $r[2], 'title' => $r[3], 'notes' => $r[4], 'place' => $r[5], 'song_id' => $r[6], 'pinned' => $r[7], 'archived' => $r[8], 'song_key' => $r[9], 'tempo' => $r[10], 'authors' => $r[11], 'latitude' => $r[12], 'longitude' => $r[13], 'user_id' => 0, 'created_at' => current_time( 'mysql' ) ) );
 				$out['journal']++;
+			}
+		}
+		if ( $has( 'work_activity' ) ) {
+			$at   = Songpress_Install::table( 'activity' );
+			$seen = array_flip( $wpdb->get_col( "SELECT source_key FROM {$at} WHERE source_key <> ''" ) ); // phpcs:ignore WordPress.DB
+			foreach ( $pdo->query( 'SELECT * FROM work_activity ORDER BY id' ) as $r ) {
+				$k = 'old:' . (int) $r['id'];
+				if ( isset( $seen[ $k ] ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $r['day'] ) ) {
+					continue;
+				}
+				$sr   = self::serials_in( '#' . (string) $r['serial_number'] );
+				$sr   = $sr ? $sr[0] : '';
+				$kind = in_array( $r['kind'], array( 'worked', 'wrote', 'released' ), true ) ? $r['kind'] : 'worked';
+				$wpdb->insert( $at, array( 'day' => substr( $r['day'], 0, 10 ), 'kind' => $kind, 'song_id' => $byser[ $sr ] ?? 0, 'serial' => $sr, 'title' => mb_substr( (string) $r['song_title'], 0, 255 ), 'detail' => (string) $r['detail'], 'source_key' => $k, 'created_at' => (string) ( $r['created_at'] ?: current_time( 'mysql' ) ) ) );
+				$out['activity'] = ( $out['activity'] ?? 0 ) + 1;
 			}
 		}
 		if ( $has( 'song_ratings' ) ) {
@@ -266,6 +281,18 @@ class Songpress_Journal {
 		if ( ! empty( $_GET['j_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['j_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
+		$view = isset( $_GET['jview'] ) && in_array( $_GET['jview'], array( 'days', 'map' ), true ) ? sanitize_key( wp_unslash( $_GET['jview'] ) ) : 'list'; // phpcs:ignore WordPress.Security.NonceVerification
+		$o   .= '<p class="spj-tabs">';
+		foreach ( array( 'list' => __( 'Notes', 'songpress' ), 'days' => __( 'Days', 'songpress' ), 'map' => __( 'Map', 'songpress' ) ) as $vk => $vl ) {
+			$o .= '<a class="spe-btn' . ( $view === $vk ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'notes', 'jview' => $vk ), $base ) ) . '">' . esc_html( $vl ) . '</a> ';
+		}
+		$o .= '</p>';
+		if ( 'days' === $view ) {
+			return $o . self::days_html() . '</div>';
+		}
+		if ( 'map' === $view ) {
+			return $o . self::map_html() . '</div>';
+		}
 		$o .= '<details class="spj-new"><summary class="spe-btn">+ ' . esc_html__( 'New entry', 'songpress' ) . '</summary>' . self::form_open( 'songpress_journal_save' ) . self::fields() . '<button class="spe-save" type="submit">' . esc_html__( 'Add entry', 'songpress' ) . '</button></form></details>';
 		$o .= '<form method="get" class="spj-find"><input type="hidden" name="sp_page" value="notes"><input type="search" name="jq" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search notes', 'songpress' ) . '"><select name="jshow" onchange="this.form.submit()"><option value="live"' . selected( $show, 'live', false ) . '>' . esc_html__( 'Current', 'songpress' ) . '</option><option value="archived"' . selected( $show, 'archived', false ) . '>' . esc_html__( 'Archived', 'songpress' ) . '</option></select><button class="spe-btn" type="submit">' . esc_html__( 'Search', 'songpress' ) . '</button></form>';
 		$o .= '<p class="spe-help">' . esc_html( sprintf( /* translators: %d: number of entries */ _n( '%d entry', '%d entries', $res['total'], 'songpress' ), $res['total'] ) ) . '</p>';
@@ -303,5 +330,57 @@ class Songpress_Journal {
 			$o .= '</p>';
 		}
 		return $o . '</div>';
+	}
+
+	/** Each day: what was written, worked on and released, with links to the songs, newest first. */
+	public static function days_html() {
+		global $wpdb;
+		$at   = Songpress_Install::table( 'activity' );
+		$days = $wpdb->get_col( "SELECT DISTINCT day FROM {$at} ORDER BY day DESC LIMIT 90" ); // phpcs:ignore WordPress.DB
+		if ( ! $days ) {
+			return '<p class="spe-help">' . esc_html__( 'No days yet. Load the old catalog file on Upload / Download to bring the history across.', 'songpress' ) . '</p>';
+		}
+		$ph   = implode( ',', array_fill( 0, count( $days ), '%s' ) );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$at} WHERE day IN ({$ph}) ORDER BY day DESC, id", $days ) ); // phpcs:ignore WordPress.DB
+		$by   = array();
+		foreach ( $rows as $r ) {
+			$by[ $r->day ][ $r->kind ][] = $r;
+		}
+		$lab = array( 'wrote' => __( 'Wrote', 'songpress' ), 'worked' => __( 'Worked on', 'songpress' ), 'released' => __( 'Released', 'songpress' ) );
+		$o   = '<div class="spj-days">';
+		foreach ( $days as $d ) {
+			$o .= '<div class="spj-day"><h4>' . esc_html( $d ) . ' <small>' . esc_html( gmdate( 'l', strtotime( $d . ' 12:00:00 UTC' ) ) ) . '</small></h4>';
+			foreach ( $lab as $k => $l ) {
+				if ( empty( $by[ $d ][ $k ] ) ) {
+					continue;
+				}
+				$items = array();
+				foreach ( $by[ $d ][ $k ] as $r ) {
+					$txt     = ( '' !== $r->serial ? $r->serial . ' ' : '' ) . $r->title;
+					$items[] = (int) $r->song_id ? '<a href="' . esc_url( Songpress_Editor::edit_url( (int) $r->song_id ) ) . '">' . esc_html( $txt ) . '</a>' : esc_html( $txt );
+				}
+				$o .= '<p><b>' . esc_html( $l ) . ':</b> ' . implode( ', ', $items ) . '</p>';
+			}
+			$o .= '</div>';
+		}
+		return $o . '</div>';
+	}
+
+	/** Notes that have a position, on a map. Leaflet and OpenStreetMap tiles load from their own sites. */
+	public static function map_html() {
+		global $wpdb;
+		$rows = $wpdb->get_results( 'SELECT id, log_date, title, place, latitude, longitude FROM ' . self::t() . " WHERE latitude <> '' AND longitude <> '' AND archived = 0 ORDER BY log_date DESC LIMIT 500" ); // phpcs:ignore WordPress.DB
+		$pts  = array();
+		foreach ( $rows as $r ) {
+			$la = (float) $r->latitude;
+			$lo = (float) $r->longitude;
+			if ( abs( $la ) <= 90 && abs( $lo ) <= 180 && ( 0.0 !== $la || 0.0 !== $lo ) ) {
+				$pts[] = array( $la, $lo, $r->log_date . ' ' . ( '' !== $r->title ? $r->title : $r->place ) );
+			}
+		}
+		if ( ! $pts ) {
+			return '<p class="spe-help">' . esc_html__( 'No notes have a position yet.', 'songpress' ) . '</p>';
+		}
+		return '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><div id="spj-map" style="height:460px;border-radius:10px"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>(function(){var P=' . wp_json_encode( $pts, JSON_HEX_TAG | JSON_HEX_AMP ) . ';if(!window.L)return;var m=L.map("spj-map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(m);var b=[];P.forEach(function(p){b.push([p[0],p[1]]);L.marker([p[0],p[1]]).addTo(m).bindPopup(document.createTextNode(p[2]).textContent);});m.fitBounds(b,{padding:[30,30],maxZoom:14});})();</script><p class="spe-help">' . esc_html( sprintf( /* translators: %d: notes */ _n( '%d note with a position.', '%d notes with a position.', count( $pts ), 'songpress' ), count( $pts ) ) ) . '</p>';
 	}
 }
