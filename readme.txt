@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.56.3 =
+* The work view has the cover art on the left, with the title, artist and audio player to its right.
+
 = 0.56.2 =
 * Phone works list: the cover art is on the left of each card and is a player (a play symbol shows on works with audio). Tapping anywhere else on the card opens the work.
 

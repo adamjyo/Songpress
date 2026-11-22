@@ -660,14 +660,14 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-userpic{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;background:var(--sp-chip)}
 .songpress-userpic-ini{display:inline-flex;align-items:center;justify-content:center;font-size:15px;color:var(--sp-text)}
 /* work view: title, artist and the audio player on the left, cover art in the top right corner */
-.songpress-top{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:6px 16px;align-items:start;margin:0 0 18px}
-.songpress-topl{min-width:0}
+.songpress-top{display:grid;grid-template-columns:112px minmax(0,1fr);gap:6px 16px;align-items:start;margin:0 0 18px}
+.songpress-topl{min-width:0;grid-column:2;grid-row:1}
 .songpress-topl h2{margin:2px 0 6px;font-size:24px;line-height:1.15;overflow-wrap:anywhere}
 .songpress-topl .songpress-band{margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .songpress-top .songpress-audio{position:static;display:block;width:100%;margin-top:6px}
-.songpress-top .songpress-cover,.songpress-top .songpress-noart.songpress-cover{width:112px;height:112px;aspect-ratio:1;border-radius:12px;object-fit:cover;font-size:36px;grid-column:2;grid-row:1}
+.songpress-top .songpress-cover,.songpress-top .songpress-noart.songpress-cover{width:112px;height:112px;aspect-ratio:1;border-radius:12px;object-fit:cover;font-size:36px;grid-column:1;grid-row:1}
 .songpress-song .songpress-by{margin:22px 0 6px;color:var(--sp-mute)}
-@container (min-width:620px){.songpress-top{grid-template-columns:minmax(0,1fr) 160px}.songpress-top .songpress-cover,.songpress-top .songpress-noart.songpress-cover{width:160px;height:160px}}
+@container (min-width:620px){.songpress-top{grid-template-columns:160px minmax(0,1fr)}.songpress-top .songpress-cover,.songpress-top .songpress-noart.songpress-cover{width:160px;height:160px}}
 /* phones: the works list as cards, cover art on the right */
 .songpress-list li.songpress-card{display:flex;align-items:center;gap:14px;margin:0 0 12px;padding:12px 14px;background:var(--sp-card);border:1px solid var(--sp-line);border-radius:14px;list-style:none}
 .songpress-cardlink{flex:1;min-width:0;display:block;color:inherit;text-decoration:none}
