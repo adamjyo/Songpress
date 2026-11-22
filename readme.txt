@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.46.4
+Stable tag: 0.47.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.47.0 =
+* On a version, the fields that belong to that version only (status, writing stage, release, art and audio, performers, producers, DistroKid and ISRC, links, style, prompts, private notes) are tinted blue, with a small key at the top. Shared fields keep the normal colour.
 
 = 0.46.4 =
 * Choosing a writer from the People list also fills in their picture (or initials), next to their IPI.

@@ -595,3 +595,9 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 
 .spe-group.spe-two .spe-rows{gap:4px 10px}
 .spe-group.spe-two .spe-credit{padding:5px 8px;gap:4px 8px}
+
+/* fields that belong to one version only are tinted so they stand out from the shared ones */
+.spe-own input:not([type=hidden]),.spe-own select,.spe-own textarea,.spe-own .sp-media{background:rgba(96,150,255,.09)!important;border-color:rgba(96,150,255,.38)!important}
+.spe-panel.spe-own>h3::after{content:"This version only";margin-left:10px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#8db4ff}
+.spe-legend{display:flex;align-items:center;gap:8px;margin:0 0 12px;color:var(--sp-mute);font-size:12.5px}
+.spe-legend i{flex:none;width:14px;height:14px;border-radius:4px;background:rgba(96,150,255,.18);border:1px solid rgba(96,150,255,.5)}
