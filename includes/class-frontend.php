@@ -209,6 +209,9 @@ class Songpress_Frontend {
 		if ( $desktop && isset( $_GET['sp_deleted'] ) ) {
 			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Deleted %d song.', 'Deleted %d songs.', absint( $_GET['sp_deleted'] ), 'songpress' ), absint( $_GET['sp_deleted'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
+		if ( $desktop && isset( $_GET['sp_bulk'] ) ) {
+			$out .= '<p class="songpress-note">' . esc_html( sprintf( /* translators: 1: songs changed, 2: songs skipped */ __( 'Updated %1$d songs. Skipped %2$d (not allowed, or the field does not apply to an original work).', 'songpress' ), absint( $_GET['sp_bulk'] ), absint( $_GET['sp_bskip'] ?? 0 ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
 		if ( $desktop && isset( $_GET['sp_err'] ) ) {
 			$out .= '<p class="songpress-note">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
@@ -223,8 +226,12 @@ class Songpress_Frontend {
 		}
 		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
 		$out   .= '<div class="songpress-searchbar"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
+		$bulk = $desktop && ( Songpress_Caps::can( 'edit_any' ) || Songpress_Caps::can( 'edit_own' ) );
+		if ( $bulk ) {
+			$out .= self::bulk_open();
+		}
 		if ( $desktop ) { // phones show the list with no column headings
-			$out .= '<div class="songpress-colhead" role="row"><span class="songpress-ch-play"></span><span class="songpress-ch-main">';
+			$out .= '<div class="songpress-colhead" role="row">' . ( $bulk ? '<input type="checkbox" class="songpress-pickall" aria-label="' . esc_attr__( 'Select all', 'songpress' ) . '">' : '' ) . '<span class="songpress-ch-play"></span><span class="songpress-ch-main">';
 			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'label' => __( 'Label', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
 				$on   = ( $k === $order );
 				$next = ( $on && 'asc' === $dir ) ? 'desc' : 'asc';
@@ -266,7 +273,7 @@ class Songpress_Frontend {
 				$out  .= '<li class="songpress-card">' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $none ? __( 'No release title', 'songpress' ) : $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->style ) ? '<span class="songpress-cardstyle">' . esc_html( $s->style ) . '</span>' : '' ) . '</span></span></a></li>';
 				continue;
 			}
-			$out .= '<li class="songpress-row">' . $art . '<a class="songpress-rowlink" href="' . $link . '">'
+			$out .= '<li class="songpress-row">' . ( $bulk ? '<input type="checkbox" class="songpress-pick" name="ids[]" value="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Select %s', 'songpress' ), $s->title ) ) . '">' : '' ) . $art . '<a class="songpress-rowlink" href="' . $link . '">'
 				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
 				. '<span class="songpress-title">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</span>'
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
@@ -279,7 +286,7 @@ class Songpress_Frontend {
 		if ( ! $res['rows'] ) {
 			$out .= '<li class="songpress-empty">' . esc_html__( 'No songs found.', 'songpress' ) . '</li>';
 		}
-		return $out . '</ul><script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . ( $desktop ? self::tabs( 'catalog' ) : '' ) . '</div>';
+		return $out . '</ul>' . ( $bulk ? '</form>' : '' ) . '<script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . ( $desktop ? self::tabs( 'catalog' ) : '' ) . '</div>';
 	}
 
 	/**
@@ -316,6 +323,33 @@ class Songpress_Frontend {
 		$o    .= '<input type="text" readonly id="sp-sh-link" value="' . esc_attr( $link ) . '" onfocus="this.select()" data-title="' . esc_attr( $title ) . '">';
 		$o    .= '<div class="spe-dlgbar"><button type="button" class="spe-save" id="sp-sh-copy">' . esc_html__( 'Copy link', 'songpress' ) . '</button><button type="button" class="spe-btn" id="sp-sh-send" hidden>' . esc_html__( 'Share with an app', 'songpress' ) . '</button><button class="spe-link" value="close">' . esc_html__( 'Close', 'songpress' ) . '</button></div></form></dialog>';
 		$o    .= '<script>(function(){var d=document.getElementById("sp-sh-dlg"),o=document.getElementById("sp-sh-open"),i=document.getElementById("sp-sh-link"),c=document.getElementById("sp-sh-copy"),s=document.getElementById("sp-sh-send");if(!d||!o)return;o.addEventListener("click",function(){if(d.showModal){d.showModal();}else{d.setAttribute("open","");}i.select();});c.addEventListener("click",function(){i.select();var done=function(){c.textContent="Copied";setTimeout(function(){c.textContent="Copy link";},1800);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(i.value).then(done,function(){document.execCommand("copy");done();});}else{document.execCommand("copy");done();}});if(navigator.share){s.hidden=false;s.addEventListener("click",function(){navigator.share({title:i.getAttribute("data-title"),url:i.value}).catch(function(){});});}d.addEventListener("click",function(e){if(e.target===d){d.close();}});})();</script>';
+		return $o;
+	}
+
+	/** The form around the list and its bar of bulk actions, which shows when something is ticked. */
+	private static function bulk_open() {
+		$o  = '<form method="post" id="songpress-bulk" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_bulk', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_bulk"><input type="hidden" name="sp_return" value="' . esc_url( Songpress_Editor::list_url() ) . '">';
+		$o .= '<div class="songpress-bulkbar" hidden><b class="songpress-bulkcount"></b> ';
+		$o .= '<select name="field" class="songpress-bulkfield"><option value="status">' . esc_html__( 'Status', 'songpress' ) . '</option><option value="genre">' . esc_html__( 'Genre', 'songpress' ) . '</option><option value="style">' . esc_html__( 'Style', 'songpress' ) . '</option><option value="artist">' . esc_html__( 'Band', 'songpress' ) . '</option><option value="themes">' . esc_html__( 'Themes', 'songpress' ) . '</option></select> ';
+		$o .= '<select name="value_status" class="songpress-bulkstatus">';
+		foreach ( Songpress_Songs::statuses() as $k => $l ) {
+			$o .= '<option value="' . esc_attr( $k ) . '">' . esc_html( $l ) . '</option>';
+		}
+		$o .= '</select><input type="text" name="value_text" class="songpress-bulktext" list="songpress-bulkgenres" hidden placeholder="' . esc_attr__( 'New value', 'songpress' ) . '"><datalist id="songpress-bulkgenres">';
+		foreach ( Songpress_Songs::genres() as $l ) {
+			$o .= '<option value="' . esc_attr( $l ) . '">';
+		}
+		$o .= '</datalist> <button type="submit" name="do" value="set" class="spe-save">' . esc_html__( 'Apply to selected', 'songpress' ) . '</button>';
+		if ( Songpress_Caps::can( 'delete' ) ) {
+			$o .= ' <button type="submit" name="do" value="delete" class="spe-btn danger" data-confirm="' . esc_attr__( 'Delete the selected works for good? An original work takes its versions with it. This cannot be undone.', 'songpress' ) . '">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
+		}
+		$o .= '</div><script>(function(){var f=document.getElementById("songpress-bulk");if(!f)return;var bar=f.querySelector(".songpress-bulkbar"),all=f.querySelector(".songpress-pickall"),fld=f.querySelector(".songpress-bulkfield"),st=f.querySelector(".songpress-bulkstatus"),tx=f.querySelector(".songpress-bulktext"),n=f.querySelector(".songpress-bulkcount");'
+			. 'function boxes(){return f.querySelectorAll(".songpress-pick");}'
+			. 'function sync(){var c=0;boxes().forEach(function(b){if(b.checked)c++;});bar.hidden=c===0;n.textContent=c+" selected";if(all){all.checked=c>0&&c===boxes().length;}}'
+			. 'function mode(){var s=fld.value==="status";st.hidden=!s;st.disabled=!s;tx.hidden=s;tx.disabled=s;tx.setAttribute("list",fld.value==="genre"?"songpress-bulkgenres":"");}'
+			. 'f.addEventListener("change",function(e){if(e.target===all){boxes().forEach(function(b){b.checked=all.checked;});}if(e.target===fld){mode();}sync();});'
+			. 'f.addEventListener("click",function(e){var b=e.target.closest("[data-confirm]");if(b&&!window.confirm(b.getAttribute("data-confirm"))){e.preventDefault();}});'
+			. 'mode();sync();})();</script>';
 		return $o;
 	}
 

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.48.3
+Stable tag: 0.63.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.0 =
+* Works list: tick works (or the box at the top for all) and a bar appears to set their Status, Genre, Style, Band or Themes in one go, or delete them (Managers). Works you cannot edit are skipped, and so are fields that do not apply to an original work.
 
 = 0.62.1 =
 * Delete: a deleted work's serial number is never given to a new work. Expenses, activity and pitches are kept but unlinked, its pitch kit and (for a whole work) its registrations go with it, and the audit log files it under Works. A version's button now says Delete this version.

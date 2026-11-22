@@ -23,6 +23,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
 		add_action( 'admin_post_songpress_archive', array( __CLASS__, 'handle_archive' ) );
 		add_action( 'admin_post_songpress_delete', array( __CLASS__, 'handle_delete' ) );
+		add_action( 'admin_post_songpress_bulk', array( __CLASS__, 'handle_bulk' ) );
 		add_action( 'admin_post_songpress_link_writers', array( __CLASS__, 'handle_link_writers' ) );
 		add_action( 'admin_post_songpress_donate_answer', array( __CLASS__, 'handle_donate_answer' ) );
 		add_action( 'admin_footer', array( __CLASS__, 'donate_prompt' ) );
@@ -501,6 +502,64 @@ class Songpress_Admin {
 		}
 		Songpress_Songs::archive( $id );
 		self::back( 'songpress', array( 'archived' => 1 ) );
+	}
+
+	/** The value a bulk edit may set, cleaned; '' when the field is not allowed. Pure of WordPress apart from the status list. */
+	public static function bulk_value( $field, $status, $text ) {
+		if ( 'status' === $field ) {
+			return isset( Songpress_Songs::statuses()[ $status ] ) ? $status : '';
+		}
+		return in_array( $field, array( 'genre', 'style', 'artist', 'themes' ), true ) ? sanitize_text_field( $text ) : '';
+	}
+
+	public static function handle_bulk() {
+		check_admin_referer( 'songpress_bulk' );
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) ( $_POST['ids'] ?? array() ) ) ) ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( ! $ids ) {
+			self::back( 'songpress', array( 'err' => rawurlencode( __( 'Tick at least one work first.', 'songpress' ) ) ) );
+		}
+		if ( 'delete' === ( $_POST['do'] ?? '' ) ) {
+			if ( ! Songpress_Caps::can( 'delete' ) ) {
+				wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+			}
+			$n = 0;
+			foreach ( $ids as $id ) {
+				if ( Songpress_Songs::get( $id ) ) { // a family may already have gone with its original
+					$n += Songpress_Songs::delete( $id );
+				}
+			}
+			self::back( 'songpress', array( 'deleted' => $n ) );
+		}
+		$field = sanitize_key( wp_unslash( $_POST['field'] ?? '' ) );
+		$value = self::bulk_value( $field, sanitize_key( wp_unslash( $_POST['value_status'] ?? '' ) ), wp_unslash( $_POST['value_text'] ?? '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( '' === $field || ( '' === $value && 'status' === $field ) ) {
+			self::back( 'songpress', array( 'err' => rawurlencode( __( 'Choose what to change and its new value.', 'songpress' ) ) ) );
+		}
+		$done = 0;
+		$skip = 0;
+		foreach ( $ids as $id ) {
+			$song = Songpress_Songs::get( $id );
+			if ( ! $song || ! Songpress_Caps::can_edit_song( $id ) ) {
+				++$skip;
+				continue;
+			}
+			// An original work with no release of its own holds no band or style: those belong to a release.
+			$root_bare = 0 === (int) $song->version_no && '' === trim( $song->artist . $song->album . $song->release_title . $song->release_date );
+			if ( $root_bare && in_array( $field, array( 'artist', 'style' ), true ) ) {
+				++$skip;
+				continue;
+			}
+			if ( 'status' === $field && ! isset( Songpress_Songs::statuses_for( $song->version_no )[ $value ] ) ) { // an original work can never be released
+				++$skip;
+				continue;
+			}
+			Songpress_Songs::update( $id, array( $field => $value ) );
+			if ( in_array( $field, Songpress_Songs::SHARED_FIELDS, true ) ) {
+				Songpress_Songs::sync_shared( $id );
+			}
+			++$done;
+		}
+		self::back( 'songpress', array( 'bulk' => $done, 'bskip' => $skip ) );
 	}
 
 	public static function handle_delete() {
