@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.2.1
+Stable tag: 0.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.2.2 =
+* Stats now opens with the chart from the old plugin: stacked by store or service, streams or income, per day, week, month and quarter. Income comes from DistroKid statements (monthly and quarterly); daily and weekly come from the daily stream estimates.
+* Stats has the DistroKid stats-page importer: choose the HTML you save from DistroKid and the daily streams are added or updated. Days it does not cover are kept.
 
 = 0.2.1 =
 * New Journal in the rail (Managers, desktop): dated notes with search, pin, archive and edit; a title that starts with a serial links the entry to its song.

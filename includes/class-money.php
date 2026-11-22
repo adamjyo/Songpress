@@ -20,7 +20,7 @@ class Songpress_Money {
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
-		foreach ( array( 'import', 'pay', 'expense_add', 'expense_delete' ) as $a ) {
+		foreach ( array( 'import', 'pay', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
 			add_action( 'admin_post_songpress_money_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
 	}
@@ -255,6 +255,55 @@ class Songpress_Money {
 		return $out;
 	}
 
+
+	/**
+	 * Read the stats page saved from DistroKid. The page carries its numbers as JSON in a script tag
+	 * (id="combinedStatsData"): a list of services and a daily series. Returns rows of day, service, streams,
+	 * or a string describing what is wrong with the file. Pure.
+	 */
+	public static function parse_stats_html( $html ) {
+		if ( ! preg_match( '/id="combinedStatsData"[^>]*>\s*(.*?)\s*<\/script>/s', (string) $html, $m ) ) {
+			return 'That file has no DistroKid daily stats. Save the stats page from DistroKid as HTML and choose that file.';
+		}
+		$data = json_decode( html_entity_decode( $m[1] ), true );
+		if ( ! is_array( $data ) || empty( $data['series']['daily'] ) || ! is_array( $data['series']['daily'] ) ) {
+			return 'That file has no daily series.';
+		}
+		$labels = array();
+		foreach ( ( isset( $data['dsps'] ) && is_array( $data['dsps'] ) ) ? $data['dsps'] : array() as $dsp ) {
+			if ( is_array( $dsp ) && ! empty( $dsp['key'] ) ) {
+				$labels[ (string) $dsp['key'] ] = isset( $dsp['label'] ) ? trim( (string) $dsp['label'] ) : (string) $dsp['key'];
+			}
+		}
+		$rows = array();
+		foreach ( $data['series']['daily'] as $point ) {
+			if ( ! is_array( $point ) || empty( $point['category'] ) || ! preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $point['category'] ) ) {
+				continue;
+			}
+			foreach ( $point as $key => $value ) {
+				if ( 'category' === $key || ! is_numeric( $value ) ) {
+					continue;
+				}
+				$rows[] = array( (string) $point['category'], mb_substr( $labels[ $key ] ?? ucfirst( (string) $key ), 0, 48 ), (int) $value );
+			}
+		}
+		return $rows ? $rows : 'The daily series was empty.';
+	}
+
+	/** Save parsed days. A day already here is updated; days the new file does not cover are kept. */
+	public static function import_stats_html( $html ) {
+		$rows = self::parse_stats_html( $html );
+		if ( is_string( $rows ) ) {
+			return array( 'error' => $rows );
+		}
+		$days = array();
+		foreach ( $rows as $r ) {
+			$days[ $r[0] ] = true;
+		}
+		self::batch( self::t( 'streams' ), array( 'day', 'service', 'streams' ), $rows );
+		return array( 'error' => '', 'days' => count( $days ), 'rows' => count( $rows ) );
+	}
+
 	/* ---------- queries ---------- */
 
 	public static function quarters() {
@@ -331,6 +380,33 @@ class Songpress_Money {
 		return $wpdb->get_results( $wpdb->prepare( "SELECT MIN(work_title) AS work_title, MAX(song_id) AS song_id, SUM(amount) AS total FROM {$t} WHERE person_key = %s GROUP BY work_title ORDER BY total DESC LIMIT %d", $key, (int) $limit ) ); // phpcs:ignore WordPress.DB
 	}
 
+
+	/** Everything the charts need: income and plays per month and store, streams per day and service. */
+	public static function chart_payload() {
+		global $wpdb;
+		$t   = self::t( 'stats' );
+		$top = $wpdb->get_col( "SELECT store FROM {$t} GROUP BY store ORDER BY SUM(units) DESC LIMIT 9" ); // phpcs:ignore WordPress.DB
+		$m   = array();
+		foreach ( $wpdb->get_results( "SELECT month, store, SUM(units) AS u, SUM(earnings) AS e FROM {$t} GROUP BY month, store ORDER BY month" ) as $r ) { // phpcs:ignore WordPress.DB
+			$name = in_array( $r->store, $top, true ) ? ( '' === $r->store ? 'Unknown' : $r->store ) : 'Other';
+			$k    = $r->month . '|' . $name;
+			if ( ! isset( $m[ $k ] ) ) {
+				$m[ $k ] = array( $r->month, $name, 0, 0.0 );
+			}
+			$m[ $k ][2] += (int) $r->u;
+			$m[ $k ][3] += (float) $r->e;
+		}
+		$d  = self::t( 'streams' );
+		$dd = array();
+		foreach ( $wpdb->get_results( "SELECT day, service, streams FROM {$d} ORDER BY day" ) as $r ) { // phpcs:ignore WordPress.DB
+			$dd[] = array( $r->day, $r->service, (int) $r->streams );
+		}
+		foreach ( $m as &$x ) {
+			$x[3] = round( $x[3], 4 );
+		}
+		return array( 'statements' => array_values( $m ), 'daily' => $dd );
+	}
+
 	public static function months() {
 		global $wpdb;
 		$t = self::t( 'stats' );
@@ -390,6 +466,20 @@ class Songpress_Money {
 			self::go( 'money', array( 'm_err' => $r['error'] ) );
 		}
 		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: statement lines, 2: people lines, 3: payouts, 4: stream days, 5: store lines, 6: journal entries, 7: ratings */ __( 'Loaded %1$d earnings lines, %2$d per-person lines, %3$d new payouts, %4$d days of streams, %5$d store lines, %6$d journal entries and %7$d ratings.', 'songpress' ), $r['earnings'], $r['person'], $r['payments'], $r['streams'], $r['stats'], $r['journal'], $r['ratings'] ) ) );
+	}
+
+
+	public static function handle_stats_import() {
+		self::guard( 'songpress_money_stats_import' );
+		if ( empty( $_FILES['stats']['tmp_name'] ) || ! is_uploaded_file( $_FILES['stats']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			self::go( 'stats', array( 'm_err' => __( 'No file was received.', 'songpress' ) ) );
+		}
+		$html = file_get_contents( $_FILES['stats']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.WP.AlternativeFunctions -- an uploaded temp file.
+		$r    = self::import_stats_html( (string) $html );
+		if ( '' !== $r['error'] ) {
+			self::go( 'stats', array( 'm_err' => $r['error'] ) );
+		}
+		self::go( 'stats', array( 'm_ok' => sprintf( /* translators: 1: days, 2: day-and-service lines */ __( 'Saved %1$d days of streams (%2$d lines).', 'songpress' ), $r['days'], $r['rows'] ) ) );
 	}
 
 	public static function handle_pay() {
@@ -586,11 +676,99 @@ class Songpress_Money {
 		return $o;
 	}
 
+
+	/** The chart for streams and income per day, week, month and quarter, with the stats import beside it. */
+	private static function chart_html() {
+		$data = self::chart_payload();
+		$o    = '<div class="spc" id="spc"><div class="spc-bar">';
+		$o   .= '<div class="spc-seg" data-k="source"><button type="button" data-v="statements" class="on">' . esc_html__( 'DistroKid statements', 'songpress' ) . '</button><button type="button" data-v="daily">' . esc_html__( 'Daily estimates', 'songpress' ) . '</button></div>';
+		$o   .= '<div class="spc-seg" data-k="mode"><button type="button" data-v="streams" class="on">' . esc_html__( 'Streams', 'songpress' ) . '</button><button type="button" data-v="income">' . esc_html__( 'Income', 'songpress' ) . '</button></div>';
+		$o   .= '<div class="spc-seg" data-k="grain"><button type="button" data-v="day">' . esc_html__( 'Day', 'songpress' ) . '</button><button type="button" data-v="week">' . esc_html__( 'Week', 'songpress' ) . '</button><button type="button" data-v="month" class="on">' . esc_html__( 'Month', 'songpress' ) . '</button><button type="button" data-v="quarter">' . esc_html__( 'Quarter', 'songpress' ) . '</button></div>';
+		$o   .= '<label class="spc-all"><input type="checkbox" id="spc-all"> ' . esc_html__( 'Whole history', 'songpress' ) . '</label></div>';
+		$o   .= '<p class="spe-help" id="spc-note"></p><div class="spc-toggles" id="spc-toggles"></div><div class="spc-plot" id="spc-plot"></div><div class="spc-read" id="spc-read" aria-live="polite"></div></div>';
+		$o   .= '<script type="application/json" id="spc-data">' . wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script>';
+		$o   .= '<script>' . self::chart_js() . '</script>';
+		return $o;
+	}
+
+	private static function chart_js() {
+		return <<<'JS'
+(function(){
+var root=document.getElementById('spc');if(!root)return;
+var D={statements:[],daily:[]};try{D=JSON.parse(document.getElementById('spc-data').textContent)}catch(e){}
+var S={source:D.statements.length||!D.daily.length?'statements':'daily',mode:'streams',grain:'month',all:false,off:{}};
+if(S.source==='daily'){S.grain='day'}
+var COL=['#f5a623','#4fb3ff','#62d68b','#e377c2','#b48cf2','#ffd166','#ff7b72','#4dd0c8','#9aa4b2','#c7a27c'];
+var plot=document.getElementById('spc-plot'),tog=document.getElementById('spc-toggles'),note=document.getElementById('spc-note'),read=document.getElementById('spc-read');
+var RECENT={day:60,week:52,month:36,quarter:20};
+function pad(n){return (n<10?'0':'')+n}
+function key(day,g){
+ var y=+day.slice(0,4),m=+day.slice(5,7),d=+day.slice(8,10);
+ if(g==='day')return day;
+ if(g==='month')return day.slice(0,7);
+ if(g==='quarter')return y+'-Q'+(Math.floor((m-1)/3)+1);
+ var t=new Date(Date.UTC(y,m-1,d));var wd=(t.getUTCDay()+6)%7;t=new Date(t.getTime()-wd*864e5);
+ return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());
+}
+function rows(){
+ var out=[];
+ if(S.source==='statements'){D.statements.forEach(function(r){out.push([r[0]+'-01',r[1],S.mode==='income'?r[3]:r[2]])})}
+ else{D.daily.forEach(function(r){out.push([r[0],r[1],r[2]])})}
+ return out;
+}
+function fmt(v){if(S.mode==='income'){return '$'+v.toLocaleString(undefined,{minimumFractionDigits:v<100?2:0,maximumFractionDigits:v<100?2:0})}return Math.round(v).toLocaleString()}
+function nice(max){if(max<=0)return 1;var p=Math.pow(10,Math.floor(Math.log10(max))),f=max/p;var n=f<=1?1:f<=2?2:f<=5?5:10;return n*p}
+function svg(tag,a,inner){var s='<'+tag;for(var k in a)s+=' '+k+'="'+String(a[k]).replace(/"/g,'&quot;')+'"';return s+'>'+(inner||'')+'</'+tag+'>'}
+function draw(){
+ var grains=S.source==='daily'?['day','week','month','quarter']:['month','quarter'];
+ if(grains.indexOf(S.grain)<0)S.grain=S.source==='daily'?'day':'month';
+ var hasIncome=S.source==='statements';
+ if(!hasIncome&&S.mode==='income')S.mode='streams';
+ root.querySelectorAll('.spc-seg').forEach(function(seg){var k=seg.getAttribute('data-k');seg.querySelectorAll('button').forEach(function(b){var v=b.getAttribute('data-v');var ok=true;
+  if(k==='grain')ok=grains.indexOf(v)>=0;if(k==='mode'&&v==='income')ok=hasIncome;b.hidden=!ok;b.classList.toggle('on',S[k]===v)})});
+ var all=rows(),agg={},series={},order=[];
+ all.forEach(function(r){var b=key(r[0],S.grain);agg[b]=agg[b]||{};agg[b][r[1]]=(agg[b][r[1]]||0)+r[2];series[r[1]]=(series[r[1]]||0)+r[2]});
+ var names=Object.keys(series).sort(function(a,b){return series[b]-series[a]});
+ var buckets=Object.keys(agg).sort();
+ if(!buckets.length){plot.innerHTML='';tog.innerHTML='';read.textContent='';note.textContent=S.source==='daily'?'No daily stats yet. Import the DistroKid stats page below.':'No statements loaded yet. Load your catalog file on the Money page.';return}
+ var lim=RECENT[S.grain];if(!S.all&&buckets.length>lim)buckets=buckets.slice(-lim);
+ note.textContent=(S.source==='statements'?'Plays and sales reported on DistroKid statements, by month. ':'Daily stream estimates from the DistroKid stats page (no income is reported daily). ')+buckets.length+' '+S.grain+(buckets.length===1?'':'s')+', '+buckets[0]+' to '+buckets[buckets.length-1]+'.';
+ tog.innerHTML='';
+ names.forEach(function(n,i){var b=document.createElement('button');b.type='button';b.className='spc-chip'+(S.off[n]?' off':'');b.innerHTML='<i style="background:'+COL[i%COL.length]+'"></i>'+n.replace(/</g,'&lt;');b.onclick=function(){S.off[n]=!S.off[n];draw()};tog.appendChild(b)});
+ var live=names.filter(function(n){return !S.off[n]});
+ var tot=buckets.map(function(b){return live.reduce(function(s,n){return s+((agg[b]||{})[n]||0)},0)});
+ var max=nice(Math.max.apply(null,tot.concat([0])));
+ var W=900,H=300,L=58,R=8,T=10,B=34,iw=W-L-R,ih=H-T-B,bw=iw/buckets.length;
+ var g='';
+ for(var i=0;i<=4;i++){var v=max*i/4,y=T+ih-ih*i/4;g+=svg('line',{x1:L,x2:W-R,y1:y,y2:y,class:'spc-grid'})+svg('text',{x:L-6,y:y+4,'text-anchor':'end',class:'spc-ax'},fmt(v))}
+ var every=Math.ceil(buckets.length/Math.max(4,Math.floor(iw/92)));
+ buckets.forEach(function(b,bi){
+  var x=L+bi*bw,y0=T+ih,part=agg[b]||{},label=b;
+  live.forEach(function(n){var v=part[n]||0;if(!v)return;var h=ih*v/max;y0-=h;var ci=names.indexOf(n);g+=svg('rect',{x:x+bw*.12,y:y0,width:Math.max(1,bw*.76),height:h,fill:COL[ci%COL.length],'data-b':bi},'')});
+  g+=svg('rect',{x:x,y:T,width:bw,height:ih,fill:'transparent',class:'spc-hit','data-b':bi});
+  if(bi%every===0)g+=svg('text',{x:x+bw/2,y:H-12,'text-anchor':'middle',class:'spc-ax'},label.length>8&&S.grain==='day'?label.slice(5):label);
+ });
+ plot.innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+S.mode+' by '+S.grain+'" preserveAspectRatio="xMidYMid meet">'+g+'</svg>';
+ function show(bi){var b=buckets[bi],part=agg[b]||{};var t=live.reduce(function(s,n){return s+(part[n]||0)},0);
+  read.innerHTML='<b>'+b+'</b> · '+fmt(t)+' '+(S.mode==='income'?'':'streams')+live.filter(function(n){return part[n]}).map(function(n){return ' · <span style="color:'+COL[names.indexOf(n)%COL.length]+'">'+n.replace(/</g,'&lt;')+' '+fmt(part[n])+'</span>'}).join('')}
+ plot.querySelectorAll('.spc-hit').forEach(function(r){r.addEventListener('mouseenter',function(){show(+r.getAttribute('data-b'))});r.addEventListener('click',function(){show(+r.getAttribute('data-b'))})});
+ show(buckets.length-1);
+}
+root.querySelectorAll('.spc-seg').forEach(function(seg){seg.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var k=seg.getAttribute('data-k');S[k]=b.getAttribute('data-v');if(k==='source'){S.off={};S.grain=S.source==='daily'?'day':'month'}draw()})});
+document.getElementById('spc-all').addEventListener('change',function(e){S.all=e.target.checked;draw()});
+draw();
+})();
+JS;
+	}
+
 	private static function render_stats() {
 		$months = self::months();
-		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Stats', 'songpress' ) . '</h2></div>';
+		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Stats', 'songpress' ) . '</h2></div>' . self::notes();
+		$o     .= self::chart_html();
+		$o     .= '<h3>' . esc_html__( 'Import the DistroKid stats page', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Choose that file here. Days it covers are updated; days it does not cover are kept.', 'songpress' ) . '</p>';
+		$o     .= str_replace( '<form ', '<form enctype="multipart/form-data" ', self::form_open( 'songpress_money_stats_import', 'spm-imp' ) ) . '<input type="file" name="stats" accept=".html,.htm,text/html" required> <button class="spe-save" type="submit">' . esc_html__( 'Import daily stats', 'songpress' ) . '</button></form>';
 		if ( ! $months && ! self::daily( 1 ) ) {
-			return $o . '<p class="spe-help">' . esc_html__( 'No stats loaded yet. Open Money and load your old catalog file.', 'songpress' ) . '</p></div>';
+			return $o . '</div>';
 		}
 		if ( $months ) {
 			$items = array();

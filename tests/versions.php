@@ -340,5 +340,19 @@ check( 'serial parsed from a journal title', array( Songpress_Journal::serial_in
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 
+// DistroKid stats page import
+$sh = '<html><body><script type="application/json" id="combinedStatsData">{"dsps":[{"key":"spotify","label":"Spotify"},{"key":"apple","label":"Apple Music"}],"series":{"daily":[{"category":"2026-02-01","spotify":10,"apple":4},{"category":"2026-02-02","spotify":7,"apple":0},{"category":"bad","spotify":1}]}}</script></body></html>';
+$pr = Songpress_Money::parse_stats_html( $sh );
+check( 'stats page parses to day/service rows', $pr, array( array( '2026-02-01', 'Spotify', 10 ), array( '2026-02-01', 'Apple Music', 4 ), array( '2026-02-02', 'Spotify', 7 ), array( '2026-02-02', 'Apple Music', 0 ) ) );
+check( 'page with no stats gives a message', is_string( Songpress_Money::parse_stats_html( '<html></html>' ) ), true );
+$ri = Songpress_Money::import_stats_html( $sh );
+check( 'stats import counts', array( $ri['days'], $ri['rows'] ), array( 2, 4 ) );
+$sh2 = str_replace( '"spotify":10', '"spotify":99', $sh );
+Songpress_Money::import_stats_html( $sh2 );
+check( 'stats import updates a day, no duplicates', array( (int) $GLOBALS['wpdb']->get_var( "SELECT streams FROM wp_songpress_streams WHERE day='2026-02-01' AND service='Spotify'" ), (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_streams WHERE day='2026-02-01'" ) ), array( 99, 2 ) );
+check( 'earlier days kept by a later import', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_streams WHERE day='2026-01-01'" ) > 0, true );
+$cp = Songpress_Money::chart_payload();
+check( 'chart payload has statements and days', array( count( $cp['statements'] ) > 0, count( $cp['daily'] ) > 0 ), array( true, true ) );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
