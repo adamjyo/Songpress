@@ -301,6 +301,26 @@ class Songpress_Journal {
 		);
 	}
 
+	/** A note for the list: no body, just what the list needs (a short preview and the #tags), so the page stays small. The full text is fetched when a note is opened. */
+	public static function shape_slim( $e ) {
+		$a    = self::shape( $e );
+		$body = (string) $a['notes'];
+		$prose = preg_replace( '/```[\s\S]*?```/', ' ', $body );
+		$tags  = array();
+		if ( preg_match_all( '/(?:^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/', (string) $prose, $m ) ) {
+			foreach ( $m[1] as $t ) {
+				$tags[ strtolower( $t ) ] = $t;
+			}
+		}
+		$head = function_exists( 'mb_substr' ) ? mb_substr( (string) $prose, 0, 600 ) : substr( (string) $prose, 0, 600 );
+		$pv   = trim( preg_replace( '/\s+/', ' ', preg_replace( '/[#*_>`\[\]]/', '', $head ) ) );
+		$a['notes'] = '';
+		$a['pv']    = function_exists( 'mb_substr' ) ? mb_substr( $pv, 0, 240 ) : substr( $pv, 0, 240 );
+		$a['tags']  = array_values( $tags );
+		$a['slim']  = 1;
+		return $a;
+	}
+
 	private static function row( $id ) {
 		global $wpdb;
 		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::t() . ' WHERE id = %d', (int) $id ) ); // phpcs:ignore WordPress.DB
@@ -325,6 +345,30 @@ class Songpress_Journal {
 			$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::t() . " SET {$what} = 1 - {$what} WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB -- one of two literals.
 			Songpress_Audit::log( 'notes', ( 'archived' === $what ? 'Archived or restored' : 'Pinned or unpinned' ) . ' a note', (string) ( self::row( $id )->title ?? '' ), array( 'entry_id' => $id ) );
 			return array( 'ok' => true, 'note' => self::shape( self::row( $id ) ) );
+		}
+		if ( 'get' === $op && $id ) {
+			$r = self::row( $id );
+			return $r ? array( 'ok' => true, 'note' => self::shape( $r ) ) : array( 'ok' => false, 'error' => 'That note is gone.' );
+		}
+		if ( 'getmany' === $op ) {
+			$ids = array_slice( array_values( array_unique( array_filter( array_map( 'absint', explode( ',', (string) ( $in['ids'] ?? '' ) ) ) ) ) ), 0, 100 );
+			$out = array();
+			foreach ( $ids as $gid ) {
+				$r = self::row( $gid );
+				if ( $r ) {
+					$out[] = self::shape( $r );
+				}
+			}
+			return array( 'ok' => true, 'notes' => $out );
+		}
+		if ( 'find' === $op ) {
+			$q = trim( (string) ( $in['q'] ?? '' ) );
+			if ( strlen( $q ) < 2 ) {
+				return array( 'ok' => true, 'ids' => array() );
+			}
+			$like = '%' . $wpdb->esc_like( $q ) . '%';
+			$ids  = $wpdb->get_col( $wpdb->prepare( 'SELECT id FROM ' . self::t() . ' WHERE notes LIKE %s OR title LIKE %s LIMIT 800', $like, $like ) ); // phpcs:ignore WordPress.DB
+			return array( 'ok' => true, 'ids' => array_map( 'intval', (array) $ids ) );
 		}
 		if ( 'delete_many' === $op ) {
 			$ids = array_filter( array_map( 'absint', explode( ',', (string) ( $in['ids'] ?? '' ) ) ) );
@@ -433,7 +477,7 @@ class Songpress_Journal {
 				break;
 			}
 			foreach ( $rows as $e ) {
-				$parts[] = wp_json_encode( self::shape( $e ), $fl );
+				$parts[] = wp_json_encode( self::shape_slim( $e ), $fl );
 			}
 			$n = count( $rows );
 			unset( $rows );
@@ -511,8 +555,8 @@ function pd(d){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||'');return m?new Date(Da
 function longDate(d){var x=pd(d);return x?MON[x.getUTCMonth()]+' '+x.getUTCDate()+', '+x.getUTCFullYear():''}
 function head(n){return (n.title||'').trim()||longDate(n.date)||'Untitled'}
 function prose(t){return String(t||'').replace(/```[\s\S]*?```/g,' ')}
-function tagsOf(n){if(n._ts===n.notes)return n._t;var o={};prose(n.notes).replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,function(_,a,t){o[t.toLowerCase()]=t});n._ts=n.notes;n._t=Object.keys(o);return n._t}
-function preview(n){return prose(String(n.notes||'').slice(0,600)).replace(/[#*_>`\[\]]/g,'').replace(/\s+/g,' ').trim().slice(0,240)}
+function tagsOf(n){if(n.slim)return n.tags||[];if(n._ts===n.notes)return n._t;var o={};prose(n.notes).replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,function(_,a,t){o[t.toLowerCase()]=t});n._ts=n.notes;n._t=Object.keys(o);return n._t}
+function preview(n){if(n.slim)return n.pv||'';return prose(String(n.notes||'').slice(0,600)).replace(/[#*_>`\[\]]/g,'').replace(/\s+/g,' ').trim().slice(0,240)}
 var day='',calY=0,calM=0;
 function two(x){return (x<10?'0':'')+x}
 function renderCal(){var c=$('spn-cal');if(!c)return;if(!calY){var b0=pd(cur&&cur.date)||new Date();calY=b0.getUTCFullYear();calM=b0.getUTCMonth()}
@@ -530,7 +574,7 @@ function visible(){
   if(tag==='@pin'&&!n.pinned)return false;
   if(tag&&tag.charAt(0)!=='@'&&tagsOf(n).indexOf(tag)<0)return false;
   if(day&&String(n.date||'').slice(0,10)!==day)return false;
-  if(k&&(n.title+' '+n.notes+' '+n.place+' '+n.authors).toLowerCase().indexOf(k)<0)return false;
+  if(k&&(n.title+' '+(n.slim?n.pv:n.notes)+' '+n.place+' '+n.authors).toLowerCase().indexOf(k)<0&&!(FQ===k&&FS[n.id]))return false;
   return true});
  r.sort(function(a,b){if(a.pinned!==b.pinned)return b.pinned-a.pinned;var c=(a.date<b.date?-1:a.date>b.date?1:0)||(a.id-b.id);return asc?c:-c});
  return r}
@@ -544,7 +588,7 @@ function renderTags(){
  Object.keys(all).sort().forEach(function(k){h+=b(k,'#'+all[k],tag===k)});
  if(arch)h+=b('@arch','Archived',tag==='@arch');
  $('spn-tags').innerHTML=h}
-var LIM=150,lk='';
+var LIM=150,lk='',FQ='',FS={},fT=null,want=0;
 function renderList(){
  var r=visible(),h='',key=q+'|'+tag+'|'+day+'|'+(asc?1:0);if(key!==lk){lk=key;LIM=150}var total=r.length;r=r.slice(0,LIM);
  r.forEach(function(n){
@@ -555,6 +599,8 @@ function renderList(){
  $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>';renderCal()}
 function setStatus(s){$('spn-status').textContent=s||''}
 function fill(n){
+ want=n.id||0;
+ if(n.slim){setStatus('Opening…');var w0=n.id;post({op:'get',entry_id:w0}).then(function(r){if(want!==w0)return;if(r.ok){fill(merge(r.note));setStatus('')}else setStatus(r.error||'Could not open it')}).catch(function(){setStatus('Could not reach the server')});return}
  cur=n;pos=(n.lat!==''&&n.lat!=null&&n.lng!=='')?{lat:+n.lat,lng:+n.lng}:null;
  $('spn-title').value=n.title||'';AL=[];$('spn-body').value=toDisp(n.notes||'');
  $('spn-f-date').value=n.date||D.today;$('spn-f-created').value=n.created||'';
@@ -663,6 +709,10 @@ $('spn-audx').addEventListener('click',function(){$('spn-audbox').hidden=true});
 $('spn-body').addEventListener('input',auds);
 function expSel(){var ids=Object.keys(sel).map(Number),ns=ids.length?notes.filter(function(n){return sel[n.id]}):(cur&&cur.id?[cur]:[]);
  if(!ns.length){setStatus('Open or select a note first');return}
+ var need=ns.filter(function(n){return n.slim}).map(function(n){return n.id});
+ if(need.length){setStatus('Getting '+need.length+' notes…');var ch=[],i;for(i=0;i<need.length;i+=100)ch.push(need.slice(i,i+100));ch.reduce(function(pr,c){return pr.then(function(){return post({op:'getmany',ids:c.join(',')}).then(function(r){(r.notes||[]).forEach(merge)})})},Promise.resolve()).then(function(){setStatus('');var ids2=ns.map(function(n){return n.id});expSel2(notes.filter(function(n){return ids2.indexOf(n.id)>=0}))}).catch(function(){setStatus('Could not reach the server')});return}
+ expSel2(ns)}
+function expSel2(ns){
  download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
 $('spn-pop').addEventListener('click',function(e){var x=e.target.closest('[data-go]');if(!x)return;var g=x.getAttribute('data-go');this.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on');if(g==='sel')expSel();else if(D.urls[g])location.href=D.urls[g]});
 document.addEventListener('click',function(e){var pm=$('spn-pop');if(!pm||pm.hidden)return;if(e.target.closest('#spn-pop')||e.target.closest('[data-act=exp]'))return;pm.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on')});
@@ -680,7 +730,7 @@ $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target
  var r=e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');
  if(selMode||e.metaKey||e.ctrlKey||e.shiftKey){sel[id]=!sel[id];if(!sel[id])delete sel[id];renderList();return}
  pick(id)});
-$('spn-search').addEventListener('input',function(){q=this.value;renderList()});
+$('spn-search').addEventListener('input',function(){q=this.value;renderList();clearTimeout(fT);var k=q.trim().toLowerCase();if(k.length<2){FQ='';FS={};return}fT=setTimeout(function(){post({op:'find',q:k}).then(function(r){if(r.ok&&q.trim().toLowerCase()===k){FS={};r.ids.forEach(function(i){FS[i]=1});FQ=k;renderList()}}).catch(function(){})},350)});
 root.querySelector('.spn-top').addEventListener('click',function(e){
  var b=e.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');
  if(a==='new')newNote();

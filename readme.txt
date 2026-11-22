@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.34
+Stable tag: 0.63.35
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.35 =
+* Notes: the list loads a slim version of each note (preview and tags); a note's full text loads when you open it, body search and export ask the server. The page is less than half the size.
 
 = 0.63.34 =
 * Notes: saving, deleting and pinning now go through admin-ajax (sites that block admin-post.php could not delete); delete is one click; select mode has Delete selected and Select all shown.
