@@ -1387,6 +1387,12 @@ class Songpress_Admin {
 		self::back( 'songpress-settings', array( 'checked' => 1 ) );
 	}
 
+	/** Any page (published, draft, private or trashed) other than $except that holds this address. */
+	private static function page_with_slug( $slug, $except ) {
+		$found = get_posts( array( 'post_type' => 'page', 'name' => $slug, 'post_status' => array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' ), 'exclude' => array( (int) $except ), 'numberposts' => 1 ) );
+		return $found ? $found[0] : null;
+	}
+
 	/** Put one of SongPress's pages at its standard address (/desktop, /my-songs). Publishes it if it was a draft or in the trash. */
 	public static function handle_page_slug() {
 		check_admin_referer( 'songpress_page_slug' );
@@ -1398,9 +1404,13 @@ class Songpress_Admin {
 		$pid  = isset( $defs[ $opt ] ) ? (int) get_option( $opt ) : 0;
 		if ( $pid && Songpress_Install::page_ok( $pid ) ) {
 			$slug  = $defs[ $opt ]['slug'];
-			$other = get_page_by_path( $slug );
-			if ( $other && (int) $other->ID !== $pid ) {
-				self::back( 'songpress-settings', array( 'err' => rawurlencode( sprintf( /* translators: %s: address */ __( '/%s is already used by another page. Rename or trash that page first.', 'songpress' ), $slug ) ) ) );
+			$other = self::page_with_slug( $slug, $pid );
+			if ( $other && 'trash' === $other->post_status ) {
+				wp_update_post( array( 'ID' => (int) $other->ID, 'post_name' => $slug . '-old' ) ); // a trashed page still holds the address; free it without deleting anything
+				$other = null;
+			}
+			if ( $other ) {
+				self::back( 'songpress-settings', array( 'err' => rawurlencode( sprintf( /* translators: 1: address, 2: page title, 3: page status */ __( '/%1$s is already used by the page "%2$s" (%3$s). Rename or trash that page, then try again.', 'songpress' ), $slug, $other->post_title, $other->post_status ) ) ) );
 			}
 			wp_update_post( array( 'ID' => $pid, 'post_name' => $slug, 'post_status' => 'publish' ) );
 		}
