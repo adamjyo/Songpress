@@ -24,21 +24,29 @@ class Songpress_Admin {
 		add_action( 'admin_head', array( __CLASS__, 'css' ) );
 	}
 
+	/**
+	 * The SongPress menu has two entries: Catalog, and Members for people management.
+	 * Everything else (Add song, Import, Export, Link writers, Settings) is a button on those two screens.
+	 * Those screens are real pages, just kept out of the menu: they are registered under options.php.
+	 */
 	public static function menu() {
 		if ( ! Songpress_Caps::can_view() ) {
 			return; // people without a SongPress class do not see the plugin at all
 		}
 		add_menu_page( 'SongPress', 'SongPress', 'read', 'songpress', array( __CLASS__, 'page_catalog' ), 'dashicons-format-audio', 26 );
 		add_submenu_page( 'songpress', __( 'Catalog', 'songpress' ), __( 'Catalog', 'songpress' ), 'read', 'songpress', array( __CLASS__, 'page_catalog' ) );
+		if ( Songpress_Caps::can( 'members' ) ) {
+			add_submenu_page( 'songpress', __( 'Members', 'songpress' ), __( 'Members', 'songpress' ), 'read', 'songpress-members', array( __CLASS__, 'page_members' ) );
+		}
 		foreach ( array(
-			array( 'create', __( 'Add song', 'songpress' ), 'songpress-song', 'page_song' ),
-			array( 'import', __( 'Import', 'songpress' ), 'songpress-import', 'page_import' ),
-			array( 'link', __( 'Link writers', 'songpress' ), 'songpress-link', 'page_link_writers' ),
-			array( 'members', __( 'Members', 'songpress' ), 'songpress-members', 'page_members' ),
-			array( 'settings', __( 'Settings', 'songpress' ), 'songpress-settings', 'page_settings' ),
+			array( 'create', 'songpress-song', 'page_song', __( 'Song', 'songpress' ) ),
+			array( 'import', 'songpress-import', 'page_import', __( 'Import', 'songpress' ) ),
+			array( 'link', 'songpress-link', 'page_link_writers', __( 'Link writers', 'songpress' ) ),
+			array( 'settings', 'songpress-settings', 'page_settings', __( 'Settings', 'songpress' ) ),
 		) as $m ) {
-			if ( Songpress_Caps::can( $m[0] ) ) {
-				add_submenu_page( 'songpress', $m[1], $m[1], 'read', $m[2], array( __CLASS__, $m[3] ) );
+			// The song editor is also how writers open their own songs, so it is registered for anyone who can edit any song.
+			if ( Songpress_Caps::can( $m[0] ) || ( 'songpress-song' === $m[1] && Songpress_Caps::can( 'edit_own' ) ) ) {
+				add_submenu_page( 'options.php', $m[3], $m[3], 'read', $m[1], array( __CLASS__, $m[2] ) );
 			}
 		}
 	}
@@ -76,6 +84,9 @@ class Songpress_Admin {
 		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Catalog', 'songpress' ) . '</h1>';
 		if ( Songpress_Caps::can( 'create' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-song' ) ) . '">' . esc_html__( 'Add song', 'songpress' ) . '</a>';
+		}
+		if ( Songpress_Caps::can( 'import' ) ) {
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-import' ) ) . '">' . esc_html__( 'Import', 'songpress' ) . '</a>';
 		}
 		if ( Songpress_Caps::can( 'export' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ) ) . '">' . esc_html__( 'Export CSV', 'songpress' ) . '</a>';
@@ -756,7 +767,11 @@ class Songpress_Admin {
 		if ( ! Songpress_Caps::can( 'members' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
 		}
-		echo '<div class="wrap songpress-wrap"><h1>' . esc_html__( 'Members', 'songpress' ) . '</h1>';
+		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Members', 'songpress' ) . '</h1>';
+		if ( Songpress_Caps::can( 'link' ) ) {
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-link' ) ) . '">' . esc_html__( 'Link writers', 'songpress' ) . '</a>';
+		}
+		echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-settings' ) ) . '">' . esc_html__( 'Plugin settings', 'songpress' ) . '</a><hr class="wp-header-end">';
 		echo '<p class="sp-help">' . esc_html__( 'SongPress has its own classes, separate from WordPress roles. A person only sees SongPress if you give them a class here. WordPress administrators are always Managers and cannot be changed.', 'songpress' ) . '</p>';
 		foreach ( array( 'saved' => 'notice-success', 'err' => 'notice-error' ) as $k => $cls ) {
 			if ( isset( $_GET[ $k ] ) ) {
