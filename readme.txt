@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.45.1
+Stable tag: 0.46.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.46.0 =
+* Writer names are a pick list from the People table (you can still type a new name). Choosing a person fills in their IPI. Writer, IPI and share sit on one line, two writers to a row when the page is wide enough.
 
 = 0.45.1 =
 * Writers are laid out two to a row, each with name, share and IPI. The Account box is gone; a writer who was already linked to an account stays linked when you save.

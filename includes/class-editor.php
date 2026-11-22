@@ -245,7 +245,8 @@ class Songpress_Editor {
 
 	private static function credit_group( $role, $title, $add_label, array $existing, $min, $with_user, $with_share, $simple ) {
 		$count = max( $min, count( $existing ) );
-		$o     = '<div class="spe-group' . ( $simple ? '' : ' adv' ) . ( $with_user ? ' spe-two' : '' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
+		$o     = $with_user ? self::people_list() : '';
+		$o    .= '<div class="spe-group' . ( $simple ? '' : ' adv' ) . ( $with_user ? ' spe-two' : '' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
 		$o    .= '<div class="spe-head' . ( $with_user ? ' spe-nohead' : '' ) . '"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><span class="adv">IPI</span>' . ( $with_share ? '<span>' . esc_html__( 'Share %', 'songpress' ) . '</span>' : '<span></span>' ) . ( $with_user ? '<span class="adv">' . esc_html__( 'Account', 'songpress' ) . '</span>' : '<span class="adv"></span>' ) . '<span></span></div><div class="spe-rows">';
 		for ( $i = 0; $i < $count; $i++ ) {
 			$o .= self::credit_row( $role, (string) $i, $existing[ $i ] ?? null, $with_user, $with_share );
@@ -255,11 +256,27 @@ class Songpress_Editor {
 		return $o;
 	}
 
+	/** The People table as a pick list for writers. Choosing a name fills in that person's IPI. */
+	private static function people_list() {
+		global $wpdb;
+		$t   = Songpress_Install::table( 'profiles' );
+		$o   = '<datalist id="spe-people">';
+		$map = array();
+		foreach ( (array) $wpdb->get_results( "SELECT name, ipi FROM {$t} WHERE kind = 'person' ORDER BY name" ) as $r ) {
+			$o .= '<option value="' . esc_attr( $r->name ) . '">';
+			if ( '' !== (string) $r->ipi ) {
+				$map[ strtolower( $r->name ) ] = array( $r->name, $r->ipi );
+			}
+		}
+		$o .= '</datalist><script>(function(){var M=' . wp_json_encode( $map ) . ';document.addEventListener("input",function(e){var i=e.target;if(!i.matches||!i.matches("input[list=spe-people]")){return;}var v=M[i.value.trim().toLowerCase()];if(!v){return;}var c=i.closest(".spe-credit"),p=c&&c.querySelector("input[name$=\"[ipi]\"]");if(p){p.value=v[1];}});})();</script>';
+		return $o;
+	}
+
 	private static function credit_row( $role, $i, $c, $with_user, $with_share ) {
 		$n    = 'credits[' . $role . '][' . $i . ']';
 		$name = (string) ( $c->name ?? '' );
-		$h    = '<div class="spe-credit"><span class="spe-who">' . ( '' !== trim( $name ) ? Songpress_Profiles::chip( $name, 28, Songpress_Profiles::kind_for_role( $role ) ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $name ) . '" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '"></span>';
-		$h   .= '<input class="adv" name="' . esc_attr( $n ) . '[ipi]" value="' . esc_attr( $c->ipi ?? '' ) . '" placeholder="IPI">';
+		$h    = '<div class="spe-credit"><span class="spe-who">' . ( '' !== trim( $name ) ? Songpress_Profiles::chip( $name, 28, Songpress_Profiles::kind_for_role( $role ) ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $name ) . '" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '"' . ( $with_user ? ' list="spe-people" autocomplete="off"' : '' ) . '></span>';
+		$h   .= '<input class="' . ( $with_user ? '' : 'adv' ) . '" name="' . esc_attr( $n ) . '[ipi]" value="' . esc_attr( $c->ipi ?? '' ) . '" placeholder="IPI">';
 		if ( $with_share ) {
 			$share = ( isset( $c->share ) && null !== $c->share ) ? rtrim( rtrim( (string) $c->share, '0' ), '.' ) : '';
 			$h    .= '<input name="' . esc_attr( $n ) . '[share]" value="' . esc_attr( $share ) . '" inputmode="decimal" placeholder="%">';

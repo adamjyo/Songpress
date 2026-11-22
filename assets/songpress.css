@@ -585,3 +585,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-group.spe-two .spe-credit > input[name$="[share]"]{grid-area:share}
 .spe-group.spe-two .spe-credit .spe-x{grid-area:x}
 @media (max-width:640px){.spe-group.spe-two .spe-rows{grid-template-columns:minmax(0,1fr)}}
+
+/* writers: name, IPI and share on one line; two cards to a row only when there is room */
+.spe-group.spe-two .spe-rows{grid-template-columns:repeat(auto-fit,minmax(430px,1fr))}
+.spe-group.spe-two .spe-credit{grid-template-columns:minmax(0,1fr) 132px 64px 28px;grid-template-areas:"who ipi share x"}
+@media (max-width:640px){.spe-group.spe-two .spe-rows{grid-template-columns:minmax(0,1fr)}.spe-group.spe-two .spe-credit{grid-template-columns:minmax(0,1fr) 96px 56px 28px}}
