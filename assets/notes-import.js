@@ -5,20 +5,27 @@
 	form = form.form;
 	var inp = form.querySelector('input[type=file]'), box = document.getElementById('spu-nprog'), bar = document.getElementById('spu-nbar'),
 		tx = document.getElementById('spu-ntxt'), btn = form.querySelector('button'), cfg = JSON.parse(form.getAttribute('data-cfg') || '{}');
-	var TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000, GROUP = 200, REST = 2;
+	var unreadable = [], TEXT = /\.(bear|md|txt|markdown)$/i, BIG = 400000, MAX = 3000000, BATCH_FILES = 10, BATCH_BYTES = 3000000, GROUP = 200, REST = 2;
 
 	function strip(s) { /* embedded pictures make a note huge; they cannot be kept in a note anyway */
 		return s.replace(/\(data:[a-z]+\/[^;)]+;base64,[A-Za-z0-9+\/=\s]{200,}\)/g, '(picture removed)')
 			.replace(/data:[a-z]+\/[^;"' )]+;base64,[A-Za-z0-9+\/=]{200,}/g, 'picture-removed');
 	}
-	function prep(file) { /* resolves to a File, or null when it is too big to send */
-		if (TEXT.test(file.name) && file.size > BIG) {
-			return file.text().then(function (t) {
-				var s = strip(t), f = new File([s], file.name, { type: 'text/plain' });
-				return f.size > MAX ? null : f;
-			});
-		}
-		return Promise.resolve(file.size > MAX && !/\.zip$/i.test(file.name) ? null : file);
+	function readOnce(file) { return /\.zip$/i.test(file.name) ? file.arrayBuffer() : file.text(); }
+	function readRetry(file, left) { /* a file kept in iCloud or Dropbox may only download when it is opened; asking again a few seconds later usually works */
+		return readOnce(file).catch(function (er) {
+			if (left <= 0) { throw er; }
+			tx.textContent = 'Waiting for ' + file.name + ' to be available on this computer…';
+			return new Promise(function (ok) { setTimeout(ok, 3000); }).then(function () { return readRetry(file, left - 1); });
+		});
+	}
+	function prep(file) { /* reads the whole file into memory now, so a file that cannot be read is known before anything is sent. Resolves to a File, or null */
+		if (!/\.(bear|md|txt|markdown|json|zip)$/i.test(file.name)) { return Promise.resolve(null); }
+		return readRetry(file, 5).then(function (data) {
+			if (/\.zip$/i.test(file.name)) { return new File([data], file.name, { type: 'application/zip' }); }
+			var s = file.size > BIG ? strip(data) : data, f = new File([s], file.name, { type: 'text/plain' });
+			return f.size > MAX ? null : f;
+		}).catch(function () { unreadable.push(file.name); return null; });
 	}
 	function wait(sec, msg, then) {
 		var n = sec; tx.textContent = msg + ' (' + n + 's)';
@@ -66,9 +73,9 @@
 		e.preventDefault();
 		box.hidden = false; btn.disabled = true; tx.textContent = 'Reading the files…';
 		Promise.all(fl.map(prep)).then(function (ready) {
-			var failed = [], units = [], cur = [], sz = 0;
+			var failed = unreadable.map(function (n) { return n + ' (this computer could not read it: if it is in iCloud or Dropbox, copy it to a folder on this Mac first)'; }), units = [], cur = [], sz = 0;
 			ready.forEach(function (f, i) {
-				if (!f) { failed.push(fl[i].name + ' (over 3 MB even without pictures)'); return; }
+				if (!f) { if (unreadable.indexOf(fl[i].name) < 0 && /\.(bear|md|txt|markdown|json|zip)$/i.test(fl[i].name)) { failed.push(fl[i].name + ' (over 3 MB even without pictures)'); } return; }
 				if (cur.length && (cur.length >= BATCH_FILES || sz + f.size > BATCH_BYTES)) { units.push(cur); cur = []; sz = 0; }
 				cur.push(f); sz += f.size;
 			});
