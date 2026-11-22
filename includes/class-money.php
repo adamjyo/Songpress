@@ -68,7 +68,7 @@ class Songpress_Money {
 	}
 
 	/** Insert rows in batches. $cols are column names; $rows are arrays of values in that order. */
-	private static function batch( $table, array $cols, array $rows, $verb = 'REPLACE' ) {
+	public static function batch( $table, array $cols, array $rows, $verb = 'REPLACE' ) {
 		global $wpdb;
 		$n = 0;
 		foreach ( array_chunk( $rows, 400 ) as $chunk ) {
@@ -98,7 +98,7 @@ class Songpress_Money {
 	}
 
 	/** ISRC and normalized title to song id, so statement lines find their song. */
-	private static function lookups() {
+	public static function lookups() {
 		global $wpdb;
 		$s   = Songpress_Install::table( 'songs' );
 		$i   = Songpress_Install::table( 'identifiers' );
@@ -459,30 +459,30 @@ class Songpress_Money {
 	public static function handle_import() {
 		self::guard( 'songpress_money_import' );
 		if ( empty( $_FILES['catalog']['tmp_name'] ) || ! is_uploaded_file( $_FILES['catalog']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-			self::go( 'money', array( 'm_err' => __( 'No file was received.', 'songpress' ) ) );
+			self::go( 'uploads', array( 'type' => 'catalog', 'm_err' => __( 'No file was received.', 'songpress' ) ) );
 		}
 		if ( ! class_exists( 'PDO' ) || ! in_array( 'sqlite', PDO::getAvailableDrivers(), true ) ) {
-			self::go( 'money', array( 'm_err' => __( 'This server cannot read SQLite files (pdo_sqlite is off).', 'songpress' ) ) );
+			self::go( 'uploads', array( 'type' => 'catalog', 'm_err' => __( 'This server cannot read SQLite files (pdo_sqlite is off).', 'songpress' ) ) );
 		}
 		$r = self::import_sqlite( $_FILES['catalog']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- an uploaded temp path, opened read-only by PDO.
 		if ( '' !== $r['error'] ) {
-			self::go( 'money', array( 'm_err' => $r['error'] ) );
+			self::go( 'uploads', array( 'type' => 'catalog', 'm_err' => $r['error'] ) );
 		}
-		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: statement lines, 2: people lines, 3: payouts, 4: stream days, 5: store lines, 6: journal entries, 7: ratings, 8: art projects, 9: agreements, 10: registrations */ __( 'Loaded %1$d earnings lines, %2$d per-person lines, %3$d new payouts, %4$d days of streams, %5$d store lines, %6$d journal entries, %7$d ratings, %8$d art projects, %9$d agreements and %10$d registrations in progress.', 'songpress' ), $r['earnings'], $r['person'], $r['payments'], $r['streams'], $r['stats'], $r['journal'], $r['ratings'], $r['art'], $r['agreements'], $r['registrations'] ) ) );
+		self::go( 'uploads', array( 'type' => 'catalog', 'm_ok' => sprintf( /* translators: 1: statement lines, 2: people lines, 3: payouts, 4: stream days, 5: store lines, 6: journal entries, 7: ratings, 8: art projects, 9: agreements, 10: registrations */ __( 'Loaded %1$d earnings lines, %2$d per-person lines, %3$d new payouts, %4$d days of streams, %5$d store lines, %6$d journal entries, %7$d ratings, %8$d art projects, %9$d agreements and %10$d registrations in progress.', 'songpress' ), $r['earnings'], $r['person'], $r['payments'], $r['streams'], $r['stats'], $r['journal'], $r['ratings'], $r['art'], $r['agreements'], $r['registrations'] ) ) );
 	}
 
 
 	public static function handle_stats_import() {
 		self::guard( 'songpress_money_stats_import' );
 		if ( empty( $_FILES['stats']['tmp_name'] ) || ! is_uploaded_file( $_FILES['stats']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-			self::go( 'stats', array( 'm_err' => __( 'No file was received.', 'songpress' ) ) );
+			self::go( 'uploads', array( 'type' => 'dk_stats', 'm_err' => __( 'No file was received.', 'songpress' ) ) );
 		}
 		$html = file_get_contents( $_FILES['stats']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.WP.AlternativeFunctions -- an uploaded temp file.
 		$r    = self::import_stats_html( (string) $html );
 		if ( '' !== $r['error'] ) {
-			self::go( 'stats', array( 'm_err' => $r['error'] ) );
+			self::go( 'uploads', array( 'type' => 'dk_stats', 'm_err' => $r['error'] ) );
 		}
-		self::go( 'stats', array( 'm_ok' => sprintf( /* translators: 1: days, 2: day-and-service lines */ __( 'Saved %1$d days of streams (%2$d lines).', 'songpress' ), $r['days'], $r['rows'] ) ) );
+		self::go( 'uploads', array( 'type' => 'dk_stats', 'm_ok' => sprintf( /* translators: 1: days, 2: day-and-service lines */ __( 'Saved %1$d days of streams (%2$d lines).', 'songpress' ), $r['days'], $r['rows'] ) ) );
 	}
 
 	public static function handle_pay() {
@@ -547,11 +547,11 @@ class Songpress_Money {
 
 	/* ---------- screens ---------- */
 
-	private static function form_open( $action, $class = '' ) {
+	public static function form_open( $action, $class = '' ) {
 		return '<form method="post" class="' . esc_attr( $class ) . '" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( $action, '_wpnonce', true, false ) . '<input type="hidden" name="action" value="' . esc_attr( $action ) . '"><input type="hidden" name="sp_return" value="' . esc_attr( Songpress_Editor::list_url() ) . '">';
 	}
 
-	private static function notes() {
+	public static function notes() {
 		$o = '';
 		if ( ! empty( $_GET['m_ok'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['m_ok'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
@@ -673,9 +673,7 @@ class Songpress_Money {
 			$o .= '</tbody></table></div>';
 		}
 
-		// import
-		$o .= '<h3>' . esc_html__( 'Load money from the old catalog file', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. The work journal, song ratings, art projects, agreements and registrations in progress come across too (entries already here are kept). Statements, per-person earnings, streams and store figures are replaced by what the file holds. Payouts and expenses you entered here are kept. Songs must already be imported.', 'songpress' ) . '</p>';
-		$o .= str_replace( '<form ', '<form enctype="multipart/form-data" ', self::form_open( 'songpress_money_import', 'spm-imp' ) ) . '<input type="file" name="catalog" accept=".sqlite,.db,.sqlite3" required> <button class="spe-save" type="submit">' . esc_html__( 'Load money', 'songpress' ) . '</button></form></div>';
+		$o .= '<p class="spe-help"><a href="' . esc_url( Songpress_Screens::url( 'uploads' ) ) . '">' . esc_html__( 'Load statements and the old catalog file on the Upload / Download page.', 'songpress' ) . '</a></p>';
 		return $o;
 	}
 
@@ -768,8 +766,7 @@ JS;
 		$months = self::months();
 		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Stats', 'songpress' ) . '</h2></div>' . self::notes();
 		$o     .= self::chart_html();
-		$o     .= '<h3>' . esc_html__( 'Import the DistroKid stats page', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Choose that file here. Days it covers are updated; days it does not cover are kept.', 'songpress' ) . '</p>';
-		$o     .= str_replace( '<form ', '<form enctype="multipart/form-data" ', self::form_open( 'songpress_money_stats_import', 'spm-imp' ) ) . '<input type="file" name="stats" accept=".html,.htm,text/html" required> <button class="spe-save" type="submit">' . esc_html__( 'Import daily stats', 'songpress' ) . '</button></form>';
+		$o     .= '<p class="spe-help"><a href="' . esc_url( Songpress_Screens::url( 'uploads', array( 'type' => 'dk_stats' ) ) ) . '">' . esc_html__( 'Import the DistroKid stats page on the Upload / Download page.', 'songpress' ) . '</a></p>';
 		if ( ! $months && ! self::daily( 1 ) ) {
 			return $o . '</div>';
 		}

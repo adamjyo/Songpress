@@ -37,6 +37,12 @@ class Songpress_Screens {
 	}
 
 	public static function render( $slug ) {
+		if ( 'uploads' === $slug ) {
+			return Songpress_Uploads::render();
+		}
+		if ( 'import' === $slug ) {
+			return Songpress_Uploads::render( 'works' );
+		}
 		if ( 'registrations' === $slug ) {
 			return Songpress_Registrations::render();
 		}
@@ -55,6 +61,11 @@ class Songpress_Screens {
 		if ( ! isset( self::MAP[ $slug ] ) ) {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'That screen does not exist.', 'songpress' ) . '</p></div>';
 		}
+		return self::legacy( $slug );
+	}
+
+	/** An old admin screen, re-dressed for the app. */
+	public static function legacy( $slug ) {
 		list( $fn, $cap ) = self::MAP[ $slug ];
 		if ( ! Songpress_Caps::can( $cap ) ) {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Only Managers can open this screen.', 'songpress' ) . '</p></div>';

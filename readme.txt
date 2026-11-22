@@ -30,6 +30,12 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.6.0 =
+* New Upload / Download page in the rail replaces every upload form in the app. Pick what you are uploading from a dropdown and its tool appears: Works, the old catalog file, photos and bios, the DistroKid stats page, and statements from DistroKid, MLC, ASCAP and CCLI (CSV or TSV; CCLI PDFs too where the server has pdftotext).
+* Statements are matched to songs by ISRC, then title, saved per song, quarter and source (replacing what that source held for the quarter), and each writer's share is worked out from the credits. Lines with no matching song are reported, not lost silently.
+* Downloads: pick a table (catalog, credits, earnings, earnings by person, payouts, expenses, streams, store figures, journal, ratings, registrations, agreements) and save it as a CSV.
+* The Money, Stats and People screens now link to this page instead of carrying their own upload forms.
+
 = 0.5.0 =
 * New Registrations in the rail (Managers, desktop): for every work, where it stands at MLC, ASCAP, BMI, CCLI and for its ISWC. Green when the work has the code, gold when you mark it in progress (with the day it started, a reference number and a note), red when not filed.
 * Filters: In progress, Waiting 30+ days, Released but not filed, All works. Marking never changes the song.

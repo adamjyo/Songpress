@@ -847,14 +847,6 @@ class Songpress_Admin {
 			echo '<tr><td><strong>' . esc_html( $a->name ) . '</strong></td><td>' . (int) Songpress_Artists::song_count( (int) $a->id ) . '</td><td><a href="' . esc_url( self::url( 'songpress-artists', array( 'artist' => (int) $a->id ) ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a> · <a href="' . esc_url( self::url( 'songpress', array( 'artist' => (int) $a->id ) ) ) . '">' . esc_html__( 'Songs', 'songpress' ) . '</a></td></tr>';
 		}
 		echo '</tbody></table>';
-		if ( Songpress_Caps::can( 'import' ) ) {
-			echo '<h2>' . esc_html__( 'Load photos from your old catalog', 'songpress' ) . '</h2><p class="sp-help">' . esc_html__( 'Choose your catalog.sqlite file to fill in photos and bios for people, bands and publishers. Songs are not touched. Safe to repeat.', 'songpress' ) . '</p>';
-			echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-			wp_nonce_field( 'songpress_profiles_load' );
-			echo '<input type="hidden" name="action" value="songpress_profiles_load"><input type="file" name="catalog" accept=".sqlite,.db,.sqlite3" required> ';
-			submit_button( __( 'Load photos from catalog file', 'songpress' ), 'secondary', 'submit', false );
-			echo '</form>';
-		}
 		echo wp_kses_post( songpress_donate_link() ) . '</div>';
 	}
 
@@ -999,14 +991,14 @@ class Songpress_Admin {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
 		if ( empty( $_FILES['catalog']['tmp_name'] ) || ! is_uploaded_file( $_FILES['catalog']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
-			self::back( 'songpress-people', array( 'loaderr' => __( 'No file was received.', 'songpress' ) ) );
+			self::back( 'songpress-uploads', array( 'type' => 'photos', 'm_err' => __( 'No file was received.', 'songpress' ) ) );
 		}
 		if ( ! class_exists( 'PDO' ) || ! in_array( 'sqlite', PDO::getAvailableDrivers(), true ) ) {
-			self::back( 'songpress-people', array( 'loaderr' => __( 'This server cannot read SQLite files (pdo_sqlite is off).', 'songpress' ) ) );
+			self::back( 'songpress-uploads', array( 'type' => 'photos', 'm_err' => __( 'This server cannot read SQLite files (pdo_sqlite is off).', 'songpress' ) ) );
 		}
 		$r = Songpress_Profiles::import_sqlite( $_FILES['catalog']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- an uploaded temp path, opened read-only by PDO.
 		Songpress_Profiles::reset_cache();
-		self::back( 'songpress-people', array( 'loaded' => (int) $r['people'], 'b' => (int) $r['bands'], 'p' => (int) $r['publishers'] ) );
+		self::back( 'songpress-uploads', array( 'type' => 'photos', 'm_ok' => sprintf( __( 'Loaded %1$d people, %2$d bands, %3$d publishers.', 'songpress' ), (int) $r['people'], (int) $r['bands'], (int) $r['publishers'] ) ) );
 	}
 
 	public static function handle_profile_save() {

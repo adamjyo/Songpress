@@ -384,3 +384,5 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .spr-chip.green{background:#12301c;color:#7ee2a0}.spr-chip.gold{background:#35290c;color:#f5c460}.spr-chip.red{background:#3d1517;color:#ff8a8f}
 .spr-edit{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}.spr-edit b{width:56px}
 .spr-edit input[name^=ref_],.spr-edit input[name^=note_]{width:170px}
+
+.spu-sel{max-width:100%;min-width:260px;padding:8px 10px;background:#17141b;color:inherit;border:1px solid #3a3342;border-radius:8px;font:inherit}.spu-panel{margin:14px 0;padding:14px;border:1px solid #2e2836;border-radius:10px}.spu-panel[hidden]{display:none}.spu-q{display:block;margin:8px 0}.spu h3{margin-top:26px}

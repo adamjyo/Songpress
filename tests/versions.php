@@ -84,6 +84,7 @@ require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
 require __DIR__ . '/../includes/class-agreements.php';
 require __DIR__ . '/../includes/class-registrations.php';
+require __DIR__ . '/../includes/class-uploads.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -425,6 +426,28 @@ check( 'stats import updates a day, no duplicates', array( (int) $GLOBALS['wpdb'
 check( 'earlier days kept by a later import', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_streams WHERE day='2026-01-01'" ) > 0, true );
 $cp = Songpress_Money::chart_payload();
 check( 'chart payload has statements and days', array( count( $cp['statements'] ) > 0, count( $cp['daily'] ) > 0 ), array( true, true ) );
+
+if ( ! defined( 'ARRAY_A' ) ) { define( 'ARRAY_A', 'ARRAY_A' ); }
+// Uploads: statement parsing and applying
+$tb = Songpress_Uploads::table( "Work Title\tDistribution Date\tDistributed Amount\n\"Harbor Lights\"\t2026-05-14\t$12.50\nHarbor Lights\t2026-06-01\t$2.50\nNo Such Song\t2026-05-01\t$4.00\n" );
+$ln = Songpress_Uploads::statement( 'mlc', $tb );
+check( 'mlc statement lines read with quarter from date', array( count( $ln ), $ln[0]['quarter'], $ln[0]['amount'] ), array( 3, '2026-Q2', 12.5 ) );
+check( 'chosen quarter overrides the file', Songpress_Uploads::statement( 'mlc', $tb, '2025-Q4' )[0]['quarter'], '2025-Q4' );
+check( 'quarter_of formats', array( Songpress_Uploads::quarter_of( '23Q1' ), Songpress_Uploads::quarter_of( '2026-11-03' ), Songpress_Uploads::quarter_of( '3/4/2026' ), Songpress_Uploads::quarter_of( 'zzz' ) ), array( '2023-Q1', '2026-Q4', '2026-Q1', '' ) );
+check( 'amount parsing', array( Songpress_Uploads::amount( '$1,234.50' ), Songpress_Uploads::amount( '(3.00)' ) ), array( 1234.5, -3.0 ) );
+check( 'ccli pdf lines', Songpress_Uploads::pdf_lines( "Song Name Here      12345   \$8.25\nTotal    \$8.25\n" ), array( array( 'title' => 'Song Name Here', 'amount' => 8.25 ) ) );
+$ap = Songpress_Uploads::apply( 'mlc', $ln );
+check( 'apply saves matched songs and reports the rest', array( $ap['songs'], $ap['unmatched'], $ap['quarters'] ), array( 1, 1, array( '2026-Q2' ) ) );
+check( 'matched lines for one song and quarter are summed', (float) $GLOBALS['wpdb']->get_var( "SELECT amount FROM wp_songpress_earnings WHERE quarter='2026-Q2' AND src='mlc'" ), 15.0 );
+Songpress_Uploads::apply( 'mlc', $ln );
+check( 'applying again replaces, never doubles', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_earnings WHERE quarter='2026-Q2' AND src='mlc'" ), 1 );
+check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
+$bad = 0;
+foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
+	if ( 'catalog' === $k ) { continue; }
+	if ( false === $GLOBALS['wpdb']->get_results( Songpress_Uploads::sql( $k ), ARRAY_A ) ) { ++$bad; }
+}
+check( 'every download query runs', $bad, 0 );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
