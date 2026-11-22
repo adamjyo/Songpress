@@ -2,8 +2,9 @@
 defined( 'ABSPATH' ) || exit;
 
 /**
- * The work journal, inside the SongPress app: dated notes about the work, searchable, with pinning and
- * archiving. Managers only. The old S&P Catalog journal and song ratings can be loaded once from its file.
+ * Notes, inside the SongPress app (the old S&P Catalog notes app): dated notes about the work, searchable, with pinning,
+ * archiving, key, tempo, authors and place, and links to the songs a note mentions (^0378 or #0378). Managers only.
+ * The old notes and song ratings can be loaded once from the catalog file.
  */
 class Songpress_Journal {
 
@@ -25,6 +26,39 @@ class Songpress_Journal {
 			return Songpress_Serial::format( (int) $m[1], isset( $m[2] ) ? (int) $m[2] : 0 );
 		}
 		return '';
+	}
+
+	/** Serials a note mentions as ^0378, ^0378-00 or #0378-02, normalized and without repeats. Pure. */
+	public static function serials_in( $text ) {
+		$out = array();
+		if ( preg_match_all( '/[\^#](\d{3,5})(?:-(\d{1,2}))?\b/', (string) $text, $m, PREG_SET_ORDER ) ) {
+			foreach ( $m as $x ) {
+				$out[ Songpress_Serial::format( (int) $x[1], isset( $x[2] ) ? (int) $x[2] : 0 ) ] = true;
+			}
+		}
+		return array_keys( $out );
+	}
+
+	/** The single song a note names, or 0 when it names none or several. $byser maps serial to song id. */
+	public static function sole_song( $text, array $byser ) {
+		$ids = array();
+		foreach ( self::serials_in( $text ) as $s ) {
+			if ( isset( $byser[ $s ] ) ) {
+				$ids[ $byser[ $s ] ] = true;
+			}
+		}
+		return 1 === count( $ids ) ? (int) array_key_first( $ids ) : 0;
+	}
+
+	/** Songs a note mentions: rows of id, serial, title. */
+	public static function mentioned( $text ) {
+		global $wpdb;
+		$ser = self::serials_in( $text );
+		if ( ! $ser ) {
+			return array();
+		}
+		$ph = implode( ',', array_fill( 0, count( $ser ), '%s' ) );
+		return $wpdb->get_results( $wpdb->prepare( 'SELECT id, serial, title FROM ' . Songpress_Install::table( 'songs' ) . " WHERE serial IN ({$ph}) ORDER BY serial", $ser ) ); // phpcs:ignore WordPress.DB
 	}
 
 	public static function kind( $k ) {
@@ -65,15 +99,25 @@ class Songpress_Journal {
 				if ( '' !== $ser && isset( $byser[ $ser ] ) ) {
 					$sid = $byser[ $ser ];
 				}
-				$rows[] = array( $key, substr( $r['log_date'], 0, 10 ), self::kind( (string) ( $r['kind'] ?? '' ) ), mb_substr( $title, 0, 255 ), (string) ( $r['notes'] ?? '' ), mb_substr( (string) ( $r['place'] ?? '' ), 0, 191 ), $sid, (int) ! empty( $r['pinned'] ), (int) ! empty( $r['archived'] ) );
+				if ( ! $sid ) {
+					$sid = self::sole_song( (string) ( $r['notes'] ?? '' ), $byser );
+				}
+				$rows[] = array( $key, substr( $r['log_date'], 0, 10 ), self::kind( (string) ( $r['kind'] ?? '' ) ), mb_substr( $title, 0, 255 ), (string) ( $r['notes'] ?? '' ), mb_substr( (string) ( $r['place'] ?? '' ), 0, 191 ), $sid, (int) ! empty( $r['pinned'] ), (int) ! empty( $r['archived'] ),
+					mb_substr( trim( (string) ( $r['song_key'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['song_tempo'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['authors'] ?? '' ) ), 0, 255 ), mb_substr( trim( (string) ( $r['latitude'] ?? '' ) ), 0, 24 ), mb_substr( trim( (string) ( $r['longitude'] ?? '' ) ), 0, 24 ) );
 			}
 			// only entries not already here, so a second load never doubles or overwrites edits
 			$have = array_flip( $wpdb->get_col( "SELECT source_key FROM {$j} WHERE source_key IS NOT NULL" ) ); // phpcs:ignore WordPress.DB
 			foreach ( $rows as $r ) {
 				if ( isset( $have[ $r[0] ] ) ) {
+					// entries loaded before key, tempo, authors and place existed: fill only what is still blank
+					foreach ( array( 9 => 'song_key', 10 => 'tempo', 11 => 'authors', 12 => 'latitude', 13 => 'longitude' ) as $i => $col ) {
+						if ( '' !== $r[ $i ] ) {
+							$wpdb->query( $wpdb->prepare( "UPDATE {$j} SET {$col} = %s WHERE source_key = %s AND {$col} = ''", $r[ $i ], $r[0] ) ); // phpcs:ignore WordPress.DB -- $col is one of five literals.
+						}
+					}
 					continue;
 				}
-				$wpdb->insert( $j, array( 'source_key' => $r[0], 'log_date' => $r[1], 'kind' => $r[2], 'title' => $r[3], 'notes' => $r[4], 'place' => $r[5], 'song_id' => $r[6], 'pinned' => $r[7], 'archived' => $r[8], 'user_id' => 0, 'created_at' => current_time( 'mysql' ) ) );
+				$wpdb->insert( $j, array( 'source_key' => $r[0], 'log_date' => $r[1], 'kind' => $r[2], 'title' => $r[3], 'notes' => $r[4], 'place' => $r[5], 'song_id' => $r[6], 'pinned' => $r[7], 'archived' => $r[8], 'song_key' => $r[9], 'tempo' => $r[10], 'authors' => $r[11], 'latitude' => $r[12], 'longitude' => $r[13], 'user_id' => 0, 'created_at' => current_time( 'mysql' ) ) );
 				$out['journal']++;
 			}
 		}
@@ -101,8 +145,8 @@ class Songpress_Journal {
 		$args  = array();
 		if ( '' !== $q ) {
 			$like    = '%' . $wpdb->esc_like( $q ) . '%';
-			$where[] = '(title LIKE %s OR notes LIKE %s OR place LIKE %s)';
-			array_push( $args, $like, $like, $like );
+			$where[] = '(title LIKE %s OR notes LIKE %s OR place LIKE %s OR authors LIKE %s)';
+			array_push( $args, $like, $like, $like, $like );
 		}
 		$w     = implode( ' AND ', $where );
 		$count = "SELECT COUNT(*) FROM {$j} WHERE {$w}";
@@ -131,7 +175,7 @@ class Songpress_Journal {
 	private static function go( $args = array() ) {
 		$ret  = isset( $_POST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
 		$base = '' !== $ret ? $ret : Songpress_Editor::list_url();
-		wp_safe_redirect( add_query_arg( array_merge( array( 'sp_page' => 'journal' ), $args ), $base ) );
+		wp_safe_redirect( add_query_arg( array_merge( array( 'sp_page' => 'notes' ), $args ), $base ) );
 		exit;
 	}
 
@@ -157,7 +201,17 @@ class Songpress_Journal {
 			'notes'    => sanitize_textarea_field( $notes ),
 			'place'    => sanitize_text_field( $in['place'] ?? '' ),
 			'song_id'  => $sid,
+			'song_key' => mb_substr( sanitize_text_field( $in['song_key'] ?? '' ), 0, 16 ),
+			'tempo'    => mb_substr( sanitize_text_field( $in['tempo'] ?? '' ), 0, 16 ),
+			'authors'  => mb_substr( sanitize_text_field( $in['authors'] ?? '' ), 0, 255 ),
 		);
+		if ( ! $sid ) {
+			$byser = array();
+			foreach ( self::serials_in( $notes ) as $sr ) {
+				$byser[ $sr ] = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE serial = %s', $sr ) ); // phpcs:ignore WordPress.DB
+			}
+			$row['song_id'] = self::sole_song( $notes, array_filter( $byser ) );
+		}
 		if ( $id ) {
 			$wpdb->update( self::t(), $row, array( 'id' => $id ) );
 		} else {
@@ -191,7 +245,8 @@ class Songpress_Journal {
 		}
 		$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Title (start with a serial to link a song)', 'songpress' ) . '</span><input name="title" value="' . esc_attr( $e ? $e->title : '' ) . '"></label>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Place', 'songpress' ) . '</span><input name="place" value="' . esc_attr( $e ? $e->place : '' ) . '"></label></div>';
-		$o .= '<label class="spe-field"><span>' . esc_html__( 'Notes', 'songpress' ) . '</span><textarea name="notes" rows="' . ( $e ? 8 : 4 ) . '">' . esc_textarea( $e ? $e->notes : '' ) . '</textarea></label>';
+		$o .= '<div class="spe-grid"><label class="spe-field"><span>' . esc_html__( 'Key', 'songpress' ) . '</span><input name="song_key" size="6" value="' . esc_attr( $e ? $e->song_key : '' ) . '"></label><label class="spe-field"><span>' . esc_html__( 'Tempo', 'songpress' ) . '</span><input name="tempo" size="6" value="' . esc_attr( $e ? $e->tempo : '' ) . '"></label><label class="spe-field"><span>' . esc_html__( 'Authors', 'songpress' ) . '</span><input name="authors" value="' . esc_attr( $e ? $e->authors : '' ) . '"></label></div>';
+		$o .= '<label class="spe-field"><span>' . esc_html__( 'Notes (write ^0378 to link a song)', 'songpress' ) . '</span><textarea name="notes" rows="' . ( $e ? 8 : 4 ) . '">' . esc_textarea( $e ? $e->notes : '' ) . '</textarea></label>';
 		return $o;
 	}
 
@@ -204,7 +259,7 @@ class Songpress_Journal {
 		$page = isset( $_GET['jp'] ) ? max( 1, absint( $_GET['jp'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
 		$res  = self::search( $q, $show, $page );
 		$base = Songpress_Editor::list_url();
-		$o    = '<div class="songpress sp-app sp-editor sp-journal"><div class="spe-top"><h2>' . esc_html__( 'Journal', 'songpress' ) . '</h2></div>';
+		$o    = '<div class="songpress sp-app sp-editor sp-journal"><div class="spe-top"><h2>' . esc_html__( 'Notes', 'songpress' ) . '</h2></div>';
 		if ( ! empty( $_GET['j_ok'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
 			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['j_ok'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
@@ -212,12 +267,20 @@ class Songpress_Journal {
 			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['j_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
 		}
 		$o .= '<details class="spj-new"><summary class="spe-btn">+ ' . esc_html__( 'New entry', 'songpress' ) . '</summary>' . self::form_open( 'songpress_journal_save' ) . self::fields() . '<button class="spe-save" type="submit">' . esc_html__( 'Add entry', 'songpress' ) . '</button></form></details>';
-		$o .= '<form method="get" class="spj-find"><input type="hidden" name="sp_page" value="journal"><input type="search" name="jq" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search the journal', 'songpress' ) . '"><select name="jshow" onchange="this.form.submit()"><option value="live"' . selected( $show, 'live', false ) . '>' . esc_html__( 'Current', 'songpress' ) . '</option><option value="archived"' . selected( $show, 'archived', false ) . '>' . esc_html__( 'Archived', 'songpress' ) . '</option></select><button class="spe-btn" type="submit">' . esc_html__( 'Search', 'songpress' ) . '</button></form>';
+		$o .= '<form method="get" class="spj-find"><input type="hidden" name="sp_page" value="notes"><input type="search" name="jq" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search notes', 'songpress' ) . '"><select name="jshow" onchange="this.form.submit()"><option value="live"' . selected( $show, 'live', false ) . '>' . esc_html__( 'Current', 'songpress' ) . '</option><option value="archived"' . selected( $show, 'archived', false ) . '>' . esc_html__( 'Archived', 'songpress' ) . '</option></select><button class="spe-btn" type="submit">' . esc_html__( 'Search', 'songpress' ) . '</button></form>';
 		$o .= '<p class="spe-help">' . esc_html( sprintf( /* translators: %d: number of entries */ _n( '%d entry', '%d entries', $res['total'], 'songpress' ), $res['total'] ) ) . '</p>';
 		foreach ( $res['rows'] as $e ) {
 			$head = trim( $e->title ) !== '' ? $e->title : ucfirst( $e->kind );
 			$o   .= '<details class="spj-entry' . ( (int) $e->pinned ? ' pinned' : '' ) . '"><summary><time>' . esc_html( $e->log_date ) . '</time> <b>' . esc_html( $head ) . '</b>' . ( (int) $e->pinned ? ' <span class="spj-pin">★</span>' : '' ) . ( '' !== $e->place ? ' <span class="spe-help">' . esc_html( $e->place ) . '</span>' : '' ) . '</summary>';
-			if ( (int) $e->song_id ) {
+			$men = self::mentioned( $e->title . "\n" . $e->notes );
+			if ( $men ) {
+				$o .= '<p class="spj-mention">' . esc_html__( 'Songs:', 'songpress' ) . ' ';
+				foreach ( $men as $m ) {
+					$o .= '<a href="' . esc_url( Songpress_Editor::edit_url( (int) $m->id ) ) . '"><span class="sp-serial">' . esc_html( $m->serial ) . '</span> ' . esc_html( $m->title ) . '</a> ';
+				}
+				$o .= '</p>';
+			}
+			if ( (int) $e->song_id && ! $men ) {
 				$o .= '<p><a href="' . esc_url( Songpress_Editor::edit_url( (int) $e->song_id ) ) . '">' . esc_html__( 'Open the song', 'songpress' ) . '</a></p>';
 			}
 			$o .= self::form_open( 'songpress_journal_save' ) . '<input type="hidden" name="entry_id" value="' . (int) $e->id . '">' . self::fields( $e ) . '<button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>';
@@ -229,7 +292,7 @@ class Songpress_Journal {
 		$pages = (int) ceil( $res['total'] / self::PER_PAGE );
 		if ( $pages > 1 ) {
 			$o .= '<p class="spj-pages">';
-			$arg = array( 'sp_page' => 'journal', 'jq' => $q, 'jshow' => $show );
+			$arg = array( 'sp_page' => 'notes', 'jq' => $q, 'jshow' => $show );
 			if ( $page > 1 ) {
 				$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array_merge( $arg, array( 'jp' => $page - 1 ) ), $base ) ) . '">' . esc_html__( 'Newer', 'songpress' ) . '</a> ';
 			}

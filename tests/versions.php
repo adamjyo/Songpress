@@ -48,7 +48,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_streams (id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, service TEXT, streams INT, UNIQUE(day,service))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, row_key TEXT UNIQUE, month TEXT, store TEXT, title TEXT, isrc TEXT, song_id INT, units INT, earnings REAL)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
-		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, song_key TEXT DEFAULT \'\', tempo TEXT DEFAULT \'\', authors TEXT DEFAULT \'\', latitude TEXT DEFAULT \'\', longitude TEXT DEFAULT \'\', source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
@@ -494,6 +494,22 @@ check( 'sessions import is repeatable', Songpress_Sessions::import_pdo( $sp ), 0
 check( 'session people merged without duplicates', array_map( function ( $p ) { return $p->name; }, Songpress_Sessions::people( 1 ) ), array( 'Adam Page', 'bob' ) );
 check( 'session chat kept once each, linked to the song', array( count( Songpress_Sessions::chat( 1 ) ), (int) $GLOBALS['wpdb']->get_var( "SELECT song_id FROM wp_songpress_sessions WHERE id = 1" ) > 0 ), array( 2, true ) );
 unlink( $sf );
+
+// Notes: serial links, key/tempo/authors
+check( 'serials in a note', Songpress_Journal::serials_in( 'worked on ^0378-00 and #0258-01, ^0378 again, #12' ), array( '0378', '0258-01' ) );
+check( 'a note naming one song links to it, several or none do not', array( Songpress_Journal::sole_song( 'see ^0378', array( '0378' => 5 ) ), Songpress_Journal::sole_song( '^0378 ^0258-01', array( '0378' => 5, '0258-01' => 6 ) ), Songpress_Journal::sole_song( 'nothing', array( '0378' => 5 ) ) ), array( 5, 0, 0 ) );
+$nf = tempnam( sys_get_temp_dir(), 'nt' );
+$np = new PDO( 'sqlite:' . $nf );
+$np->exec( "CREATE TABLE work_log (id INTEGER PRIMARY KEY, log_date TEXT, notes TEXT, created_at TEXT, source_key TEXT, kind TEXT, title TEXT, pinned INT, latitude TEXT, longitude TEXT, place TEXT, song_key TEXT, song_tempo TEXT, authors TEXT, archived INT)" );
+$np->exec( "INSERT INTO work_log VALUES (9001,'2007-08-04','Adam Page lyric','2007-08-04',NULL,NULL,'',0,'30.1','-97.2','Austin','G','120bpm','Adam Page',0)" );
+$nr = Songpress_Journal::import_pdo( $np );
+$ne = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_journal WHERE source_key='old:9001'" );
+check( 'note import keeps key, tempo, authors and place', array( $nr['journal'], $ne->song_key, $ne->tempo, $ne->authors, $ne->latitude, $ne->place ), array( 1, 'G', '120bpm', 'Adam Page', '30.1', 'Austin' ) );
+$GLOBALS['wpdb']->query( "UPDATE wp_songpress_journal SET song_key='', tempo='' WHERE source_key='old:9001'" );
+$nr2 = Songpress_Journal::import_pdo( $np );
+$ne2 = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_journal WHERE source_key='old:9001'" );
+check( 'second load adds none but fills blanks', array( $nr2['journal'], $ne2->song_key, $ne2->tempo ), array( 0, 'G', '120bpm' ) );
+unlink( $nf );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

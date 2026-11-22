@@ -40,7 +40,7 @@ class Songpress_Uploads {
 		'expenses'      => array( 'Expenses', 'money', 'SELECT spent_on, payee, category, amount, person, notes FROM {expenses} ORDER BY spent_on DESC' ),
 		'streams'       => array( 'Daily streams', 'money', 'SELECT day, service, streams FROM {streams} ORDER BY day DESC, service' ),
 		'stats'         => array( 'DistroKid store figures by month', 'money', 'SELECT month, store, title, isrc, units, earnings FROM {stats} ORDER BY month DESC, store' ),
-		'journal'       => array( 'Work journal', 'journal', 'SELECT log_date, kind, title, notes, place, pinned, archived FROM {journal} ORDER BY log_date DESC' ),
+		'journal'       => array( 'Notes', 'journal', 'SELECT log_date, kind, title, notes, place, song_key, tempo, authors, latitude, longitude, pinned, archived FROM {journal} ORDER BY log_date DESC' ),
 		'ratings'       => array( 'Song ratings', 'journal', 'SELECT s.serial, s.title, r.voter, r.stars, r.created_at FROM {ratings} r LEFT JOIN {songs} s ON s.id = r.song_id ORDER BY s.serial' ),
 		'registrations' => array( 'Registrations', 'registrations', 'SELECT f.family_no, r.society, r.in_progress, r.started_on, r.reference, r.note, r.updated_at FROM {registrations} r LEFT JOIN {families} f ON f.id = r.family_id ORDER BY f.family_no, r.society' ),
 		'agreements'    => array( 'Agreements', 'agreements', 'SELECT serial, kind, title, created_at FROM {agreements} ORDER BY created_at DESC' ),
@@ -357,7 +357,7 @@ class Songpress_Uploads {
 	public static function types() {
 		$t = array(
 			'works'    => __( 'Works (songs from the old catalog, one batch at a time)', 'songpress' ),
-			'catalog'  => __( 'Old catalog file (money, journal, art, agreements, registrations)', 'songpress' ),
+			'catalog'  => __( 'Old catalog file (money, notes, art, agreements, registrations)', 'songpress' ),
 			'photos'   => __( 'Photos and bios (people, bands, publishers)', 'songpress' ),
 			'dk_stats' => __( 'DistroKid stats page (daily streams)', 'songpress' ),
 		);
@@ -401,7 +401,7 @@ class Songpress_Uploads {
 			$o .= $panel( 'photos', '<p class="spe-help">' . esc_html__( 'Choose catalog.sqlite to fill in photos and bios for people, bands and publishers. Photos you changed by hand are kept.', 'songpress' ) . '</p>' . $form( 'songpress_profiles_load', 'songpress_profiles_load', 'catalog', '.sqlite,.db,.sqlite3', __( 'Load photos', 'songpress' ) ) );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
-			$o .= $panel( 'catalog', '<p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. Statements, payouts, streams, the work journal, ratings, art projects, agreements and registrations come across (entries already here are kept).', 'songpress' ) . '</p>' . $form( 'songpress_money_import', 'songpress_money_import', 'catalog', '.sqlite,.db,.sqlite3', __( 'Load the catalog file', 'songpress' ) ) );
+			$o .= $panel( 'catalog', '<p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. Statements, payouts, streams, the notes, ratings, art projects, agreements and registrations come across (entries already here are kept).', 'songpress' ) . '</p>' . $form( 'songpress_money_import', 'songpress_money_import', 'catalog', '.sqlite,.db,.sqlite3', __( 'Load the catalog file', 'songpress' ) ) );
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
 			foreach ( self::STATEMENTS as $k => $s ) {
 				$extra = '<input type="hidden" name="src" value="' . esc_attr( $k ) . '"><label class="spu-q">' . esc_html__( 'Quarter (optional, like 2026 Q2)', 'songpress' ) . ' <input type="text" name="quarter" placeholder="2026 Q2" size="9"></label> ';

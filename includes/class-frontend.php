@@ -138,7 +138,7 @@ class Songpress_Frontend {
 			$nav .= $mk( 'sessions', __( 'Sessions', 'songpress' ), $svg( '<path d="M4 5h16v11H9l-5 4zM8 9h8M8 12h5"/>' ), 'sessions' );
 		}
 		if ( Songpress_Caps::can( 'journal' ) && ! wp_is_mobile() ) {
-			$nav .= $mk( 'journal', __( 'Journal', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
+			$nav .= $mk( 'notes', __( 'Notes', 'songpress' ), $svg( '<path d="M6 3h12a1 1 0 011 1v16a1 1 0 01-1 1H6zM6 3v18M10 8h5M10 12h5"/>' ), 'journal' );
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';

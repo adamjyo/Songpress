@@ -30,6 +30,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.9.0 =
+* Journal is now Notes, the old S&P Catalog notes app: dated notes with kind, title, place, key, tempo and authors, pinning, archiving and search (authors too). The old notes load from the catalog file with their key, tempo, authors and map position, including notes loaded earlier.
+* Write ^0378 or #0378-02 in a note to link the song. A note that names exactly one song is linked to it; opening a note lists the songs it mentions.
+* Downloads: "Notes" replaces "Work journal" and includes the new fields.
+
 = 0.8.0 =
 * New Sessions in the rail: writing sessions with a date, time, place, the people in them (any number, with IPI and share), notes, lyrics, an audio link and a chat. A session can point at a song by serial.
 * Managers see every session; a writer sees the sessions they are in. Chat and editing are for the desktop app.

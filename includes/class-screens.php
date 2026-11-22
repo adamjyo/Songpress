@@ -58,7 +58,7 @@ class Songpress_Screens {
 		if ( 'art' === $slug ) {
 			return Songpress_Art::render();
 		}
-		if ( 'journal' === $slug ) {
+		if ( 'journal' === $slug || 'notes' === $slug ) {
 			return Songpress_Journal::render();
 		}
 		if ( in_array( $slug, array( 'money', 'stats' ), true ) ) {
