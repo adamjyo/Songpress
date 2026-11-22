@@ -14,6 +14,7 @@ class Songpress_Admin {
 		add_action( 'wp_ajax_songpress_upload', array( 'Songpress_Media', 'ajax_upload' ) );
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
 		add_action( 'admin_post_songpress_profile_save', array( __CLASS__, 'handle_profile_save' ) );
+		add_action( 'admin_post_songpress_check_update', array( __CLASS__, 'handle_check_update' ) );
 		add_action( 'admin_post_songpress_artist_save', array( __CLASS__, 'handle_artist_save' ) );
 		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
@@ -1296,6 +1297,9 @@ class Songpress_Admin {
 		if ( isset( $_GET['saved'] ) ) {
 			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Saved.', 'songpress' ) . '</p></div>';
 		}
+		if ( isset( $_GET['checked'] ) ) {
+			echo '<div class="notice notice-info is-dismissible"><p>' . esc_html__( 'Checked GitHub just now.', 'songpress' ) . '</p></div>';
+		}
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'songpress_settings' );
 		echo '<input type="hidden" name="action" value="songpress_settings"><p><label><input type="checkbox" name="delete_on_uninstall" value="1"' . checked( get_option( 'songpress_delete_on_uninstall' ), '1', false ) . '> ' . esc_html__( 'Delete all SongPress data when the plugin is deleted', 'songpress' ) . '</label></p>';
@@ -1303,6 +1307,7 @@ class Songpress_Admin {
 		echo '<p><label><input type="checkbox" name="public_donate" value="1"' . checked( get_option( 'songpress_public_donate' ), '1', false ) . '> ' . esc_html__( 'Show a small "Donate: buy me a cup of coffee" link at the bottom of public SongPress pages', 'songpress' ) . '</label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'SongPress is free. This link helps support it. It is off unless you turn it on, and it never appears on your public pages without your say.', 'songpress' ) . '</p>';
 		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
+		self::update_box();
 		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
 		echo '<p><label>' . esc_html__( 'GitHub repository', 'songpress' ) . ' <input name="github_repo" size="28" value="' . esc_attr( Songpress_Updater::repo() ) . '" placeholder="owner/repository"></label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'WordPress asks GitHub twice a day whether there is a newer release. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
@@ -1322,6 +1327,52 @@ class Songpress_Admin {
 		echo '<input type="hidden" name="action" value="songpress_pages">';
 		submit_button( __( 'Create any missing pages', 'songpress' ), 'secondary', 'submit', false );
 		echo '</form>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	/** Installed version, latest GitHub release, and the buttons to check and install. Shown above the update options. */
+	private static function update_box() {
+		$cur = SONGPRESS_VERSION;
+		$rel = Songpress_Updater::enabled() ? Songpress_Updater::latest() : null;
+		echo '<div style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #f5a524;padding:10px 14px;max-width:640px;margin:8px 0 14px">';
+		echo '<p style="margin:0 0 4px"><strong>' . esc_html__( 'Installed:', 'songpress' ) . '</strong> ' . esc_html( $cur ) . '</p>';
+		if ( ! Songpress_Updater::enabled() ) {
+			echo '<p style="margin:0">' . esc_html__( 'GitHub updates are off. Turn them on below, save, then check.', 'songpress' ) . '</p>';
+		} elseif ( ! $rel ) {
+			echo '<p style="margin:0">' . esc_html( sprintf( /* translators: %s: owner/repository */ __( 'No release found yet at github.com/%s. Click "Check GitHub now" once a release is published.', 'songpress' ), Songpress_Updater::repo() ) ) . '</p>';
+		} elseif ( Songpress_Updater::is_newer( $rel['version'], $cur ) ) {
+			echo '<p style="margin:0 0 6px"><strong>' . esc_html__( 'Latest on GitHub:', 'songpress' ) . '</strong> ' . esc_html( $rel['version'] ) . ' &mdash; <span style="color:#b32d2e">' . esc_html__( 'update available', 'songpress' ) . '</span></p>';
+			$file = plugin_basename( SONGPRESS_FILE );
+			$url  = wp_nonce_url( self_admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( $file ) ), 'upgrade-plugin_' . $file );
+			if ( current_user_can( 'update_plugins' ) ) {
+				echo '<p style="margin:0"><a class="button button-primary" href="' . esc_url( $url ) . '">' . esc_html__( 'Update now', 'songpress' ) . '</a> ';
+				if ( '' !== $rel['url'] ) {
+					echo '<a href="' . esc_url( $rel['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'What changed', 'songpress' ) . '</a>';
+				}
+				echo '</p>';
+			} else {
+				echo '<p style="margin:0">' . esc_html__( 'Ask a WordPress administrator to install the update.', 'songpress' ) . '</p>';
+			}
+		} else {
+			echo '<p style="margin:0"><strong>' . esc_html__( 'Latest on GitHub:', 'songpress' ) . '</strong> ' . esc_html( $rel['version'] ) . ' &mdash; ' . esc_html__( 'you are up to date', 'songpress' ) . '</p>';
+		}
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="margin-top:8px">';
+		wp_nonce_field( 'songpress_check_update' );
+		echo '<input type="hidden" name="action" value="songpress_check_update">';
+		submit_button( __( 'Check GitHub now', 'songpress' ), 'secondary', 'submit', false );
+		echo '</form></div>';
+	}
+
+	public static function handle_check_update() {
+		check_admin_referer( 'songpress_check_update' );
+		if ( ! Songpress_Caps::can( 'settings' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		Songpress_Updater::forget();
+		if ( Songpress_Updater::enabled() ) {
+			Songpress_Updater::latest( true );
+		}
+		delete_site_transient( 'update_plugins' ); // WordPress rebuilds it, with our release if newer
+		self::back( 'songpress-settings', array( 'checked' => 1 ) );
 	}
 
 	public static function handle_pages() {
