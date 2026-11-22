@@ -636,3 +636,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-hero [data-panel=basics]:not(:has(.spe-own))>.spe-grid{grid-template-rows:auto auto 1fr}
 .spe-hero [data-panel=basics] .spe-field.wide:last-child{display:flex;flex-direction:column}
 .spe-hero [data-panel=basics] .spe-field.wide:last-child textarea{flex:1}
+/* Share button and popup */
+.spe-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.spe-top .spe-sharebtn{margin-left:auto}
+.spe-dialog{max-width:min(460px,calc(100vw - 32px));width:100%;padding:20px;border:1px solid var(--sp-line);border-radius:14px;background:var(--sp-card);color:var(--sp-text)}
+.spe-dialog::backdrop{background:rgba(0,0,0,.6)}
+.spe-dialog h3{margin:0 0 8px;font-size:18px}
+.spe-dialog input{margin:8px 0}
+.spe-dlgbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}

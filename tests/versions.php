@@ -236,6 +236,8 @@ check( 'tokens are filled for songs without one', Songpress_Songs::ensure_tokens
 $tok = $wpdb->get_var( "SELECT share_token FROM wp_songpress_songs WHERE id = $v1" );
 check( 'token finds song', (int) Songpress_Songs::by_token( $tok )->id, $v1 );
 check( 'bad token finds nothing', Songpress_Songs::by_token( 'short' ), null );
+$wpdb->query( "UPDATE wp_songpress_songs SET share_token = NULL WHERE id = $v1" );
+check( 'token_for makes a token when a song has none, and keeps it', array( strlen( Songpress_Songs::token_for( $v1 ) ), Songpress_Songs::token_for( $v1 ) === Songpress_Songs::token_for( $v1 ) ), array( 24, true ) );
 check( 'every song has a token', (int) $wpdb->get_var( "SELECT COUNT(*) FROM wp_songpress_songs WHERE share_token IS NULL OR share_token = ''" ), 0 );
 $nv0 = Songpress_Songs::create_version( $v1, 1 );
 check( 'a new song or version is shareable at once', strlen( (string) $wpdb->get_var( "SELECT share_token FROM wp_songpress_songs WHERE id = " . (int) $nv0 ) ), 24 );

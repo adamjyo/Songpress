@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.53.0 =
+* A Share button replaces "View song" at the top right of the work editor. It opens a popup with the work's public link: copy it, or send it with your device's share sheet where one exists. The link shows the song only, never splits, codes, notes or money.
+
 = 0.52.4 =
 * The "View song" link is removed from the work editor.
 

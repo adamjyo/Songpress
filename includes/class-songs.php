@@ -415,6 +415,18 @@ class Songpress_Songs {
 		return wp_generate_password( 24, false, false );
 	}
 
+	/** A song's public link token, made on the spot if it somehow has none. */
+	public static function token_for( $id ) {
+		global $wpdb;
+		$t   = Songpress_Install::table( 'songs' );
+		$tok = (string) $wpdb->get_var( $wpdb->prepare( "SELECT share_token FROM {$t} WHERE id = %d", (int) $id ) ); // phpcs:ignore WordPress.DB
+		if ( '' === $tok ) {
+			$tok = self::new_token();
+			$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET share_token = %s WHERE id = %d", $tok, (int) $id ) ); // phpcs:ignore WordPress.DB
+		}
+		return $tok;
+	}
+
 	/** One-time: give every song that has no link token one. Returns how many were changed. */
 	public static function ensure_tokens() {
 		global $wpdb;

@@ -46,7 +46,7 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2></div>';
+		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? self::share_popup( $song ) : '' ) . '</div>';
 		$o       .= self::notices();
 		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
@@ -237,6 +237,19 @@ class Songpress_Editor {
 		$pid  = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'art' ) . ' WHERE song_id = %d ORDER BY updated_at DESC, id DESC LIMIT 1', (int) $song_id ) ); // phpcs:ignore WordPress.DB
 		$base = self::list_url();
 		return $pid ? add_query_arg( array( 'sp_page' => 'art', 'art' => $pid ), $base ) : add_query_arg( array( 'sp_page' => 'art', 'art' => 'new', 'song' => (int) $song_id ), $base );
+	}
+
+	/** The Share button and its popup: the public link for this work (no login, never shows splits, codes, notes or money), to copy or send through the device's share sheet. */
+	private static function share_popup( $song ) {
+		$link  = add_query_arg( 'sp_share', Songpress_Songs::token_for( (int) $song->id ), home_url( '/' ) );
+		$title = Songpress_Songs::display_title( $song );
+		$o     = '<button type="button" class="spe-btn spe-sharebtn" id="spe-share-open">' . esc_html__( 'Share', 'songpress' ) . '</button>';
+		$o    .= '<dialog class="spe-dialog" id="spe-share-dlg" aria-labelledby="spe-share-h"><form method="dialog"><h3 id="spe-share-h">' . esc_html( sprintf( /* translators: %s: song title */ __( 'Share %s', 'songpress' ), $title ) ) . '</h3>';
+		$o    .= '<p class="spe-help">' . esc_html__( 'Anyone with this link can read the song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money.', 'songpress' ) . '</p>';
+		$o    .= '<input type="text" readonly id="spe-share-link" value="' . esc_attr( $link ) . '" onfocus="this.select()" data-title="' . esc_attr( $title ) . '">';
+		$o    .= '<div class="spe-dlgbar"><button type="button" class="spe-save" id="spe-share-copy">' . esc_html__( 'Copy link', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spe-share-send" hidden>' . esc_html__( 'Share with an app', 'songpress' ) . '</button><button class="spe-link" value="close">' . esc_html__( 'Close', 'songpress' ) . '</button></div></form></dialog>';
+		$o    .= '<script>(function(){var d=document.getElementById("spe-share-dlg"),o=document.getElementById("spe-share-open"),i=document.getElementById("spe-share-link"),c=document.getElementById("spe-share-copy"),s=document.getElementById("spe-share-send");if(!d||!o)return;o.addEventListener("click",function(){if(d.showModal){d.showModal();}else{d.setAttribute("open","");}i.select();});c.addEventListener("click",function(){i.select();var done=function(){c.textContent="Copied";setTimeout(function(){c.textContent="Copy link";},1800);};if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(i.value).then(done,function(){document.execCommand("copy");done();});}else{document.execCommand("copy");done();}});if(navigator.share){s.hidden=false;s.addEventListener("click",function(){navigator.share({title:i.getAttribute("data-title"),url:i.value}).catch(function(){});});}d.addEventListener("click",function(e){if(e.target===d){d.close();}});})();</script>';
+		return $o;
 	}
 
 	private static function chordpro_popup() {
