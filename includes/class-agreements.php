@@ -357,7 +357,14 @@ class Songpress_Agreements {
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select name="kind"><option value="split">' . esc_html__( 'Cowriter split confirmation', 'songpress' ) . '</option><option value="publishing">' . esc_html__( 'Publishing agreement', 'songpress' ) . '</option></select></label></div>';
 		$o .= '<p class="spe-help">' . esc_html__( 'The text is built from the song: its writers, IPIs and splits, its publisher, ISWC and copyright number. Each signer gets a link to copy and send; nobody is emailed.', 'songpress' ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Create agreement', 'songpress' ) . '</button></form>';
 		$rows = self::all();
-		$o   .= '<h3>' . esc_html__( 'All agreements', 'songpress' ) . '</h3>';
+		$only = isset( $_GET['song'] ) ? Songpress_Songs::get( absint( $_GET['song'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $only ) {
+			$base4 = substr( (string) $only->serial, 0, 4 );
+			$rows  = array_values( array_filter( (array) $rows, function ( $r ) use ( $base4 ) {
+				return 0 === strpos( (string) $r->serial, $base4 );
+			} ) );
+		}
+		$o   .= '<h3>' . ( $only ? esc_html( sprintf( /* translators: %s: song title */ __( 'Agreements for %s', 'songpress' ), $only->title ) ) . ' <a class="spe-btn" href="' . esc_url( add_query_arg( 'sp_page', 'agreements', $base ) ) . '">' . esc_html__( 'Show all', 'songpress' ) . '</a>' : esc_html__( 'All agreements', 'songpress' ) ) . '</h3>';
 		if ( ! $rows ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'None yet.', 'songpress' ) . '</p>';
 		}

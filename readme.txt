@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.30.0
+Stable tag: 0.31.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.31.0 =
+* A work's editor has Registrations and Agreements buttons at the top: Registrations opens just that work's registrations; Agreements opens that work's agreements with the new-agreement form already filled in for it. Both have a "Show all" link. The Rights entry stays in the rail.
 
 = 0.30.0 =
 * Rail: Registrations and Agreements share one entry, "Rights", with the two as tabs.

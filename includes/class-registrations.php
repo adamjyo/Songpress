@@ -219,6 +219,13 @@ class Songpress_Registrations {
 		$works = self::works();
 		$rf    = isset( $_GET['rf'] ) ? sanitize_key( wp_unslash( $_GET['rf'] ) ) : 'progress'; // phpcs:ignore WordPress.Security.NonceVerification
 		$rf    = in_array( $rf, array( 'progress', 'waiting', 'unfiled', 'all' ), true ) ? $rf : 'progress';
+		$one   = isset( $_GET['work'] ) ? absint( $_GET['work'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $one ) {
+			$rf    = 'all';
+			$works = array_values( array_filter( $works, function ( $w ) use ( $one ) {
+				return isset( $w->ids[ $one ] );
+			} ) );
+		}
 		$tot   = array();
 		foreach ( self::SOCIETIES as $k => $d ) {
 			$tot[ $k ] = array( 'green' => 0, 'gold' => 0, 'red' => 0 );
@@ -256,6 +263,9 @@ class Songpress_Registrations {
 		if ( $undated ) {
 			$o .= '<form method="post" class="spr-undated" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_registration_undated', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_registration_undated"><p class="spe-help">' . esc_html( sprintf( /* translators: %d: number of registrations */ _n( '%d in-progress registration has no start date, so it never shows as waiting.', '%d in-progress registrations have no start date, so they never show as waiting.', $undated, 'songpress' ), $undated ) ) . '</p><label>' . esc_html__( 'Started on', 'songpress' ) . ' <input type="date" name="started_on" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '"></label> <button class="spe-btn" type="submit">' . esc_html__( 'Set for all undated', 'songpress' ) . '</button> <small class="spe-help">' . esc_html__( 'Dates you already entered are not changed. You can still set each one by hand below.', 'songpress' ) . '</small></form>';
 		}
+		if ( $one ) {
+			$o .= '<p class="spe-help">' . esc_html__( 'Showing one work.', 'songpress' ) . ' <a class="spe-btn" href="' . esc_url( add_query_arg( 'sp_page', 'registrations', $base ) ) . '">' . esc_html__( 'Show all', 'songpress' ) . '</a></p>';
+		}
 		$o .= '<ul class="songpress-stats spr-tot">';
 		foreach ( self::SOCIETIES as $k => $d ) {
 			$o .= '<li>' . esc_html( $d[0] ) . '<strong><span class="spr-g">' . (int) $tot[ $k ]['green'] . '</span> · <span class="spr-y">' . (int) $tot[ $k ]['gold'] . '</span> · <span class="spr-r">' . (int) $tot[ $k ]['red'] . '</span></strong></li>';
@@ -270,7 +280,7 @@ class Songpress_Registrations {
 		}
 		foreach ( array_slice( $rows, 0, 300 ) as $r ) {
 			list( $w, $st ) = $r;
-			$o .= '<details class="spr-row"><summary><span class="spr-name"><b>' . esc_html( $w->serial ) . '</b> ' . esc_html( $w->title ) . '</span><span class="spr-chips">';
+			$o .= '<details class="spr-row"' . ( $one ? ' open' : '' ) . '><summary><span class="spr-name"><b>' . esc_html( $w->serial ) . '</b> ' . esc_html( $w->title ) . '</span><span class="spr-chips">';
 			foreach ( self::SOCIETIES as $k => $d ) {
 				$s  = $st[ $k ];
 				$o .= '<span class="spr-chip ' . esc_attr( $s['state'] ) . '" title="' . esc_attr( $s['code'] ) . '">' . esc_html( $d[0] ) . ( null !== $s['days'] ? ' ' . (int) $s['days'] . 'd' : '' ) . '</span>';
