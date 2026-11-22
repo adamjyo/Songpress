@@ -627,3 +627,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-prev.spe-player audio{width:100%}
 .spe-mact{display:block;margin-top:4px}
 .spe-dropping .spe-prev{border-color:var(--sp-accent)}
+.spe-mhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}
+.spe-mhead .spe-tool{min-height:0;padding:4px 10px;font-size:12px;text-decoration:none;white-space:nowrap}

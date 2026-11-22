@@ -86,7 +86,7 @@ class Songpress_Editor {
 		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		// Cover art and an audio player sit beside Basics on every work, the original included.
 		$media  = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
-		$media .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ) );
+		$media .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ), ( $song && Songpress_Caps::can( 'upload' ) ) ? self::art_url( (int) $song->id ) : '' );
 		$media .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
 		$media .= '</div></section>';
 		$o .= '<div class="spe-hero">' . $media;
@@ -369,14 +369,14 @@ class Songpress_Editor {
 	 * One drop target. Cover art: drop an image on it or click it to pick one from the computer. Audio: a player; drop a file
 	 * on it or click it to choose from the WordPress Media Library. No upload buttons and no link boxes.
 	 */
-	private static function media_box( $field, $label, $accept, $id, $url ) {
+	private static function media_box( $field, $label, $accept, $id, $url, $tool_url = '' ) {
 		$is_img = 'art' === $field;
 		$src    = $id ? ( $is_img ? (string) wp_get_attachment_image_url( $id, 'medium' ) : (string) wp_get_attachment_url( $id ) ) : '';
 		if ( '' === $src && '' !== $url ) {
 			$src = $url;
 		}
 		$ph  = $is_img ? __( 'Drop cover art here, or click to choose an image', 'songpress' ) : __( 'Drop an audio file here, or click to choose from the Media Library', 'songpress' );
-		$o   = '<div class="spe-media" data-field="' . esc_attr( $field ) . '"><span class="spe-label">' . esc_html( $label ) . '</span>';
+		$o   = '<div class="spe-media" data-field="' . esc_attr( $field ) . '"><div class="spe-mhead"><span class="spe-label">' . esc_html( $label ) . '</span>' . ( '' !== $tool_url ? '<a class="spe-btn spe-tool" href="' . esc_url( $tool_url ) . '" target="_blank" rel="noopener">' . esc_html__( 'Cover art tool', 'songpress' ) . '</a>' : '' ) . '</div>';
 		$o  .= '<input type="hidden" name="' . esc_attr( $field ) . '_id" value="' . (int) $id . '"><input type="hidden" class="spe-clr" name="' . esc_attr( $field ) . '_clear" value="0"><input type="hidden" name="' . esc_attr( $field ) . '_url" value="' . esc_attr( $url ) . '">';
 		$o  .= '<div class="spe-prev' . ( $is_img ? ' spe-dz' : ' spe-player' ) . '" data-ph="' . esc_attr( $ph ) . '" tabindex="0" role="button">' . ( '' !== $src ? ( $is_img ? '<img src="' . esc_url( $src ) . '" alt="">' : '<audio controls preload="none" src="' . esc_url( $src ) . '"></audio>' ) : '' ) . '</div>';
 		$o  .= '<input type="file" class="spe-pick" accept="' . esc_attr( $accept ) . '" hidden>';

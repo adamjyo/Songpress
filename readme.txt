@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.52.1 =
+* A "Cover art tool" button sits to the right of the Cover art label and opens the Art studio for that work in a new tab.
+
 = 0.52.0 =
 * Cover art is a drop box: drop an image on it or click it to pick one. Audio is a player box: drop a file on it or click it to choose from the WordPress Media Library. The upload buttons and link boxes are gone.
 
