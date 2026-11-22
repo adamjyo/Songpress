@@ -195,7 +195,7 @@ class Songpress_Profiles {
 				if ( '' === $pick( $r, array( 'name' ) ) ) {
 					continue;
 				}
-				if ( self::upsert( 'band', $r['name'], array( 'photo_url' => $pick( $r, array( 'icon_url' ) ), 'bio' => $pick( $r, array( 'notes' ) ), 'keep' => true ) ) ) {
+				if ( self::upsert( 'band', $r['name'], array( 'photo_url' => $pick( $r, array( 'icon_url' ) ), 'bio' => $pick( $r, array( 'bio', 'notes' ) ), 'keep' => true ) ) ) {
 					$out['bands']++;
 				}
 			}
