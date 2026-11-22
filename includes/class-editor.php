@@ -62,7 +62,8 @@ class Songpress_Editor {
 		}
 		$cur_artist  = $song ? (int) $song->artist_id : ( isset( $_GET['sp_artist'] ) ? absint( $_GET['sp_artist'] ) : Songpress_Artists::default_id() );
 		$all_artists = Songpress_Artists::all();
-		$artist_html = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
+		$artist_hidden = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
+		$artist_html   = $artist_hidden;
 		if ( count( $all_artists ) > 1 ) {
 			$ao = '';
 			foreach ( $all_artists as $a ) {
@@ -70,11 +71,11 @@ class Songpress_Editor {
 			}
 			$artist_html = Songpress_Caps::can( 'create' ) ? '<label class="spe-field"><span>' . esc_html__( 'Artist', 'songpress' ) . '</span><select name="artist_id">' . $ao . '</select></label>' : $artist_html;
 		}
-		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3><div class="spe-grid">';
-		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
-		$o .= '<label class="spe-field"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . $artist_html;
 		// The original work holds only what every version shares. Everything else is entered on a version.
 		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
+		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3><div class="spe-grid">';
+		$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
+		$o .= '<label class="spe-field"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . ( $root ? $artist_hidden : '' );
 		if ( ! $root ) {
 			$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv' );
 		}
@@ -119,7 +120,7 @@ class Songpress_Editor {
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
-			$rel .= '<div class="spe-grid">' . self::input( 'release_title', __( 'Release title', 'songpress' ), $song ) . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::input( 'artist', __( 'Performing artist or band', 'songpress' ), $song );
+			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_title', __( 'Release title', 'songpress' ), $song ) . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::input( 'artist', __( 'Performing artist or band', 'songpress' ), $song );
 			$rel .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' );
 			$rel .= '<datalist id="spe-genres">';
 			foreach ( Songpress_Songs::genres() as $gn ) {
