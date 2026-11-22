@@ -323,28 +323,18 @@ class Songpress_Frontend {
 		$id = (int) $s->id;
 		list( $kind, $text ) = Songpress_Songs::best_chart( $s );
 		$labels = array( 'chordpro' => 'ChordPro', 'chords_lyrics' => __( 'Chords and lyrics', 'songpress' ), 'lyrics' => __( 'Lyrics', 'songpress' ), 'none' => '' );
-		$out  = '<article class="songpress-song">' . $top . '<div class="songpress-cols"><div class="songpress-side">';
-		$out .= '<div class="songpress-hero">' . self::art( $s, 'songpress-cover' );
+		// Header: the title, the artist and the audio player on the left, the cover art in the top right corner.
+		$out  = '<article class="songpress-song">' . $top . '<header class="songpress-top"><div class="songpress-topl">';
+		$out .= '<p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</p>';
+		$out .= '<h2>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>';
+		if ( '' !== trim( (string) $s->artist ) ) {
+			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
+		}
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
 		}
-		$out .= '</div><p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</p>';
-		$out .= '<h2>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2><p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p>';
-		if ( '' !== trim( (string) $s->artist ) ) {
-			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
-		}
-		$seen = array();
-		$out .= '<p class="songpress-faces">';
-		foreach ( Songpress_Songs::credits( $id ) as $c ) {
-			$k = Songpress_Profiles::key( $c->name );
-			if ( '' === $k || isset( $seen[ $k ] ) || ! in_array( $c->role, array( 'writer', 'performer', 'producer' ), true ) ) {
-				continue;
-			}
-			$seen[ $k ] = 1;
-			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28, 'person' ) . esc_html( $c->name ) . '</span>';
-		}
-		$out .= '</p></div><div class="songpress-main">';
+		$out .= '</div>' . self::art( $s, 'songpress-cover' ) . '</header><div class="songpress-main">';
 		if ( 'none' !== $kind ) {
 			// the lyric process: any level can be shown; a level nobody typed falls back to the highest one, stepped down
 			$lv   = Songpress_Songs::lyric_levels( $s );
@@ -361,7 +351,18 @@ class Songpress_Frontend {
 			}
 			$out .= '</p>' . ( 'chordpro' === $want ? wp_kses_post( Songpress_ChordPro::render( $text ) ) : '<pre class="songpress-chart">' . esc_html( $text ) . '</pre>' );
 		}
-		return $out . '</div></div></article>';
+		$seen = array();
+		$out .= '<p class="songpress-by">' . esc_html( Songpress_Songs::authors_line( $id, $uid ) ) . '</p><p class="songpress-faces">';
+		foreach ( Songpress_Songs::credits( $id ) as $c ) {
+			$k = Songpress_Profiles::key( $c->name );
+			if ( '' === $k || isset( $seen[ $k ] ) || ! in_array( $c->role, array( 'writer', 'performer', 'producer' ), true ) ) {
+				continue;
+			}
+			$seen[ $k ] = 1;
+			$out       .= '<span class="songpress-face" style="display:inline-block;margin:0 10px 6px 0">' . Songpress_Profiles::chip( $c->name, 28, 'person' ) . esc_html( $c->name ) . '</span>';
+		}
+		$out .= '</p>';
+		return $out . '</div></article>';
 	}
 
 	/** A song's public share link: /?sp_share=TOKEN. No login. Shows the song only: no splits, no codes, no notes, no money. */
