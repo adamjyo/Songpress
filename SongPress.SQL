@@ -283,3 +283,37 @@ CREATE TABLE {prefix}songpress_art (
   UNIQUE KEY source_key (source_key),
   KEY song_id (song_id)
 ) {charset};
+
+-- Agreements: a cowriter split confirmation or a publishing agreement for one song, with a signing link per signer.
+-- Nobody is emailed: a Manager copies each link and sends it themselves.
+CREATE TABLE {prefix}songpress_agreements (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  serial varchar(16) NOT NULL DEFAULT '',
+  kind varchar(12) NOT NULL DEFAULT 'split',
+  title varchar(255) NOT NULL DEFAULT '',
+  body longtext NULL,
+  print_token varchar(40) NOT NULL,
+  source_key varchar(64) NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY print_token (print_token),
+  UNIQUE KEY source_key (source_key),
+  KEY song_id (song_id)
+) {charset};
+
+CREATE TABLE {prefix}songpress_signers (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  agreement_id bigint(20) unsigned NOT NULL,
+  name varchar(191) NOT NULL DEFAULT '',
+  role varchar(16) NOT NULL DEFAULT 'writer',
+  share varchar(32) NOT NULL DEFAULT '',
+  token varchar(40) NOT NULL,
+  signed_as varchar(191) NULL,
+  signed_at datetime NULL,
+  ip varchar(64) NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY token (token),
+  KEY agreement_id (agreement_id)
+) {charset};

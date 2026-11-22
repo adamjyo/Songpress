@@ -37,6 +37,9 @@ class Songpress_Screens {
 	}
 
 	public static function render( $slug ) {
+		if ( 'agreements' === $slug ) {
+			return Songpress_Agreements::render();
+		}
 		if ( 'art' === $slug ) {
 			return Songpress_Art::render();
 		}

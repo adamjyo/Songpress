@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.4.0 =
+* New Agreements in the rail (Managers, desktop): cowriter split confirmations and publishing agreements, written from the song's writers, IPIs, splits, publisher, ISWC and copyright number.
+* Every signer gets a private link to copy and send; they open it without logging in, type their name and tick a box. Nobody is emailed. A signature, once made, never changes. A printable page shows who signed and when.
+* "Load money" also brings your old agreements across; their old signing and print links keep working.
 
 = 0.3.1 =
 * Writers, Bands, Labels and Publishers are now separate lists, each with its own entry in the left rail. They never appear together. A writer can also be an author and a band can also be an artist, but each profile belongs to one list.

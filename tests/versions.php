@@ -51,6 +51,8 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_signers (id INTEGER PRIMARY KEY AUTOINCREMENT, agreement_id INT, name TEXT, role TEXT, share TEXT, token TEXT UNIQUE, signed_as TEXT, signed_at TEXT, ip TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -79,6 +81,7 @@ require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
 require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
+require __DIR__ . '/../includes/class-agreements.php';
 
 $fail = 0; $n = 0;
 function check( $name, $got, $want ) { global $fail, $n; $n++; if ( $got !== $want ) { $fail++; echo "FAIL $name\n  got:  " . var_export( $got, true ) . "\n  want: " . var_export( $want, true ) . "\n"; } }
@@ -308,6 +311,10 @@ $mp->exec( "INSERT INTO art_projects VALUES (5,'0001 Harbor Lights art','" . str
 	array( 'type' => 'paint', 'name' => 'Unknown kind' ),
 	array( 'type' => 'text', 'x' => 9999, 'meta' => array( 'color' => 'javascript:evil', 'size' => 99999 ) ),
 ) ) ) . "','https://site.test/uploads/prev.jpg','2026-11-18 23:28:39','0001'),(6,'No serial',"."'[]'".",'','2026-11-01 10:00:00','')" );
+$mp->exec( 'CREATE TABLE publishing_agreements (id INT, song_id INT, serial TEXT, title TEXT, body TEXT, status TEXT, kind TEXT, created_at TEXT, print_token TEXT, catalog_stem TEXT)' );
+$mp->exec( "INSERT INTO publishing_agreements VALUES (1,11,'0001','Harbor Lights','COWRITER SPLIT CONFIRMATION\n\nbody','sent','split','2026-09-20T04:27:59+00:00','OLDPRINT123','0001')" );
+$mp->exec( 'CREATE TABLE agreement_signers (id INT, agreement_id INT, writer_name TEXT, email TEXT, share TEXT, token TEXT, signed_at TEXT, signed_as TEXT, ip TEXT, status TEXT)' );
+$mp->exec( "INSERT INTO agreement_signers VALUES (1,1,'A','', '50','OLDTOKENa',NULL,NULL,NULL,'pending'),(2,1,'B','','50','OLDTOKENb','2026-09-21T10:00:00+00:00','Bee Name','1.2.3.4','signed')" );
 unset( $mp );
 $r = Songpress_Money::import_sqlite( $mf );
 check( 'money import earnings lines', $r['earnings'], 3 );
@@ -364,6 +371,20 @@ $kinds = array_map( function ( $r ) { return $r->kind; }, $GLOBALS['wpdb']->get_
 check( 'a label and a person with one name stay separate', $kinds, array( 'label', 'person' ) );
 Songpress_Songs::replace_credits( $s2, array( array( 'role' => 'writer', 'name' => 'W' ), array( 'role' => 'label', 'name' => 'Redbeard Records' ) ) );
 check( 'label credit is saved with the song', people( $s2, 'label' ), array( 'Redbeard Records:-' ) );
+check( 'old agreement imported with its signers', array( $r['agreements'], (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_signers WHERE token LIKE 'OLDTOKEN%'" ), (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_signers WHERE signed_at IS NOT NULL" ) ), array( 1, 2, 1 ) );
+check( 'old links keep their tokens', $GLOBALS['wpdb']->get_var( "SELECT print_token FROM wp_songpress_agreements WHERE source_key = 'old:1'" ), 'OLDPRINT123' );
+check( 'second import adds no agreements', $r2['agreements'], 0 );
+$ag = Songpress_Agreements::create( $v0, 'split' );
+$sg = Songpress_Agreements::signers( $ag );
+check( 'agreement signers are the writers', array_map( function ( $x ) { return $x->name . ':' . $x->share; }, $sg ), array( 'A:50', 'B:30', 'C:20' ) );
+check( 'agreement text lists writers and splits', array( strpos( Songpress_Agreements::get( $ag )->body, '- A — writer share 50%' ) !== false, strpos( Songpress_Agreements::get( $ag )->body, 'ISWC: T-123' ) !== false ), array( true, true ) );
+$agp = Songpress_Agreements::create( $v0, 'publishing' );
+check( 'publishing agreement text has the grant', strpos( Songpress_Agreements::get( $agp )->body, 'Grant. Each writer grants' ) !== false, true );
+check( 'signing needs a name and the box', array( Songpress_Agreements::sign( $sg[0]->token, '', true, '1.1.1.1' ) !== '', Songpress_Agreements::sign( $sg[0]->token, 'Aaa', false, '1.1.1.1' ) !== '' ), array( true, true ) );
+check( 'signing works', Songpress_Agreements::sign( $sg[0]->token, 'A Writer', true, '1.1.1.1' ), '' );
+check( 'a signature is never changed', array( Songpress_Agreements::sign( $sg[0]->token, 'Someone Else', true, '2.2.2.2' ) !== '', Songpress_Agreements::signers( $ag )[0]->signed_as ), array( true, 'A Writer' ) );
+check( 'unknown token is refused', Songpress_Agreements::sign( 'nope', 'X', true, '' ) !== '', true );
+check( 'list counts signers', array_map( function ( $r ) { return $r->signed . '/' . $r->total; }, array_slice( Songpress_Agreements::all(), 0, 2 ) ), array( '0/' . count( Songpress_Agreements::signers( $agp ) ), '1/3' ) );
 check( 'quarter parsing', array( Songpress_Money::quarter( '2026 Q2' ), Songpress_Money::quarter( '2026-q3' ), Songpress_Money::quarter( 'x' ) ), array( '2026-Q2', '2026-Q3', '' ) );
 unlink( $mf );
 
