@@ -44,8 +44,10 @@ require_once SONGPRESS_DIR . 'admin/class-admin.php';
 register_activation_hook( __FILE__, array( 'Songpress_Install', 'activate' ) );
 register_deactivation_hook( __FILE__, array( 'Songpress_Install', 'deactivate' ) );
 
+// Database upgrades and page creation need WordPress fully started (rewrite rules, translations), so they wait for init.
+add_action( 'init', array( 'Songpress_Install', 'maybe_upgrade' ), 1 );
+
 add_action( 'plugins_loaded', function () {
-	Songpress_Install::maybe_upgrade();
 	add_filter( 'user_has_cap', array( 'Songpress_Caps', 'filter_user_caps' ), 10, 4 );
 	Songpress_Frontend::init();
 	Songpress_Updater::init();
