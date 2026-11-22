@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.52.4 =
+* The "View song" link is removed from the work editor.
+
 = 0.52.3 =
 * The Art and audio card and the Basics card are the same height. On the original work, Other titles grows to fill the space.
 
