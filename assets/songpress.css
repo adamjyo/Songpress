@@ -515,4 +515,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-side-logo{display:flex;align-items:center;gap:10px}
 .sp-side-name{display:flex;flex-direction:column;min-width:0;line-height:1.2}
 .sp-side-name b{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:17px;font-weight:600;color:#fff;letter-spacing:-.01em}
-.sp-side-name small{font-size:11px;color:#8a8f98;margin-top:2px}
+.sp-side-name small{font-size:10px;white-space:nowrap;color:#8a8f98;margin-top:2px}
