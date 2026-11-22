@@ -456,7 +456,7 @@ check( 'applying again replaces, never doubles', (int) $GLOBALS['wpdb']->get_var
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
-	if ( in_array( $k, array( 'catalog', 'notes_md', 'notes_bear' ), true ) ) { continue; }
+	if ( in_array( $k, array( 'catalog', 'notes_md', 'notes_bear', 'notes_textbundle' ), true ) ) { continue; }
 	if ( false === $GLOBALS['wpdb']->get_results( Songpress_Uploads::sql( $k ), ARRAY_A ) ) { ++$bad; }
 }
 check( 'every download query runs', $bad, 0 );
@@ -636,6 +636,16 @@ check( 'one more undated in-progress registration counted', Songpress_Registrati
 check( 'bad date changes nothing', array( Songpress_Registrations::date_undated( 'soon' ), Songpress_Registrations::undated_count() ), array( 0, $u0 + 1 ) );
 check( 'dating undated fills it', array( Songpress_Registrations::date_undated( '2026-02-02' ), Songpress_Registrations::undated_count() ), array( $u0 + 1, 0 ) );
 check( 'a date you entered is kept', $wpdb->get_var( "SELECT started_on FROM wp_songpress_registrations WHERE family_id = $rf AND society = 'mlc'" ), '2026-01-05' );
+
+// Bear TextBundle
+$fresh = clone $row; $fresh->authors = 'Adam Page'; $fresh->song_key = 'G'; $fresh->tempo = '90bpm';
+$tb = Songpress_Journal::note_to_textbundle( $fresh );
+$ti = json_decode( $tb['info'], true );
+check( 'textbundle info.json', array( $ti['version'], $ti['type'] ), array( 2, 'net.daringfireball.markdown' ) );
+$tbr = Songpress_Journal::parse_note_file( 'x.md', $tb['text'] );
+check( 'textbundle text reads back', array( $tbr['title'], $tbr['authors'], $tbr['song_key'], $tbr['date'] ), array( 'Wine and Bread', 'Adam Page', 'G', '2007-08-04' ) );
+$un = clone $row; $un->title = ''; $un->kind = 'day';
+check( 'untitled note is named after its date', strtok( Songpress_Journal::note_to_textbundle( $un )['text'], "\n" ), '# Day 2007-08-04' );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

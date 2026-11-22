@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.19.0
+Stable tag: 0.20.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.20.0 =
+* Notes export for Bear: "Notes as Bear TextBundles" (Upload / Download, and "All for Bear (.textbundle)" on the Notes page) saves each note as a .textbundle folder in a zip, ready for Bear's File > Import. Each file carries the note's created time so Bear's "keep original creation and modification date" import option can use it. Importing that zip back into SongPress works too.
 
 = 0.19.0 =
 * Activity log (Managers only): a new rail page showing who did what and when across the app: song changes, notes, people and logins, money, sessions, uploads and downloads, agreements, registrations, art and sign-ins. Filter by area or person, search, page through, and download as CSV. Entries are never edited or removed.

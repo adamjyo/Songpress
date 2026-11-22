@@ -42,6 +42,7 @@ class Songpress_Uploads {
 		'stats'         => array( 'DistroKid store figures by month', 'money', 'SELECT month, store, title, isrc, units, earnings FROM {stats} ORDER BY month DESC, store' ),
 		'notes_md'      => array( 'Notes as Markdown files (.md, zipped)', 'journal', '' ),
 		'notes_bear'    => array( 'Notes as Bear files (.bear, zipped)', 'journal', '' ),
+		'notes_textbundle' => array( 'Notes as Bear TextBundles (.textbundle, zipped, for Bear\'s Import)', 'journal', '' ),
 		'journal'       => array( 'Notes', 'journal', 'SELECT log_date, kind, title, notes, place, song_key, tempo, authors, latitude, longitude, pinned, archived FROM {journal} ORDER BY log_date DESC' ),
 		'ratings'       => array( 'Song ratings', 'journal', 'SELECT s.serial, s.title, r.voter, r.stars, r.created_at FROM {ratings} r LEFT JOIN {songs} s ON s.id = r.song_id ORDER BY s.serial' ),
 		'registrations' => array( 'Registrations', 'registrations', 'SELECT f.family_no, r.society, r.in_progress, r.started_on, r.reference, r.note, r.updated_at FROM {registrations} r LEFT JOIN {families} f ON f.id = r.family_id ORDER BY f.family_no, r.society' ),
@@ -326,8 +327,8 @@ class Songpress_Uploads {
 		if ( ! isset( self::DOWNLOADS[ $key ] ) || ! Songpress_Caps::can( self::DOWNLOADS[ $key ][1] ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
-		if ( 'notes_md' === $key || 'notes_bear' === $key ) {
-			self::notes_files( 'notes_bear' === $key ? 'bear' : 'md' );
+		if ( in_array( $key, array( 'notes_md', 'notes_bear', 'notes_textbundle' ), true ) ) {
+			self::notes_files( 'notes_bear' === $key ? 'bear' : ( 'notes_textbundle' === $key ? 'textbundle' : 'md' ) );
 		}
 		if ( 'catalog' === $key ) {
 			wp_safe_redirect( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_export' ), 'songpress_export' ) );
@@ -368,6 +369,19 @@ class Songpress_Uploads {
 						$name = $base . ' ' . $i;
 					}
 					$used[ $name ] = true;
+					if ( 'textbundle' === $ext ) {
+						// A folder named Name.textbundle holding info.json and text.md. Bear's "keep original dates" import option reads
+						// the file dates, so each file is stamped with the note's own created time.
+						$tb    = Songpress_Journal::note_to_textbundle( $e );
+						$stamp = strtotime( ( $e->created_at ? $e->created_at : $e->log_date . ' 12:00:00' ) . ' UTC' );
+						foreach ( array( 'info.json' => $tb['info'], 'text.md' => $tb['text'] ) as $fn => $body ) {
+							$zip->addFromString( $name . '.textbundle/' . $fn, $body );
+							if ( $stamp && method_exists( $zip, 'setMtimeName' ) ) {
+								$zip->setMtimeName( $name . '.textbundle/' . $fn, $stamp );
+							}
+						}
+						continue;
+					}
 					$zip->addFromString( $name . '.' . $ext, 'bear' === $ext ? Songpress_Journal::note_to_bear( $e ) : Songpress_Journal::note_to_md( $e ) );
 				}
 				$zip->close();
@@ -381,7 +395,7 @@ class Songpress_Uploads {
 		header( 'Content-Type: text/plain; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="songpress-notes-' . gmdate( 'Y-m-d' ) . '.' . $ext . '"' );
 		foreach ( $rows as $e ) {
-			echo ( 'bear' === $ext ? Songpress_Journal::note_to_bear( $e ) : Songpress_Journal::note_to_md( $e ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- a text download.
+			echo ( in_array( $ext, array( 'bear', 'textbundle' ), true ) ? Songpress_Journal::note_to_bear( $e ) : Songpress_Journal::note_to_md( $e ) ) . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput -- a text download.
 		}
 		exit;
 	}
@@ -413,8 +427,13 @@ class Songpress_Uploads {
 				if ( true === $z->open( $f['tmp'] ) ) {
 					for ( $i = 0; $i < $z->numFiles; $i++ ) {
 						$n = $z->getNameIndex( $i );
-						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) ) {
-							$texts[] = array( basename( $n ), (string) $z->getFromIndex( $i ) );
+						if ( preg_match( '/\.(bear|md|txt|markdown|json)$/i', $n ) && 0 !== strpos( basename( $n ), '.' ) && 'info.json' !== basename( $n ) ) {
+							// inside a .textbundle folder the text is called text.md; the folder name is the note's name
+							$bn = basename( $n );
+							if ( 'text.md' === $bn && false !== strpos( dirname( $n ), '.textbundle' ) ) {
+								$bn = basename( dirname( $n ), '.textbundle' ) . '.md';
+							}
+							$texts[] = array( $bn, (string) $z->getFromIndex( $i ) );
 						}
 					}
 					$z->close();

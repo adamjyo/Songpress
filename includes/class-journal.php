@@ -378,6 +378,7 @@ class Songpress_Journal {
 				'map'    => add_query_arg( array( 'sp_page' => 'notes', 'jview' => 'map' ), $base ),
 				'md'     => wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ),
 				'bear'   => wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_bear' ), 'songpress_download' ),
+				'tb'     => wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_textbundle' ), 'songpress_download' ),
 				'tool'   => class_exists( 'Songpress_ChordTool' ) ? Songpress_ChordTool::url() : '',
 			),
 		);
@@ -409,7 +410,7 @@ class Songpress_Journal {
 		$o .= '<label><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select id="spn-f-kind"></select></label>';
 		$o .= '<div class="spn-songs"><span>' . esc_html__( 'Songs mentioned', 'songpress' ) . '</span><div id="spn-songs"></div></div>';
 		$o .= '<label><span>' . esc_html( "#'s" ) . '</span><input id="spn-f-tag" placeholder="' . esc_attr__( '# then a tag, Enter to add', 'songpress' ) . '"></label>';
-		$o .= '<div class="spn-links"><a href="#" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</a><a href="#" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</a><a href="#" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</a><a href="#" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</a></div>';
+		$o .= '<div class="spn-links"><a href="#" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</a><a href="#" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</a><a href="#" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</a><a href="#" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</a><a href="#" data-go="tb">' . esc_html__( 'All for Bear (.textbundle)', 'songpress' ) . '</a></div>';
 		$o .= '</aside></div>';
 		$o .= '<script type="application/json" id="spn-data">' . $json . '</script>' . self::script() . '</div></div>';
 		return $o;
@@ -734,6 +735,18 @@ JS
 	/** A note in the Bear layout: "# Title", authors, "key | tempo | date", then the note. Always has the authors line so it reads back. Pure. */
 	public static function note_to_bear( $e ) {
 		return '# ' . str_replace( "\n", ' ', (string) $e->title ) . "\n" . str_replace( "\n", ' ', (string) $e->authors ) . "\n" . $e->song_key . ' | ' . $e->tempo . ' | ' . $e->log_date . "\n\n" . (string) $e->notes . "\n";
+	}
+
+	/** A note as a TextBundle (the folder format Bear imports): info.json and text.md. Untitled notes are named after their date. Pure. */
+	public static function note_to_textbundle( $e ) {
+		$c = clone $e;
+		if ( '' === trim( (string) $c->title ) ) {
+			$c->title = ucfirst( (string) $c->kind ) . ' ' . $c->log_date;
+		}
+		return array(
+			'info' => wp_json_encode( array( 'version' => 2, 'type' => 'net.daringfireball.markdown', 'transient' => true, 'creatorIdentifier' => 'com.songpress' ) ),
+			'text' => self::note_to_bear( $c ),
+		);
 	}
 
 	/** Add one parsed note. A note with the same source key is not added twice. Returns true when it was added. */
