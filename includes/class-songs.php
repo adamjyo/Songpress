@@ -18,7 +18,7 @@ class Songpress_Songs {
 	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid' );
 
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
-	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url' );
+	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
 	/** The statuses in use: the Manager's own list (Lists screen) or the built-in six. key => label. */
 	public static function statuses() {
@@ -226,7 +226,7 @@ class Songpress_Songs {
 		foreach ( self::FIELDS as $f ) {
 			$data[ $f ] = $from->$f;
 		}
-		// A new version is a new recording or arrangement and its own work: it keeps what is shared (title, lyrics, chords, story,
+		// A new version is a new recording or arrangement and its own work: it keeps what is shared (title, lyrics, chords, story, themes,
 		// writers and publishers) and starts with its own release, band, key, tempo, genre, art and audio left empty.
 		foreach ( self::VERSION_FIELDS as $f ) {
 			$data[ $f ] = in_array( $f, array( 'audio_id', 'art_id' ), true ) ? 0 : '';
@@ -381,10 +381,10 @@ class Songpress_Songs {
 
 	private static function copy_children( $from, $to ) {
 		global $wpdb;
-		// Each version has its own people. Writers and publishers (with their splits) start as a copy so they can be changed
+		// Each version has its own people. Writers, publishers and labels (with their splits) start as a copy so they can be changed
 		// without touching the original or any other version. Performers and producers differ per version, so they start empty.
 		$cr = Songpress_Install::table( 'credits' );
-		$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d AND role IN ('writer','publisher')", $to, $from ) );
+		$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d AND role IN ('writer','publisher','label')", $to, $from ) );
 		// Work-level codes (ISWC, CCLI, MLC...) follow the song. Release codes (ISRC, DistroKid) and streaming links do not.
 		$id = Songpress_Install::table( 'identifiers' );
 		$in = implode( ',', array_fill( 0, count( self::RELEASE_IDENTIFIERS ), '%s' ) );

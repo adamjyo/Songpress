@@ -630,7 +630,7 @@ check( 'backfill twice changes nothing', Songpress_Songs::fill_blank( 9001, arra
 Songpress_Songs::update( $of, array( 'ai_prompt' => "line one\nline two", 'copyright_date' => '2019-05-05' ) );
 check( 'prompt keeps its line breaks', Songpress_Songs::get( $of )->ai_prompt, "line one\nline two" );
 $ov = Songpress_Songs::create_version( $of, 1 );
-check( 'new version keeps style and copyright but not the production date', array( Songpress_Songs::get( $ov )->style, Songpress_Songs::get( $ov )->copyright_date, Songpress_Songs::get( $ov )->production_date ), array( 'Typed style', '2019-05-05', '' ) );
+check( 'new version keeps copyright but starts without its own style and production date', array( Songpress_Songs::get( $ov )->style, Songpress_Songs::get( $ov )->copyright_date, Songpress_Songs::get( $ov )->production_date ), array( '', '2019-05-05', '' ) );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
