@@ -22,14 +22,14 @@ class Songpress_Frontend {
 
 	private static function gate() {
 		if ( ! is_user_logged_in() ) {
-			return '<p class="songpress-note">' . sprintf(
+			return '<div class="sp-app"><p class="songpress-note">' . sprintf(
 				/* translators: %s: login link */
 				esc_html__( 'Please %s to see your songs.', 'songpress' ),
 				'<a href="' . esc_url( wp_login_url( get_permalink() ) ) . '">' . esc_html__( 'log in', 'songpress' ) . '</a>'
-			) . '</p>';
+			) . '</p></div>';
 		}
 		if ( ! Songpress_Caps::can_view() ) {
-			return '<p class="songpress-note">' . esc_html__( 'Your account cannot see the catalog.', 'songpress' ) . '</p>';
+			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Your account cannot see the catalog.', 'songpress' ) . '</p></div>';
 		}
 		return '';
 	}
@@ -51,20 +51,43 @@ class Songpress_Frontend {
 		if ( isset( $_GET['sp_song'] ) ) {
 			return self::song_view( absint( $_GET['sp_song'] ), $uid ) . wp_kses_post( songpress_public_donate_link() );
 		}
-		$q   = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : '';
-		$res = Songpress_Songs::query( array( 'search' => $q, 'per_page' => 40, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
-		$out = '<div class="songpress"><form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form><ul class="songpress-list">';
+		$q      = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : '';
+		$status = isset( $_GET['sp_status'] ) ? sanitize_key( wp_unslash( $_GET['sp_status'] ) ) : '';
+		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
+		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => 40, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
+		$out    = '<div class="songpress sp-app">' . self::head( __( 'Songs', 'songpress' ) );
+		$out   .= '<form method="get" class="songpress-search"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search title or serial', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '">' . ( '' !== $status ? '<input type="hidden" name="sp_status" value="' . esc_attr( $status ) . '">' : '' ) . '</form>';
+		$out   .= '<div class="songpress-chips"><a class="' . ( '' === $status ? 'on' : '' ) . '" href="' . esc_url( remove_query_arg( 'sp_status' ) ) . '">' . esc_html__( 'All', 'songpress' ) . '</a>';
+		foreach ( Songpress_Songs::STATUSES as $k => $label ) {
+			$out .= '<a class="' . ( $k === $status ? 'on' : '' ) . '" href="' . esc_url( add_query_arg( 'sp_status', $k ) ) . '">' . esc_html( $label ) . '</a>';
+		}
+		$out .= '</div><ul class="songpress-list">';
 		foreach ( $res['rows'] as $s ) {
 			$by   = Songpress_Songs::authors_line( (int) $s->id, $uid );
 			$link = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
-			$out .= '<li><a href="' . $link . '">' . self::art( $s, 'songpress-thumb' ) . '<span class="songpress-meta"><span class="songpress-title">' . esc_html( $s->title ) . '</span>'
+			$out .= '<li><a class="songpress-row" href="' . $link . '">' . self::art( $s, 'songpress-thumb' ) . '<span class="songpress-meta"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title">' . esc_html( $s->title ) . '</span>'
 				. ( '' !== $by ? '<span class="songpress-by">' . esc_html( $by ) . '</span>' : '' )
-				. '<span class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</span></span></a></li>';
+				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</span></span><span class="songpress-chev" aria-hidden="true">&rsaquo;</span></a></li>';
 		}
 		if ( ! $res['rows'] ) {
 			$out .= '<li class="songpress-empty">' . esc_html__( 'No songs found.', 'songpress' ) . '</li>';
 		}
-		return $out . '</ul></div>' . wp_kses_post( songpress_public_donate_link() );
+		return $out . '</ul>' . wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'catalog' ) . '</div>';
+	}
+
+	/** The logo and page title at the top of every phone screen. */
+	private static function head( $title ) {
+		return '<div class="songpress-head"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" alt="SongPress"><h2>' . esc_html( $title ) . '</h2></div>';
+	}
+
+	/** Songs / Profile tabs along the bottom, linking to the two pages SongPress made. */
+	private static function tabs( $on ) {
+		$c = (int) get_option( 'songpress_page_catalog' );
+		$p = (int) get_option( 'songpress_page_profile' );
+		if ( ! $c || ! $p || ! Songpress_Install::page_ok( $c ) || ! Songpress_Install::page_ok( $p ) ) {
+			return '';
+		}
+		return '<nav class="songpress-tabs" aria-label="SongPress"><a class="' . ( 'catalog' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $c ) ) . '">' . esc_html__( 'Songs', 'songpress' ) . '</a><a class="' . ( 'profile' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html__( 'Profile', 'songpress' ) . '</a></nav>';
 	}
 
 	private static function song_view( $id, $uid ) {
@@ -75,7 +98,7 @@ class Songpress_Frontend {
 		if ( ! $s ) {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
-		return self::song_body( $s, $uid, '<p><a href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a></p>' );
+		return '<div class="songpress sp-app">' . self::song_body( $s, $uid, '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Songs', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The song itself: cover, audio, title, writers, chart. Shared by the logged-in view and the public share page. */
@@ -128,14 +151,14 @@ class Songpress_Frontend {
 			echo self::share_meta( $s ); // phpcs:ignore WordPress.Security.EscapeOutput -- every value is escaped inside.
 		}
 		echo '<link rel="stylesheet" href="' . esc_url( SONGPRESS_URL . 'assets/songpress.css?ver=' . SONGPRESS_VERSION ) . '">';
-		echo '<style>body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#fff;color:#1d2327}.songpress-share{max-width:560px;margin:0 auto;padding:16px}.songpress-sharelogo{display:block;width:44px;height:44px;margin:4px 0 12px}</style></head><body><main class="songpress-share">';
+		echo '<style>body{margin:0;background:#0f1012;color:#e9eaec}.songpress-share{max-width:560px;margin:0 auto;padding:16px}.songpress-share .sp-app{border-radius:0;padding:0 16px 8px}.songpress-sharelogo{display:block;width:44px;height:44px;margin:4px 0 12px}</style></head><body><main class="songpress-share">';
 		echo '<img class="songpress-sharelogo" src="' . esc_url( SONGPRESS_URL . 'assets/seal-amber.svg' ) . '" alt="SongPress">';
 		if ( $s ) {
-			echo self::song_body( $s, 0 ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
+			echo '<div class="sp-app">' . self::song_body( $s, 0 ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
 		} else {
 			echo '<p>' . esc_html__( 'This link is no longer active.', 'songpress' ) . '</p>';
 		}
-		echo wp_kses_post( songpress_public_donate_link() ) . '</main></body></html>';
+		echo '<div class="sp-app" style="padding-top:0">' . wp_kses_post( songpress_public_donate_link() ) . '</div></main></body></html>';
 		exit;
 	}
 
@@ -181,10 +204,17 @@ class Songpress_Frontend {
 				$rel++;
 			}
 		}
-		$out  = '<div class="songpress-profile"><h2>' . esc_html( $u->display_name ) . '</h2>';
-		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p>';
-		$out .= '<ul class="songpress-stats"><li><strong>' . (int) $res['total'] . '</strong> ' . esc_html__( 'Songs', 'songpress' ) . '</li><li><strong>' . (int) $rel . '</strong> ' . esc_html__( 'Released', 'songpress' ) . '</li></ul>';
-		$out .= '<p class="songpress-sub">' . esc_html__( 'Earnings and streams will appear here when that feature is added.', 'songpress' ) . '</p></div>';
-		return $out . wp_kses_post( songpress_public_donate_link() );
+		$ini = '';
+		foreach ( array_slice( preg_split( '/\s+/', trim( $u->display_name ) ), 0, 2 ) as $w ) {
+			$ini .= function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $w, 0, 1 ) ) : strtoupper( substr( $w, 0, 1 ) );
+		}
+		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
+		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
+		$out  = '<div class="songpress-profile sp-app"><div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
+		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
+		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Songs', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
+		$out .= '<p class="songpress-sub">' . esc_html__( 'Earnings and streams will appear here when that feature is added.', 'songpress' ) . '</p>';
+		$out .= wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'profile' ) . '</div>';
+		return $out;
 	}
 }
