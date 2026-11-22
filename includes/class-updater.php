@@ -20,6 +20,8 @@ class Songpress_Updater {
 		add_filter( 'plugins_api', array( __CLASS__, 'details' ), 10, 3 );
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_folder' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'forget' ) );
+		add_action( 'load-plugins.php', array( __CLASS__, 'refresh_if_stale' ) );
+		add_action( 'load-update-core.php', array( __CLASS__, 'refresh_if_stale' ) );
 	}
 
 	public static function enabled() {
@@ -108,10 +110,10 @@ class Songpress_Updater {
 		}
 		$best = self::pick( $release, self::from_branch( $headers ) );
 		if ( ! $best ) {
-			set_transient( self::CACHE, array(), HOUR_IN_SECONDS ); // nothing usable: try again in an hour
+			set_transient( self::CACHE, array(), 5 * MINUTE_IN_SECONDS ); // nothing usable: try again in five minutes
 			return null;
 		}
-		set_transient( self::CACHE, $best, 12 * HOUR_IN_SECONDS );
+		set_transient( self::CACHE, $best, 10 * MINUTE_IN_SECONDS );
 		return $best;
 	}
 
@@ -167,6 +169,14 @@ class Songpress_Updater {
 			return $want;
 		}
 		return $source;
+	}
+
+	/** Opening Plugins or Updates re-checks GitHub when our ten-minute memory has run out, so a new version shows up without waiting for WordPress's own twice-a-day check. */
+	public static function refresh_if_stale() {
+		if ( ! self::enabled() || false !== get_transient( self::CACHE ) ) {
+			return;
+		}
+		delete_site_transient( 'update_plugins' );
 	}
 
 	public static function forget() {
