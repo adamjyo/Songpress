@@ -555,5 +555,16 @@ $nb = $row; $nb->authors = ''; $nb->song_key = ''; $nb->tempo = '';
 $bb2 = Songpress_Journal::parse_note_file( 'b.bear', Songpress_Journal::note_to_bear( $nb ) );
 check( 'bear export without authors still reads back as bear', array( $bb2['title'], $bb2['date'], trim( $bb2['notes'] ) ), array( 'Wine and Bread', '2007-08-04', trim( $row->notes ) ) );
 
+// Notes screen actions
+$r1 = Songpress_Journal::ajax_op( array( 'op' => 'save', 'title' => 'Screen note', 'notes' => "hello #idea\nand ^0378", 'log_date' => '2026-05-06', 'song_key' => 'D', 'tempo' => '88', 'authors' => 'Adam Page', 'created_at' => '2026-05-06T10:30', 'kind' => 'note' ) );
+check( 'notes screen: save new', array( $r1['ok'], $r1['note']['title'], $r1['note']['key'], $r1['note']['created'], $r1['note']['date'] ), array( true, 'Screen note', 'D', '2026-05-06T10:30', '2026-05-06' ) );
+$nid = $r1['note']['id'];
+$r2 = Songpress_Journal::ajax_op( array( 'op' => 'save', 'entry_id' => $nid, 'title' => 'Screen note 2', 'notes' => 'changed', 'log_date' => '2026-05-07' ) );
+check( 'notes screen: save existing', array( $r2['note']['id'], $r2['note']['title'], $r2['note']['date'] ), array( $nid, 'Screen note 2', '2026-05-07' ) );
+check( 'notes screen: empty save refused', Songpress_Journal::ajax_op( array( 'op' => 'save' ) )['ok'], false );
+check( 'notes screen: pin then archive', array( Songpress_Journal::ajax_op( array( 'op' => 'flag', 'entry_id' => $nid, 'flag' => 'pinned' ) )['note']['pinned'], Songpress_Journal::ajax_op( array( 'op' => 'flag', 'entry_id' => $nid, 'flag' => 'archived' ) )['note']['archived'] ), array( 1, 1 ) );
+check( 'notes screen: unknown action', Songpress_Journal::ajax_op( array( 'op' => 'zzz' ) )['ok'], false );
+check( 'notes screen: delete', array( Songpress_Journal::ajax_op( array( 'op' => 'delete', 'entry_id' => $nid ) )['deleted'], $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Songpress_Install::table( 'journal' ) . ' WHERE id = ' . (int) $nid ) ), array( $nid, 0 ) );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

@@ -14,6 +14,7 @@ class Songpress_Journal {
 	public static function init() {
 		add_action( 'admin_post_songpress_journal_save', array( __CLASS__, 'handle_save' ) );
 		add_action( 'admin_post_songpress_journal_flag', array( __CLASS__, 'handle_flag' ) );
+		add_action( 'admin_post_songpress_journal_ajax', array( __CLASS__, 'handle_ajax' ) );
 	}
 
 	private static function t() {
@@ -194,15 +195,14 @@ class Songpress_Journal {
 		exit;
 	}
 
-	public static function handle_save() {
-		self::guard( 'songpress_journal_save' );
+	/** Save one entry from posted fields. Returns array( id, err ). Shared by the form handler and the Notes screen. */
+	public static function persist( array $in ) {
 		global $wpdb;
-		$in    = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned below.
 		$id    = absint( $in['entry_id'] ?? 0 );
 		$notes = (string) ( $in['notes'] ?? '' );
 		$title = sanitize_text_field( $in['title'] ?? '' );
-		if ( '' === trim( $notes ) && '' === $title ) {
-			self::go( array( 'j_err' => __( 'Write something first.', 'songpress' ) ) );
+		if ( '' === trim( $notes ) && '' === $title && ! $id ) {
+			return array( 0, __( 'Write something first.', 'songpress' ) );
 		}
 		$ser = self::serial_in( $title );
 		$sid = 0;
@@ -233,10 +233,82 @@ class Songpress_Journal {
 				$row['created_at'] = $cr;
 			}
 			$wpdb->update( self::t(), $row, array( 'id' => $id ) );
-		} else {
-			$wpdb->insert( self::t(), array_merge( $row, array( 'user_id' => get_current_user_id(), 'created_at' => '' !== $cr ? $cr : current_time( 'mysql' ) ) ) );
+			return array( $id, '' );
 		}
-		self::go( array( 'j_ok' => $id ? __( 'Entry saved.', 'songpress' ) : __( 'Entry added.', 'songpress' ) ) );
+		$wpdb->insert( self::t(), array_merge( $row, array( 'user_id' => get_current_user_id(), 'created_at' => '' !== $cr ? $cr : current_time( 'mysql' ) ) ) );
+		return array( (int) $wpdb->insert_id, '' );
+	}
+
+	public static function handle_save() {
+		self::guard( 'songpress_journal_save' );
+		$in = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned in persist().
+		list( $id, $err ) = self::persist( $in );
+		if ( '' !== $err ) {
+			self::go( array( 'j_err' => $err ) );
+		}
+		self::go( array( 'j_ok' => absint( $in['entry_id'] ?? 0 ) ? __( 'Entry saved.', 'songpress' ) : __( 'Entry added.', 'songpress' ) ) );
+	}
+
+	/** The shape the Notes screen works with. */
+	public static function shape( $e ) {
+		return array(
+			'id'       => (int) $e->id,
+			'date'     => (string) $e->log_date,
+			'kind'     => (string) $e->kind,
+			'title'    => (string) $e->title,
+			'notes'    => (string) $e->notes,
+			'place'    => (string) $e->place,
+			'key'      => (string) $e->song_key,
+			'tempo'    => (string) $e->tempo,
+			'authors'  => (string) $e->authors,
+			'created'  => $e->created_at ? str_replace( ' ', 'T', substr( (string) $e->created_at, 0, 16 ) ) : '',
+			'pinned'   => (int) $e->pinned,
+			'archived' => (int) $e->archived,
+		);
+	}
+
+	private static function row( $id ) {
+		global $wpdb;
+		return $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::t() . ' WHERE id = %d', (int) $id ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/** One action from the Notes screen: save, pin, archive, delete or songs. Returns the reply as an array. */
+	public static function ajax_op( array $in ) {
+		global $wpdb;
+		$op = (string) ( $in['op'] ?? '' );
+		$id = absint( $in['entry_id'] ?? 0 );
+		if ( 'save' === $op ) {
+			list( $nid, $err ) = self::persist( $in );
+			if ( '' !== $err ) {
+				return array( 'ok' => false, 'error' => $err );
+			}
+			return array( 'ok' => true, 'note' => self::shape( self::row( $nid ) ) );
+		}
+		if ( 'flag' === $op && $id ) {
+			$what = 'archived' === ( $in['flag'] ?? '' ) ? 'archived' : 'pinned';
+			$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::t() . " SET {$what} = 1 - {$what} WHERE id = %d", $id ) ); // phpcs:ignore WordPress.DB -- one of two literals.
+			return array( 'ok' => true, 'note' => self::shape( self::row( $id ) ) );
+		}
+		if ( 'delete' === $op && $id ) {
+			$wpdb->delete( self::t(), array( 'id' => $id ) );
+			return array( 'ok' => true, 'deleted' => $id );
+		}
+		if ( 'songs' === $op ) {
+			$out = array();
+			foreach ( self::mentioned( (string) ( $in['text'] ?? '' ) ) as $m ) {
+				$out[] = array( 'serial' => (string) $m->serial, 'title' => (string) $m->title, 'url' => Songpress_Editor::edit_url( (int) $m->id ) );
+			}
+			return array( 'ok' => true, 'songs' => $out );
+		}
+		return array( 'ok' => false, 'error' => 'Unknown action.' );
+	}
+
+	public static function handle_ajax() {
+		check_admin_referer( 'songpress_journal_ajax' );
+		if ( ! Songpress_Caps::can( 'journal' ) ) {
+			wp_send_json( array( 'ok' => false, 'error' => 'Not allowed.' ), 403 );
+		}
+		wp_send_json( self::ajax_op( wp_unslash( $_POST ) ) ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned in persist().
 	}
 
 	public static function handle_flag() {
@@ -273,67 +345,227 @@ class Songpress_Journal {
 		if ( ! Songpress_Caps::can( 'journal' ) ) {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Only Managers can open this screen.', 'songpress' ) . '</p></div>';
 		}
-		$q    = isset( $_GET['jq'] ) ? sanitize_text_field( wp_unslash( $_GET['jq'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-		$show = isset( $_GET['jshow'] ) && 'archived' === $_GET['jshow'] ? 'archived' : 'live'; // phpcs:ignore WordPress.Security.NonceVerification
-		$page = isset( $_GET['jp'] ) ? max( 1, absint( $_GET['jp'] ) ) : 1; // phpcs:ignore WordPress.Security.NonceVerification
-		$res  = self::search( $q, $show, $page );
 		$base = Songpress_Editor::list_url();
-		$o    = '<div class="songpress sp-app sp-editor sp-journal"><div class="spe-top"><h2>' . esc_html__( 'Notes', 'songpress' ) . '</h2></div>';
-		if ( ! empty( $_GET['j_ok'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$o .= '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['j_ok'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
-		}
-		if ( ! empty( $_GET['j_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$o .= '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['j_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
-		}
 		$view = isset( $_GET['jview'] ) && in_array( $_GET['jview'], array( 'days', 'map' ), true ) ? sanitize_key( wp_unslash( $_GET['jview'] ) ) : 'list'; // phpcs:ignore WordPress.Security.NonceVerification
-		$o   .= '<p class="spj-tabs">';
-		foreach ( array( 'list' => __( 'Notes', 'songpress' ), 'days' => __( 'Days', 'songpress' ), 'map' => __( 'Map', 'songpress' ) ) as $vk => $vl ) {
-			$o .= '<a class="spe-btn' . ( $view === $vk ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'notes', 'jview' => $vk ), $base ) ) . '">' . esc_html( $vl ) . '</a> ';
-		}
-		$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ) ) . '">' . esc_html__( 'Import notes (.bear, .md, .txt)', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .md', 'songpress' ) . '</a> <a class="spe-btn" href="' . esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_bear' ), 'songpress_download' ) ) . '">' . esc_html__( 'Export all as .bear', 'songpress' ) . '</a></p>';
-		if ( 'days' === $view ) {
-			return $o . self::days_html() . '</div>';
-		}
-		if ( 'map' === $view ) {
-			return $o . self::map_html() . '</div>';
-		}
-		$o .= '<details class="spj-new"><summary class="spe-btn">+ ' . esc_html__( 'New entry', 'songpress' ) . '</summary>' . self::form_open( 'songpress_journal_save' ) . self::fields() . '<button class="spe-save" type="submit">' . esc_html__( 'Add entry', 'songpress' ) . '</button></form></details>';
-		$o .= '<form method="get" class="spj-find"><input type="hidden" name="sp_page" value="notes"><input type="search" name="jq" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search notes', 'songpress' ) . '"><select name="jshow" onchange="this.form.submit()"><option value="live"' . selected( $show, 'live', false ) . '>' . esc_html__( 'Current', 'songpress' ) . '</option><option value="archived"' . selected( $show, 'archived', false ) . '>' . esc_html__( 'Archived', 'songpress' ) . '</option></select><button class="spe-btn" type="submit">' . esc_html__( 'Search', 'songpress' ) . '</button></form>';
-		$o .= '<p class="spe-help">' . esc_html( sprintf( /* translators: %d: number of entries */ _n( '%d entry', '%d entries', $res['total'], 'songpress' ), $res['total'] ) ) . '</p>';
-		foreach ( $res['rows'] as $e ) {
-			$head = trim( $e->title ) !== '' ? $e->title : ucfirst( $e->kind );
-			$o   .= '<details class="spj-entry' . ( (int) $e->pinned ? ' pinned' : '' ) . '"><summary><time>' . esc_html( $e->log_date ) . '</time> <b>' . esc_html( $head ) . '</b>' . ( (int) $e->pinned ? ' <span class="spj-pin">★</span>' : '' ) . ( '' !== $e->place ? ' <span class="spe-help">' . esc_html( $e->place ) . '</span>' : '' ) . '</summary>';
-			$men = self::mentioned( $e->title . "\n" . $e->notes );
-			if ( $men ) {
-				$o .= '<p class="spj-mention">' . esc_html__( 'Songs:', 'songpress' ) . ' ';
-				foreach ( $men as $m ) {
-					$o .= '<a href="' . esc_url( Songpress_Editor::edit_url( (int) $m->id ) ) . '"><span class="sp-serial">' . esc_html( $m->serial ) . '</span> ' . esc_html( $m->title ) . '</a> ';
-				}
-				$o .= '</p>';
+		if ( 'list' !== $view ) {
+			$o  = '<div class="songpress sp-app sp-editor sp-journal"><div class="spe-top"><h2>' . esc_html( 'days' === $view ? __( 'Days', 'songpress' ) : __( 'Map', 'songpress' ) ) . '</h2></div>';
+			$o .= '<p class="spj-tabs"><a class="spe-btn" href="' . esc_url( add_query_arg( 'sp_page', 'notes', $base ) ) . '">&larr; ' . esc_html__( 'Notes', 'songpress' ) . '</a> ';
+			foreach ( array( 'days' => __( 'Days', 'songpress' ), 'map' => __( 'Map', 'songpress' ) ) as $vk => $vl ) {
+				$o .= '<a class="spe-btn' . ( $view === $vk ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'notes', 'jview' => $vk ), $base ) ) . '">' . esc_html( $vl ) . '</a> ';
 			}
-			if ( (int) $e->song_id && ! $men ) {
-				$o .= '<p><a href="' . esc_url( Songpress_Editor::edit_url( (int) $e->song_id ) ) . '">' . esc_html__( 'Open the song', 'songpress' ) . '</a></p>';
-			}
-			$o .= self::form_open( 'songpress_journal_save' ) . '<input type="hidden" name="entry_id" value="' . (int) $e->id . '">' . self::fields( $e ) . '<button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>';
-			foreach ( array( 'pinned' => array( 'Pin', 'Unpin' ), 'archived' => array( 'Archive', 'Restore' ) ) as $flag => $labels ) {
-				$o .= self::form_open( 'songpress_journal_flag', 'spj-flag' ) . '<input type="hidden" name="entry_id" value="' . (int) $e->id . '"><input type="hidden" name="flag" value="' . esc_attr( $flag ) . '"><button class="spe-btn" type="submit">' . esc_html( (int) $e->$flag ? $labels[1] : $labels[0] ) . '</button></form>';
-			}
-			$o .= '</details>';
+			return $o . '</p>' . ( 'days' === $view ? self::days_html() : self::map_html() ) . '</div>';
 		}
-		$pages = (int) ceil( $res['total'] / self::PER_PAGE );
-		if ( $pages > 1 ) {
-			$o .= '<p class="spj-pages">';
-			$arg = array( 'sp_page' => 'notes', 'jq' => $q, 'jshow' => $show );
-			if ( $page > 1 ) {
-				$o .= '<a class="spe-btn" href="' . esc_url( add_query_arg( array_merge( $arg, array( 'jp' => $page - 1 ) ), $base ) ) . '">' . esc_html__( 'Newer', 'songpress' ) . '</a> ';
-			}
-			$o .= esc_html( $page . ' / ' . $pages );
-			if ( $page < $pages ) {
-				$o .= ' <a class="spe-btn" href="' . esc_url( add_query_arg( array_merge( $arg, array( 'jp' => $page + 1 ) ), $base ) ) . '">' . esc_html__( 'Older', 'songpress' ) . '</a>';
-			}
-			$o .= '</p>';
+		global $wpdb;
+		$rows  = $wpdb->get_results( 'SELECT * FROM ' . self::t() . ' ORDER BY pinned DESC, log_date DESC, id DESC LIMIT 3000' ); // phpcs:ignore WordPress.DB
+		$notes = array();
+		foreach ( (array) $rows as $e ) {
+			$notes[] = self::shape( $e );
 		}
-		return $o . '</div>';
+		$data = array(
+			'notes' => $notes,
+			'today' => gmdate( 'Y-m-d' ),
+			'ajax'  => admin_url( 'admin-post.php' ),
+			'nonce' => wp_create_nonce( 'songpress_journal_ajax' ),
+			'kinds' => self::KINDS,
+			'urls'  => array(
+				'import' => add_query_arg( array( 'sp_page' => 'uploads', 'type' => 'notes_files' ), $base ),
+				'days'   => add_query_arg( array( 'sp_page' => 'notes', 'jview' => 'days' ), $base ),
+				'map'    => add_query_arg( array( 'sp_page' => 'notes', 'jview' => 'map' ), $base ),
+				'md'     => wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_md' ), 'songpress_download' ),
+				'bear'   => wp_nonce_url( admin_url( 'admin-post.php?action=songpress_download&table=notes_bear' ), 'songpress_download' ),
+				'tool'   => class_exists( 'Songpress_ChordTool' ) ? Songpress_ChordTool::url() : '',
+			),
+		);
+		$json = wp_json_encode( $data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE );
+		$o    = '<div class="songpress sp-app spn-wrap"><div class="spn" id="spn">';
+		$o   .= '<div class="spn-tags" id="spn-tags"></div>';
+		$o   .= '<div class="spn-side"><div class="spn-top">';
+		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
+			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
+		}
+		$o .= '<input class="spn-search" id="spn-search" type="search" placeholder="' . esc_attr__( 'Search', 'songpress' ) . '"></div><div class="spn-list" id="spn-list"></div></div>';
+		$o .= '<div class="spn-main"><button type="button" class="spn-tgl spn-tgl-list" data-act="list" title="' . esc_attr__( 'Show or hide the list', 'songpress' ) . '">◧</button><button type="button" class="spn-tgl spn-tgl-info" data-act="info" title="' . esc_attr__( 'Show or hide the details', 'songpress' ) . '">◨</button>';
+		$o .= '<div class="spn-editor" id="spn-editor"><input class="spn-title" id="spn-title" placeholder="' . esc_attr__( 'Title', 'songpress' ) . '"><div class="spn-card"><textarea class="spn-body" id="spn-body" placeholder="' . esc_attr__( 'Write here. ^0378 links a song, #tag adds a tag.', 'songpress' ) . '"></textarea><div class="spn-prev" id="spn-prev" hidden></div>';
+		$o .= '<div class="spn-bar" id="spn-bar">';
+		foreach ( array( array( 'b', 'B', 'Bold' ), array( 'i', 'I', 'Italic' ), array( 'h', 'H', 'Heading' ), array( 'ul', '•', 'List' ), array( 'a', '🔗', 'Link' ), array( 'cp', '♫', 'ChordPro block' ), array( 'img', '▣', 'Image' ), array( 'aud', '♪', 'Audio' ), array( 'eye', '👁', 'Preview' ), '-', array( 'pin', '📌', 'Pin' ), array( 'arch', '🗄', 'Archive' ), array( 'del', '🗑', 'Delete' ) ) as $b ) {
+			$o .= is_array( $b ) ? '<button type="button" data-t="' . esc_attr( $b[0] ) . '" title="' . esc_attr( $b[2] ) . '" aria-label="' . esc_attr( $b[2] ) . '">' . esc_html( $b[1] ) . '</button>' : '<i class="spn-sep"></i>';
+		}
+		$o .= '</div><span class="spn-status" id="spn-status"></span><button type="button" class="spn-save" id="spn-save">' . esc_html__( 'Save', 'songpress' ) . '</button></div></div>';
+		$o .= '<aside class="spn-info" id="spn-info">';
+		foreach ( array(
+			array( 'date', __( 'Date', 'songpress' ), 'date' ),
+			array( 'created', __( 'Created', 'songpress' ), 'datetime-local' ),
+			array( 'place', __( 'Location', 'songpress' ), 'text' ),
+			array( 'authors', __( 'Authors', 'songpress' ), 'text' ),
+		) as $f ) {
+			$o .= '<label><span>' . esc_html( $f[1] ) . '</span><input type="' . esc_attr( $f[2] ) . '" id="spn-f-' . esc_attr( $f[0] ) . '"></label>';
+		}
+		$o .= '<div class="spn-two"><label><span>' . esc_html__( 'Key', 'songpress' ) . '</span><input id="spn-f-key"></label><label><span>' . esc_html__( 'Tempo', 'songpress' ) . '</span><input id="spn-f-tempo"></label></div>';
+		$o .= '<label><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select id="spn-f-kind"></select></label>';
+		$o .= '<div class="spn-songs"><span>' . esc_html__( 'Songs mentioned', 'songpress' ) . '</span><div id="spn-songs"></div></div>';
+		$o .= '<label><span>' . esc_html( "#'s" ) . '</span><input id="spn-f-tag" placeholder="' . esc_attr__( '# then a tag, Enter to add', 'songpress' ) . '"></label>';
+		$o .= '<div class="spn-links"><a href="#" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</a><a href="#" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</a><a href="#" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</a><a href="#" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</a></div>';
+		$o .= '</aside></div>';
+		$o .= '<script type="application/json" id="spn-data">' . $json . '</script>' . self::script() . '</div></div>';
+		return $o;
+	}
+
+	private static function script() {
+		return '<script>' . <<<'JS'
+(function(){
+var root=document.getElementById('spn');if(!root)return;
+var D=JSON.parse(document.getElementById('spn-data').textContent),notes=D.notes;
+var $=function(i){return document.getElementById(i)};
+var cur=null,tag='',q='',asc=false,sel={},selMode=false,busy=false,timer=null,dirty=false,showPrev=false;
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'],DOW=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function pd(d){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||'');return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null}
+function longDate(d){var x=pd(d);return x?MON[x.getUTCMonth()]+' '+x.getUTCDate()+', '+x.getUTCFullYear():''}
+function head(n){return (n.title||'').trim()||longDate(n.date)||'Untitled'}
+function prose(t){return String(t||'').replace(/```[\s\S]*?```/g,' ')}
+function tagsOf(n){var o={};prose(n.notes).replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,function(_,a,t){o[t.toLowerCase()]=t});return Object.keys(o)}
+function preview(n){return prose(n.notes).replace(/[#*_>`\[\]]/g,'').replace(/\s+/g,' ').trim()}
+function visible(){
+ var k=q.toLowerCase();
+ var r=notes.filter(function(n){
+  if(tag==='@arch')return n.archived;
+  if(n.archived)return false;
+  if(tag==='@pin'&&!n.pinned)return false;
+  if(tag&&tag.charAt(0)!=='@'&&tagsOf(n).indexOf(tag)<0)return false;
+  if(k&&(n.title+' '+n.notes+' '+n.place+' '+n.authors).toLowerCase().indexOf(k)<0)return false;
+  return true});
+ r.sort(function(a,b){if(a.pinned!==b.pinned)return b.pinned-a.pinned;var c=(a.date<b.date?-1:a.date>b.date?1:0)||(a.id-b.id);return asc?c:-c});
+ return r}
+function renderTags(){
+ var all={},pins=0,arch=0;
+ notes.forEach(function(n){if(n.archived){arch++;return}if(n.pinned)pins++;tagsOf(n).forEach(function(t){all[t.toLowerCase()]=t})});
+ var h='<h3>#\'s</h3>';
+ function b(k,l,on){return '<button type="button" class="spn-tag'+(on?' on':'')+'" data-tag="'+esc(k)+'">'+esc(l)+'</button>'}
+ h+=b('','All',!tag);
+ if(pins)h+=b('@pin','Pinned',tag==='@pin');
+ Object.keys(all).sort().forEach(function(k){h+=b(k,'#'+all[k],tag===k)});
+ if(arch)h+=b('@arch','Archived',tag==='@arch');
+ $('spn-tags').innerHTML=h}
+function renderList(){
+ var r=visible(),h='';
+ r.forEach(function(n){
+  var x=pd(n.date);
+  h+='<div class="spn-row'+(cur&&cur.id===n.id?' on':'')+(sel[n.id]?' sel':'')+'" data-id="'+n.id+'"><span class="spn-date"><b>'+(x?DOW[x.getUTCDay()]:'')+'</b><em>'+(x?x.getUTCDate():'')+'</em><small>'+(x?x.getUTCFullYear():'')+'</small></span><span class="spn-info2"><span class="spn-t">'+(n.pinned?'★ ':'')+esc(head(n))+'</span><span class="spn-p">'+esc(preview(n))+'</span></span></div>'});
+ $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>'}
+function setStatus(s){$('spn-status').textContent=s||''}
+function fill(n){
+ cur=n;
+ $('spn-title').value=n.title||'';$('spn-body').value=n.notes||'';
+ $('spn-f-date').value=n.date||D.today;$('spn-f-created').value=n.created||'';
+ $('spn-f-place').value=n.place||'';$('spn-f-authors').value=n.authors||'';
+ $('spn-f-key').value=n.key||'';$('spn-f-tempo').value=n.tempo||'';$('spn-f-kind').value=n.kind||'day';
+ dirty=false;setStatus('');
+ root.querySelector('[data-t=pin]').classList.toggle('on',!!n.pinned);
+ root.querySelector('[data-t=arch]').classList.toggle('on',!!n.archived);
+ sizeBody();showPrev=false;$('spn-prev').hidden=true;$('spn-body').hidden=false;
+ songs();renderList()}
+function blank(){return {id:0,date:D.today,kind:'day',title:'',notes:'',place:'',key:'',tempo:'',authors:'',created:'',pinned:0,archived:0}}
+function sizeBody(){var t=$('spn-body');t.style.height='auto';t.style.height=Math.max(t.scrollHeight,300)+'px'}
+function post(f){
+ var fd=new FormData();fd.append('action','songpress_journal_ajax');fd.append('_wpnonce',D.nonce);
+ Object.keys(f).forEach(function(k){fd.append(k,f[k])});
+ return fetch(D.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
+function collect(){return {op:'save',entry_id:cur?cur.id:0,title:$('spn-title').value,notes:$('spn-body').value,log_date:$('spn-f-date').value,created_at:$('spn-f-created').value,place:$('spn-f-place').value,authors:$('spn-f-authors').value,song_key:$('spn-f-key').value,tempo:$('spn-f-tempo').value,kind:$('spn-f-kind').value}}
+function merge(n){
+ var i=notes.findIndex(function(x){return x.id===n.id});
+ if(i<0)notes.unshift(n);else notes[i]=n;return n}
+function save(quiet){
+ if(busy)return Promise.resolve();
+ var f=collect();if(!f.title.trim()&&!f.notes.trim()&&!f.entry_id)return Promise.resolve();
+ busy=true;setStatus('Saving…');
+ return post(f).then(function(r){busy=false;
+  if(!r.ok){setStatus(r.error||'Could not save');return}
+  var n=merge(r.note);cur=n;dirty=false;setStatus('Saved');renderTags();renderList();songs();
+  setTimeout(function(){if(!dirty)setStatus('')},1500)
+ }).catch(function(){busy=false;setStatus('Could not save')})}
+function touch(){dirty=true;setStatus('');clearTimeout(timer);timer=setTimeout(function(){if(dirty)save(true)},1800)}
+function songs(){
+ var box=$('spn-songs'),t=($('spn-title').value+'\n'+$('spn-body').value);
+ if(!/[\^#]\d{3,5}/.test(t)){box.innerHTML='<small>None</small>';return}
+ post({op:'songs',text:t}).then(function(r){
+  box.innerHTML=(r.songs&&r.songs.length)?r.songs.map(function(s){return '<a href="'+esc(s.url)+'"><b>'+esc(s.serial)+'</b> '+esc(s.title)+'</a>'}).join(''):'<small>None</small>'})}
+function wrap(a,b,ph){
+ var t=$('spn-body'),s=t.selectionStart,e=t.selectionEnd,v=t.value,m=v.slice(s,e)||ph||'';
+ t.value=v.slice(0,s)+a+m+b+v.slice(e);t.focus();t.selectionStart=s+a.length;t.selectionEnd=s+a.length+m.length;sizeBody();touch()}
+function lineStart(p){var t=$('spn-body'),v=t.value,s=t.selectionStart,ls=v.lastIndexOf('\n',s-1)+1;t.value=v.slice(0,ls)+p+v.slice(ls);t.focus();t.selectionStart=t.selectionEnd=s+p.length;sizeBody();touch()}
+function md(t){
+ var s=esc(t),out=[],inCode=false,inList=false;
+ s.split('\n').forEach(function(l){
+  if(/^```/.test(l)){out.push(inCode?'</pre>':'<pre class="spn-cp">');inCode=!inCode;return}
+  if(inCode){out.push(l);return}
+  var li=/^\s*[-*•]\s+(.*)/.exec(l);
+  if(li){if(!inList){out.push('<ul>');inList=true}out.push('<li>'+inl(li[1])+'</li>');return}
+  if(inList){out.push('</ul>');inList=false}
+  var h=/^(#{1,3})\s+(.*)/.exec(l);
+  if(h){out.push('<h'+h[1].length+'>'+inl(h[2])+'</h'+h[1].length+'>');return}
+  out.push(l.trim()?'<p>'+inl(l)+'</p>':'')});
+ if(inList)out.push('</ul>');if(inCode)out.push('</pre>');
+ return out.join('\n')}
+function inl(s){
+ return s.replace(/!\[([^\]]*)\]\((https?:[^)\s]+)\)/g,'<img src="$2" alt="$1">')
+  .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+  .replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/(^|[\s(])\*([^*]+)\*/g,'$1<i>$2</i>')
+  .replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,'$1<span class="spn-hash">#$2</span>')
+  .replace(/([\^#])(\d{3,5}(?:-\d{1,2})?)/g,'<span class="spn-hash">$1$2</span>')}
+function mdFile(n){return '# '+head(n)+'\n\n'+(n.notes||'')+'\n'}
+function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
+function pick(id){var n=notes.find(function(x){return x.id===id});if(!n)return;(dirty?save(true):Promise.resolve()).then(function(){fill(n);if(window.innerWidth<=800)root.classList.remove('m-list')})}
+function newNote(){(dirty?save(true):Promise.resolve()).then(function(){fill(blank());$('spn-title').focus()})}
+
+$('spn-tags').addEventListener('click',function(e){var b=e.target.closest('[data-tag]');if(!b)return;tag=b.getAttribute('data-tag');renderTags();renderList()});
+$('spn-list').addEventListener('click',function(e){
+ var r=e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');
+ if(selMode||e.metaKey||e.ctrlKey||e.shiftKey){sel[id]=!sel[id];if(!sel[id])delete sel[id];renderList();return}
+ pick(id)});
+$('spn-search').addEventListener('input',function(){q=this.value;renderList()});
+root.querySelector('.spn-top').addEventListener('click',function(e){
+ var b=e.target.closest('[data-act]');if(!b)return;var a=b.getAttribute('data-act');
+ if(a==='new')newNote();
+ else if(a==='imp')location.href=D.urls.import;
+ else if(a==='exp'){var ids=Object.keys(sel).map(Number),ns=ids.length?notes.filter(function(n){return sel[n.id]}):(cur&&cur.id?[cur]:[]);
+  if(!ns.length){setStatus('Open or select a note first');return}
+  download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
+ else if(a==='sel'){selMode=!selMode;b.classList.toggle('on',selMode);if(!selMode)sel={};renderList()}
+ else if(a==='sort'){asc=!asc;renderList()}
+ else if(a==='lay')root.classList.toggle('no-tags')});
+root.querySelector('.spn-main').addEventListener('click',function(e){
+ var g=e.target.closest('[data-act]');if(!g)return;
+ if(g.getAttribute('data-act')==='list')root.classList.toggle('no-list');
+ if(g.getAttribute('data-act')==='info')root.classList.toggle('no-info')});
+root.querySelector('.spn-links').addEventListener('click',function(e){var a=e.target.closest('[data-go]');if(!a)return;e.preventDefault();location.href=D.urls[a.getAttribute('data-go')]});
+$('spn-bar').addEventListener('click',function(e){
+ var b=e.target.closest('[data-t]');if(!b)return;var t=b.getAttribute('data-t'),u;
+ if(t==='b')wrap('**','**','bold');else if(t==='i')wrap('*','*','italic');else if(t==='h')lineStart('## ');else if(t==='ul')lineStart('- ');
+ else if(t==='a'){u=window.prompt('Link address (https://…)');if(u)wrap('[',']('+u+')','link')}
+ else if(t==='cp')wrap('\n```chordpro\n','\n```\n','[C]Words with [G]chords');
+ else if(t==='img'){u=window.prompt('Image address (Media Library link)');if(u)wrap('![',']('+u+')','image')}
+ else if(t==='aud'){u=window.prompt('Audio address (Media Library link)');if(u)wrap('[♪ ',']('+u+')','audio')}
+ else if(t==='eye'){showPrev=!showPrev;$('spn-prev').hidden=!showPrev;$('spn-body').hidden=showPrev;if(showPrev)$('spn-prev').innerHTML=md($('spn-body').value);b.classList.toggle('on',showPrev)}
+ else if(t==='pin'||t==='arch'){
+  if(!cur||!cur.id){setStatus('Save the note first');return}
+  post({op:'flag',entry_id:cur.id,flag:t==='pin'?'pinned':'archived'}).then(function(r){if(r.ok){cur=merge(r.note);b.classList.toggle('on',!!(t==='pin'?cur.pinned:cur.archived));renderTags();renderList()}})}
+ else if(t==='del'){
+  if(!cur||!cur.id){fill(blank());return}
+  if(!b.classList.contains('arm')){b.classList.add('arm');b.title='Click again to delete';setTimeout(function(){b.classList.remove('arm');b.title='Delete'},2500);return}
+  post({op:'delete',entry_id:cur.id}).then(function(r){if(r.ok){notes=notes.filter(function(x){return x.id!==r.deleted});var v=visible();fill(v[0]||blank());renderTags()}})}});
+['spn-title','spn-body','spn-f-date','spn-f-created','spn-f-place','spn-f-authors','spn-f-key','spn-f-tempo','spn-f-kind'].forEach(function(i){$(i).addEventListener('input',function(){if(i==='spn-body')sizeBody();touch()})});
+$('spn-f-tag').addEventListener('keydown',function(e){
+ if(e.key!=='Enter')return;e.preventDefault();var v=this.value.trim().replace(/^[#$]+/,'').replace(/\s+/g,'-');if(!v)return;
+ var t=$('spn-body');t.value=t.value.replace(/\s*$/,'')+(t.value.trim()?'\n\n':'')+'#'+v;this.value='';sizeBody();touch()});
+$('spn-save').addEventListener('click',function(){save()});
+$('spn-body').addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save()}});
+window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
+var ks=$('spn-f-kind');Object.keys(D.kinds).forEach(function(k){var o=document.createElement('option');o.value=k;o.textContent=D.kinds[k];ks.appendChild(o)});
+var secs=document.createElement('div');
+renderTags();var v=visible();fill(v[0]||blank());
+})();
+JS
+. '</script>';
 	}
 
 	/** Each day: what was written, worked on and released, with links to the songs, newest first. */
