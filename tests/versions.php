@@ -62,6 +62,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_audit (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT DEFAULT 0, area TEXT, action TEXT, subject TEXT DEFAULT \'\', detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_registrations (id INTEGER PRIMARY KEY AUTOINCREMENT, family_id INT, society TEXT, in_progress INT DEFAULT 0, started_on TEXT, reference TEXT, note TEXT, updated_at TEXT, updated_by INT, UNIQUE(family_id,society))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_pitches (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, channel TEXT, sent_to TEXT, sent_at TEXT, follow_up TEXT DEFAULT \'\', outcome TEXT DEFAULT \'open\', notes TEXT, user_id INT DEFAULT 0, created_at TEXT, updated_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_pitch_kits (song_id INTEGER PRIMARY KEY, wav_url TEXT, clean_url TEXT, instr_url TEXT, stems_url TEXT, photo_url TEXT, bio TEXT, bio_url TEXT, mood TEXT DEFAULT \'\', contact TEXT DEFAULT \'\', explicit INT DEFAULT 0, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -70,7 +71,7 @@ class FakeWpdb {
 	}
 	function esc_like( $s ) { return $s; }
 	function get_var( $sql ) { if ( false !== strpos( $sql, 'GET_LOCK' ) ) { return 1; } $r = $this->pdo->query( $sql )->fetchColumn(); return false === $r ? null : $r; }
-	function get_row( $sql ) { return $this->pdo->query( $sql )->fetch( PDO::FETCH_OBJ ) ?: null; }
+	function get_row( $sql, $out = 'OBJECT' ) { return $this->pdo->query( $sql )->fetch( 'ARRAY_A' === $out ? PDO::FETCH_ASSOC : PDO::FETCH_OBJ ) ?: null; }
 	function get_col( $sql ) { return $this->pdo->query( $sql )->fetchAll( PDO::FETCH_COLUMN ); }
 	function get_results( $sql ) { return $this->pdo->query( $sql )->fetchAll( PDO::FETCH_OBJ ); }
 	function query( $sql ) { if ( false !== strpos( $sql, 'RELEASE_LOCK' ) ) { return 1; } return $this->pdo->exec( $sql ); }
@@ -728,12 +729,21 @@ check( 'after the gap another copy is kept', count( Songpress_Journal::ajax_op( 
 Songpress_Journal::ajax_op( array( 'op' => 'delete', 'entry_id' => $nv ) );
 check( 'deleting a note deletes its versions', count( Songpress_Journal::ajax_op( array( 'op' => 'versions', 'entry_id' => $nv ) )['versions'] ), 0 );
 
-$pf = array( 'title' => 'Glass Houses', 'serial' => '0001', 'band' => 'Red Beard', 'writers' => array( array( 'name' => 'Ann', 'share' => '50' ), array( 'name' => 'Bo', 'share' => '50' ) ), 'genre' => 'Americana', 'key' => 'G', 'tempo' => '92', 'isrc' => '', 'iswc' => '', 'audio' => 'https://x.test/a.mp3', 'art' => '', 'about' => "<p>Written after   the flood.</p>", 'status' => '', 'release' => '' );
-check( 'radio copy names the song and band', array( strpos( Songpress_Pitch::radio_copy( $pf ), '"Glass Houses" by Red Beard' ) !== false, strpos( Songpress_Pitch::radio_copy( $pf ), 'Written after the flood.' ) !== false ), array( true, true ) );
+$pf = array( 'title' => 'Glass Houses', 'serial' => '0001', 'band' => 'Red Beard', 'writers' => array( array( 'name' => 'Ann', 'share' => '50' ), array( 'name' => 'Bo', 'share' => '50' ) ), 'publishers' => array( array( 'name' => 'Red Beard Music', 'share' => '100', 'ipi' => '' ) ), 'genre' => 'Americana', 'key' => 'G', 'tempo' => '92', 'isrc' => '', 'iswc' => '', 'pro' => 'BMI 123', 'audio' => 'https://x.test/a.mp3', 'art' => '', 'about' => "<p>Written after   the flood.</p>", 'status' => '', 'release' => '', 'wav' => 'https://x.test/a.wav', 'clean' => '', 'instr' => '', 'stems' => '', 'photo' => '', 'bio_url' => '', 'bio' => 'A Nashville band.', 'mood' => 'warm', 'contact' => 'me@x.test', 'explicit' => 0 );
+check( 'radio copy names the song, band, story, bio and downloads', array( strpos( Songpress_Pitch::radio_copy( $pf ), '"Glass Houses" by Red Beard' ) !== false, strpos( Songpress_Pitch::radio_copy( $pf ), 'Written after the flood.' ) !== false, strpos( Songpress_Pitch::radio_copy( $pf ), 'Download (WAV): https://x.test/a.wav' ) !== false, strpos( Songpress_Pitch::radio_copy( $pf ), 'A Nashville band.' ) !== false ), array( true, true, true, true ) );
 check( 'spotify pitch is at most 500 characters', mb_strlen( Songpress_Pitch::spotify_copy( array_merge( $pf, array( 'about' => str_repeat( 'word ', 400 ) ) ) ) ) <= 500, true );
-check( 'one-sheet lists writers with shares', strpos( Songpress_Pitch::onesheet( $pf ), 'Ann (50%); Bo (50%)' ) !== false, true );
-$rd = array_column( Songpress_Pitch::readiness( $pf ), 0 );
-check( 'readiness flags missing art and ISRC', array( $rd[2], $rd[7], $rd[4] ), array( false, false, true ) );
+check( 'one-sheet lists writers, publisher and contact', array( strpos( Songpress_Pitch::onesheet( $pf ), 'Ann (50%); Bo (50%)' ) !== false, strpos( Songpress_Pitch::onesheet( $pf ), 'Publisher: Red Beard Music (100%)' ) !== false, strpos( Songpress_Pitch::onesheet( $pf ), 'Contact: me@x.test' ) !== false ), array( true, true, true ) );
+$rd = Songpress_Pitch::readiness( $pf );
+check( 'readiness flags missing art and ISRC, passes the WAV', array( $rd[0][0], $rd[2][0], $rd[9][0], $rd[7][0] ), array( true, false, false, true ) );
+check( 'an explicit song needs a clean version', end( Songpress_Pitch::readiness( array_merge( $pf, array( 'explicit' => 1 ) ) ) )[1], 'Clean version' );
+check( 'every missing item explains itself', count( array_filter( $rd, function ( $r ) { return '' === $r[3]; } ) ), 0 );
+check( 'draft bio uses the band and genre', strpos( Songpress_Pitch::draft_bio( $pf ), 'Red Beard makes Americana' ) === 0, true );
+check( 'channels pick the right words', array( Songpress_Pitch::copy_key( 'spotify', 'playlists' ), Songpress_Pitch::copy_key( 'x', 'radio' ), Songpress_Pitch::copy_key( 'x', 'sync' ), Songpress_Pitch::copy_key( 'x', 'christian' ) ), array( 'spotify', 'radio', 'onesheet', 'email' ) );
+Songpress_Pitch::save_kit( 1, array( 'wav' => 'https://x.test/m.wav', 'bio' => 'Hello band', 'contact' => 'me' ) );
+Songpress_Pitch::save_kit( 1, array( 'mood' => 'warm', 'explicit_set' => 1, 'explicit' => 1 ) );
+$kk = Songpress_Pitch::kit( 1 );
+check( 'kit saves only what was sent', array( $kk['wav'], $kk['bio'], $kk['mood'], $kk['explicit'] ), array( 'https://x.test/m.wav', 'Hello band', 'warm', 1 ) );
+check( 'the last bio is offered to the next work', Songpress_Pitch::last_bio(), 'Hello band' );
 check( 'outcome falls back to open', Songpress_Pitch::outcome( 'bogus' ), 'open' );
 check( 'a pitch needs a work and a destination', array( Songpress_Pitch::add( array( 'song_id' => 0, 'sent_to' => 'WXYZ' ) ), Songpress_Pitch::add( array( 'song_id' => 1 ) ) ), array( 0, 0 ) );
 $pid = Songpress_Pitch::add( array( 'song_id' => 1, 'channel' => 'spotify', 'sent_to' => 'WXYZ', 'sent_at' => '2026-01-01', 'follow_up' => '2026-01-10' ) );

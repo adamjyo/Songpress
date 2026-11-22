@@ -6,6 +6,7 @@ return array (
   'playlists' => 
   array (
     'label' => 'Streaming playlists',
+    'tip' => 'Spotify wants the song at least 7 days before release, one unreleased song at a time, and not as a featured artist. Fill in every field you can.',
     'items' => 
     array (
       0 => 
@@ -13,7 +14,7 @@ return array (
         'id' => 'spotify',
         'name' => 'Spotify for Artists',
         'cost' => 'Free',
-        'blurb' => 'Official editorial pitch. One unreleased track per release. Submit 2–4 weeks before street date (7-day minimum). 500-character pitch.',
+        'blurb' => 'Official editorial pitch. One unreleased song at a time, at least 7 days before release (2–4 weeks is better), not as a featured artist. Add every detail the form allows.',
         'url' => 'https://artists.spotify.com/',
         'cta' => 'Open Spotify for Artists',
       ),
@@ -94,6 +95,7 @@ return array (
   'terrestrial' => 
   array (
     'label' => 'Terrestrial AM / FM',
+    'tip' => 'Send the music director a stream link and a WAV download, plus a one-sheet. Never send a streaming link alone.',
     'items' => 
     array (
       0 => 
@@ -146,6 +148,7 @@ return array (
   'radio' => 
   array (
     'label' => 'College, community & internet radio',
+    'tip' => 'Send a stream link and a download link, plus a one-sheet. Flag explicit songs (they cannot air in the daytime). Do not follow up for two weeks and never pester the DJ on air.',
     'items' => 
     array (
       0 => 
@@ -234,6 +237,7 @@ return array (
   'christian' => 
   array (
     'label' => 'Christian / worship',
+    'tip' => 'Register the song with CCLI first so churches can report it. Lead with the song\'s story and lyrics.',
     'items' => 
     array (
       0 => 
@@ -304,6 +308,7 @@ return array (
   'sync' => 
   array (
     'label' => 'Sync (film, TV, ads, games)',
+    'tip' => 'Libraries want WAV (48 kHz / 24-bit), plus a clean version if explicit, an instrumental, and stems. Have the writer splits agreed in writing and no uncleared samples.',
     'items' => 
     array (
       0 => 

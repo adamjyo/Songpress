@@ -458,3 +458,19 @@ CREATE TABLE {prefix}songpress_pitches (
   KEY follow_up (follow_up)
 ) {charset};
 
+-- Pitch kit: the files, bio and rights notes a work needs to be pitched. Files are links to the Media Library or anywhere on the web.
+CREATE TABLE {prefix}songpress_pitch_kits (
+  song_id bigint(20) unsigned NOT NULL,
+  wav_url text,
+  clean_url text,
+  instr_url text,
+  stems_url text,
+  photo_url text,
+  bio text,
+  bio_url text,
+  mood varchar(191) NOT NULL DEFAULT '',
+  contact varchar(191) NOT NULL DEFAULT '',
+  explicit tinyint(1) NOT NULL DEFAULT 0,
+  updated_at datetime NOT NULL,
+  PRIMARY KEY  (song_id)
+) {charset};
