@@ -502,7 +502,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 /* rail: the whole left column, full height, flush with the window edge */
 @media (min-width:760px){
  .sp-shell{display:block;min-height:100vh}
- .sp-side{position:fixed;left:0;top:0;bottom:0;width:232px;height:auto;border-radius:0;box-shadow:none;z-index:5}
- body.admin-bar .sp-side{top:32px;height:auto}
+ .sp-side{position:fixed;left:0;top:0;width:232px;height:100vh;height:100dvh;border-radius:0;box-shadow:none;z-index:5}
+ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 32px)}
  .sp-main{margin-left:232px}
 }

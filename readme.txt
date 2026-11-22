@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.35.5
+Stable tag: 0.35.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.35.6 =
+* Rail: fixed a bug where the rail was only as tall as its links, so Settings and Log out did not reach the bottom. It is now exactly the height of the window.
 
 = 0.35.5 =
 * Rail: it is now the whole left edge of the window, full height, fixed in place while the page scrolls, with no box or shadow around it.
