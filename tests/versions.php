@@ -84,7 +84,6 @@ require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-audit.php';
-require __DIR__ . '/../includes/class-lists.php';
 if ( ! defined( 'SONGPRESS_VERSION' ) ) { define( 'SONGPRESS_VERSION', '9.9.9' ); }
 if ( ! defined( 'SONGPRESS_DB_VERSION' ) ) { define( 'SONGPRESS_DB_VERSION', '18' ); }
 if ( ! defined( 'SONGPRESS_DIR' ) ) { define( 'SONGPRESS_DIR', dirname( __DIR__ ) . '/' ); }
@@ -664,20 +663,17 @@ check( 'unify twice changes nothing', Songpress_Songs::unify_titles(), 0 );
 $oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
 check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
-// Editable statuses and genres
-check( 'statuses default to the built-in list with the old editor options', array_keys( Songpress_Songs::statuses() ), array( 'idea', 'writing', 'finished', 'recorded', 'released', 'retired', 'starter', 'scrapped', 'scratch', 'studio_demo', 'pre_production', 'production', 'post_production', 'taken_down', 'outside' ) );
-check( 'parse statuses: key | label, bare line, repeat dropped', Songpress_Lists::parse_statuses( "idea | Spark\nmastered\nMixing Down | Mixing\nidea | Again\n\n |  " ), array( 'idea' => 'Spark', 'mastered' => 'mastered', 'mixing_down' => 'Mixing' ) );
-check( 'parse genres: no blanks or repeats', Songpress_Lists::parse_genres( "Folk\n\nfolk\nCountry Rock\n" ), array( 'Folk', 'Country Rock' ) );
-update_option( 'songpress_statuses', array( 'idea' => 'Spark', 'writing' => 'Writing', 'released' => 'Out' ) );
-check( 'custom statuses are used', array( Songpress_Songs::statuses()['idea'], array_keys( Songpress_Songs::statuses_for( 0 ) ) ), array( 'Spark', array( 'idea', 'writing' ) ) );
-$cs = Songpress_Songs::sanitize( array( 'status' => 'writing' ) );
-$cs2 = Songpress_Songs::sanitize( array( 'status' => 'retired' ) );
-check( 'a removed status falls back to idea on save, a kept one stays', array( $cs['status'], $cs2['status'] ), array( 'writing', 'idea' ) );
-delete_option_test();
-function delete_option_test() { unset( $GLOBALS['opts']['songpress_statuses'] ); }
-check( 'statuses back to default when the list is cleared', count( Songpress_Songs::statuses() ), 15 );
-update_option( 'songpress_genres', array( 'Folk', 'Gospel' ) );
-check( 'genres list keeps the Manager list and adds the old editor genres', Songpress_Songs::genres(), array( 'Folk', 'Gospel', 'Country', 'Pop', 'Rock', 'Americana', 'R&B', 'Hip-Hop', 'Jazz', 'Electronic', 'Soundtrack', 'Other' ) );
+// Statuses and genres come from the built-in options and from what works carry. There is no Lists screen.
+check( 'statuses are the built-in list with the old editor options', array_keys( Songpress_Songs::statuses() ), array( 'idea', 'writing', 'finished', 'recorded', 'released', 'retired', 'starter', 'scrapped', 'scratch', 'studio_demo', 'pre_production', 'production', 'post_production', 'taken_down', 'outside' ) );
+$cs  = Songpress_Songs::sanitize( array( 'status' => 'writing' ) );
+$cs2 = Songpress_Songs::sanitize( array( 'status' => 'nonsense' ) );
+check( 'an unknown status falls back to idea on save, a known one stays', array( $cs['status'], $cs2['status'] ), array( 'writing', 'idea' ) );
+check( 'merge_options adds new values, ignores case repeats and blanks', Songpress_Songs::merge_options( array( 'Folk', 'Pop' ), array( 'folk', 'Surf Rock', '', 'surf rock', ' Ska ' ) ), array( 'Folk', 'Pop', 'Surf Rock', 'Ska' ) );
+check( 'genres start as the old editor list', Songpress_Songs::genres(), Songpress_Songs::GENRES );
+$gid = Songpress_Songs::update( $v3, array( 'genre' => 'Surf Rock' ) );
+check( 'a genre typed on a work joins the list', in_array( 'Surf Rock', Songpress_Songs::genres(), true ), true );
+Songpress_Songs::update( $v3, array( 'genre' => '' ) );
+check( 'it leaves the list when no work has it', in_array( 'Surf Rock', Songpress_Songs::genres(), true ), false );
 
 // Registration start dates
 $rf = Songpress_Songs::get( $of )->family_id;

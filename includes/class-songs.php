@@ -37,22 +37,61 @@ class Songpress_Songs {
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
 	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
-	/** The statuses in use: the Manager's own list (Lists screen) or the built-in six. key => label. */
-	public static function statuses() {
-		$o = get_option( 'songpress_statuses', array() );
-		return ( is_array( $o ) && $o ) ? $o : self::STATUSES;
+	/** Statuses and genres found on works, read once per request. */
+	private static $in_use = null;
+
+	/** Forget the cached lists, so the next read sees the works as they are now. */
+	public static function reset_lists() {
+		self::$in_use = null;
 	}
 
-	/** The genres the Manager listed, offered as suggestions. A song's genre can still be anything. */
-	public static function genres() {
-		$o = get_option( 'songpress_genres', array() );
-		$o = is_array( $o ) ? array_values( $o ) : array();
-		foreach ( self::GENRES as $g ) {
-			if ( ! in_array( strtolower( $g ), array_map( 'strtolower', $o ), true ) ) {
-				$o[] = $g;
+	/** Pure: the built-in options plus whatever works use that is not built in, matched without regard to case. */
+	public static function merge_options( array $builtin, array $used ) {
+		$seen = array_map( 'strtolower', $builtin );
+		foreach ( $used as $v ) {
+			$v = trim( (string) $v );
+			if ( '' !== $v && ! in_array( strtolower( $v ), $seen, true ) ) {
+				$builtin[] = $v;
+				$seen[]    = strtolower( $v );
+			}
+		}
+		return $builtin;
+	}
+
+	private static function used( $column ) {
+		global $wpdb;
+		if ( null === self::$in_use ) {
+			self::$in_use = array();
+		}
+		if ( ! isset( self::$in_use[ $column ] ) ) {
+			$t   = Songpress_Install::table( 'songs' );
+			$col = 'genre' === $column ? 'genre' : 'status';
+			$out = array();
+			foreach ( (array) $wpdb->get_results( "SELECT DISTINCT {$col} AS v FROM {$t} WHERE {$col} <> '' ORDER BY {$col}" ) as $r ) { // phpcs:ignore WordPress.DB
+				$out[] = (string) $r->v;
+			}
+			self::$in_use[ $column ] = $out;
+		}
+		return self::$in_use[ $column ];
+	}
+
+	/** The statuses: the built-in ones, plus any a work still carries (an imported value is never lost). */
+	public static function statuses() {
+		$o = self::STATUSES;
+		foreach ( self::used( 'status' ) as $k ) {
+			if ( ! isset( $o[ $k ] ) ) {
+				$o[ $k ] = ucfirst( str_replace( '_', ' ', $k ) );
 			}
 		}
 		return $o;
+	}
+
+	/**
+	 * The genre suggestions: the built-in ones, plus every genre typed on a work. There is no list to maintain.
+	 * A typed genre appears here once a work has it, and goes again when no work does.
+	 */
+	public static function genres() {
+		return self::merge_options( self::GENRES, self::used( 'genre' ) );
 	}
 
 	/** The statuses a song may have. The original work can never be released. */
@@ -289,6 +328,7 @@ class Songpress_Songs {
 	private static function insert( $new_family, $family_id, array $data, $owner_id ) {
 		global $wpdb;
 		$songs = Songpress_Install::table( 'songs' );
+		self::reset_lists();
 		$now   = current_time( 'mysql', true );
 		$result = Songpress_Serial::allocate( $new_family, $family_id, function ( $fid, $fno, $ver, $serial ) use ( $wpdb, $songs, $data, $owner_id, $now ) {
 			$row = array_merge( $data, array(
@@ -312,6 +352,7 @@ class Songpress_Songs {
 		$was  = self::get( $id );
 		$data['updated_at'] = current_time( 'mysql', true );
 		$ok = false !== $wpdb->update( $t, $data, array( 'id' => (int) $id ) );
+		self::reset_lists();
 		// Every save bumps the revision. The editor compares it to detect that someone else saved first.
 		$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET revision = revision + 1 WHERE id = %d", $id ) );
 		if ( $was ) {

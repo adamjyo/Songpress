@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.49.0 =
+* The Lists screen is gone. Statuses are the built-in set. The genre dropdown offers the built-in genres plus every genre typed on any work: a new one appears as soon as a work has it and disappears when no work does. Nothing to maintain.
+
 = 0.48.4 =
 * History now records when a new version is created (on the song it came from and on the version itself), when a release is scheduled (a future release date is set), and when a song is marked Released.
 * Dropdowns are the same height, width and text size as the other fields.
