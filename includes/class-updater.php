@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Songpress_Updater {
 	const DEFAULT_REPO = 'adamjyo/Songpress';
-	const CACHE        = 'songpress_github_release';
+	const CACHE        = 'songpress_github_release'; // the old ten-minute memory; deleted if it is still around
 	const BRANCH       = 'main';
 	const CRON         = 'songpress_check_updates';
 	const LAST         = 'songpress_update_last';
@@ -44,17 +44,11 @@ class Songpress_Updater {
 		return $update;
 	}
 
-	/** Pure: has a minute passed since the last forced look? */
-	public static function due( $last, $now, $gap = 60 ) {
-		return ! $last || ( $now - (int) $last ) >= $gap;
-	}
-
 	/** Every hour: look at GitHub afresh, tell WordPress, and install a newer version if automatic updates are on. */
 	public static function background_check() {
 		if ( ! self::enabled() ) {
 			return;
 		}
-		self::forget();
 		delete_site_transient( 'update_plugins' );
 		if ( ! function_exists( 'wp_update_plugins' ) ) {
 			require_once ABSPATH . 'wp-includes/update.php';
@@ -126,13 +120,13 @@ class Songpress_Updater {
 		);
 	}
 
-	/** The latest published release, cached for 12 hours. Drafts and pre-releases are ignored. */
+	/** The newer of the latest release and the main branch, asked of GitHub afresh each time (never remembered between requests). Drafts and pre-releases are ignored. */
 	public static function latest( $force = false ) {
-		$cached = get_transient( self::CACHE );
-		if ( ! $force && is_array( $cached ) ) {
-			return $cached ?: null;
+		static $memo = false; // only for the rest of this one request, so a page that asks twice does not call GitHub twice
+		if ( ! $force && false !== $memo ) {
+			return $memo ?: null;
 		}
-		$headers = array( 'Accept' => 'application/vnd.github+json', 'User-Agent' => 'SongPress/' . SONGPRESS_VERSION );
+		$headers = array( 'Cache-Control' => 'no-cache', 'Accept' => 'application/vnd.github+json', 'User-Agent' => 'SongPress/' . SONGPRESS_VERSION );
 		if ( defined( 'SONGPRESS_GITHUB_TOKEN' ) && SONGPRESS_GITHUB_TOKEN ) { // for a private repository
 			$headers['Authorization'] = 'Bearer ' . SONGPRESS_GITHUB_TOKEN;
 		}
@@ -151,10 +145,10 @@ class Songpress_Updater {
 		}
 		$best = self::pick( $release, self::from_branch( $headers ) );
 		if ( ! $best ) {
-			set_transient( self::CACHE, array(), 2 * MINUTE_IN_SECONDS ); // nothing usable: try again in two minutes
+			$memo = array();
 			return null;
 		}
-		set_transient( self::CACHE, $best, 5 * MINUTE_IN_SECONDS );
+		$memo = $best;
 		return $best;
 	}
 
@@ -212,13 +206,11 @@ class Songpress_Updater {
 		return $source;
 	}
 
-	/** Opening Plugins or Updates always looks at GitHub afresh (at most once a minute), so a new version is there when you ask for it. */
+	/** Opening Plugins or Updates always looks at GitHub afresh: nothing is remembered between visits. */
 	public static function refresh_if_stale() {
-		if ( ! self::enabled() || ! self::due( get_transient( self::LAST ), time() ) ) {
+		if ( ! self::enabled() ) {
 			return;
 		}
-		set_transient( self::LAST, time(), MINUTE_IN_SECONDS );
-		self::forget();
 		delete_site_transient( 'update_plugins' );
 	}
 

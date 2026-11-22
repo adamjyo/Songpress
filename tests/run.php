@@ -129,7 +129,6 @@ check( 'old class names are gone', array( isset( Songpress_Caps::CLASSES['owner'
 // GitHub updater (pure parts)
 if ( ! defined( 'SONGPRESS_VERSION' ) ) { define( 'SONGPRESS_VERSION', '0.1.0' ); }
 require_once __DIR__ . '/../includes/class-updater.php';
-check( 'update look is due when never made, or a minute ago', array( Songpress_Updater::due( 0, 1000 ), Songpress_Updater::due( 940, 1000 ), Songpress_Updater::due( 941, 1000 ) ), array( true, true, false ) );
 check( 'newer tag', Songpress_Updater::is_newer( 'v0.2.0', '0.1.0' ), true );
 check( 'same version is not newer', Songpress_Updater::is_newer( 'v0.1.0', '0.1.0' ), false );
 check( 'older is not newer', Songpress_Updater::is_newer( '0.1.0', '0.1.1' ), false );

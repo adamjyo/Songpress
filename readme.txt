@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.61.4 =
+* Updates: nothing is remembered. Every look at GitHub is a fresh one, and opening Plugins or Updates always makes one.
+
 = 0.61.3 =
 * Updates: opening Plugins or Updates always checks GitHub afresh (at most once a minute); SongPress also checks every hour and installs a newer version by itself. A Settings checkbox turns automatic installing off.
 
