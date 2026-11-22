@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.60.0 =
+* Upload / Download: one catalog upload does it all. After the songs are in, the same file also brings the photos and bios, statements, notes, ratings, art, agreements and registrations. The separate photos and catalog options are gone.
+
 = 0.59.3 =
 * Profile: each song shows what the signed-in person has earned from it, not the song's total.
 

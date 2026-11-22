@@ -481,9 +481,7 @@ class Songpress_Uploads {
 	/** Upload tools in dropdown order: slug => label. */
 	public static function types() {
 		$t = array(
-			'works'    => __( 'Works (songs from the old catalog, one batch at a time)', 'songpress' ),
-			'catalog'  => __( 'Old catalog file (money, notes, art, agreements, registrations)', 'songpress' ),
-			'photos'   => __( 'Photos and bios (people, bands, publishers)', 'songpress' ),
+			'works'    => __( 'Old catalog file (songs, photos, statements, notes, art, agreements, registrations)', 'songpress' ),
 			'notes_files' => __( 'Notes (.bear, .md, .txt files, a zip of them, or an old .json export)', 'songpress' ),
 			'dk_stats' => __( 'DistroKid stats page (daily streams)', 'songpress' ),
 		);
@@ -523,14 +521,12 @@ class Songpress_Uploads {
 		};
 
 		if ( Songpress_Caps::can( 'import' ) ) {
-			$o .= $panel( 'works', '<p class="spe-help">' . esc_html__( 'Your old catalog.sqlite. You get a report first and nothing is written until you confirm. Run it again to bring the next batch.', 'songpress' ) . '</p>' . ( 'works' === $type ? Songpress_Screens::legacy( 'import' ) : '<p class="spe-help">' . esc_html__( 'Choose this upload to open the tool.', 'songpress' ) . '</p>' ) );
-			$o .= $panel( 'photos', '<p class="spe-help">' . esc_html__( 'Choose catalog.sqlite to fill in photos and bios for people, bands and publishers. Photos you changed by hand are kept.', 'songpress' ) . '</p>' . $form( 'songpress_profiles_load', 'songpress_profiles_load', 'catalog', '.sqlite,.db,.sqlite3', __( 'Load photos', 'songpress' ) ) );
+			$o .= $panel( 'works', '<p class="spe-help">' . esc_html__( 'One upload does it all: your old catalog.sqlite. You get a report first and nothing is written until you confirm. The songs come in 500 at a time; when none are left, the same file also brings the photos and bios, statements, payouts, streams, notes, ratings, art projects, agreements and registrations. Run it again to bring the next batch.', 'songpress' ) . '</p>' . ( 'works' === $type ? Songpress_Screens::legacy( 'import' ) : '<p class="spe-help">' . esc_html__( 'Choose this upload to open the tool.', 'songpress' ) . '</p>' ) );
 		}
 		if ( Songpress_Caps::can( 'journal' ) ) {
 			$o .= $panel( 'notes_files', '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them, or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . '</p><form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button></form>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
-			$o .= $panel( 'catalog', '<p class="spe-help">' . esc_html__( 'Choose catalog.sqlite. Statements, payouts, streams, the notes, ratings, art projects, agreements and registrations come across (entries already here are kept).', 'songpress' ) . '</p>' . $form( 'songpress_money_import', 'songpress_money_import', 'catalog', '.sqlite,.db,.sqlite3', __( 'Load the catalog file', 'songpress' ) ) );
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
 			foreach ( self::STATEMENTS as $k => $s ) {
 				$extra = '<input type="hidden" name="src" value="' . esc_attr( $k ) . '"><label class="spu-q">' . esc_html__( 'Quarter (optional, like 2026 Q2)', 'songpress' ) . ' <input type="text" name="quarter" placeholder="2026 Q2" size="9"></label> ';

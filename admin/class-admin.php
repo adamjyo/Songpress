@@ -653,6 +653,13 @@ class Songpress_Admin {
 		if ( isset( $_GET['done'] ) ) {
 			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html( sprintf( /* translators: 1: imported 2: skipped */ __( 'Imported %1$d songs, skipped %2$d already there. Run it again to continue if there are more.', 'songpress' ), absint( $_GET['done'] ), absint( $_GET['skipped'] ?? 0 ) ) ) );
 		}
+		if ( isset( $_GET['xn'] ) || isset( $_GET['xe'] ) ) {
+			if ( isset( $_GET['xe'] ) ) {
+				echo '<div class="notice notice-error"><p>' . esc_html( sprintf( /* translators: %s: reason */ __( 'The songs were imported, but the rest of the file could not be read: %s', 'songpress' ), sanitize_text_field( wp_unslash( $_GET['xe'] ) ) ) ) . '</p></div>';
+			} else {
+				echo '<div class="notice notice-success"><p>' . esc_html( sprintf( /* translators: 1: notes, 2: statement lines, 3: people, bands and publishers filled in */ __( 'The same file also brought in %1$d notes, %2$d statement lines and %3$d people, bands and publishers.', 'songpress' ), absint( $_GET['xn'] ), absint( $_GET['xs'] ?? 0 ), absint( $_GET['xp'] ?? 0 ) ) ) . '</p></div>';
+			}
+		}
 		if ( isset( $_GET['accounts'] ) ) {
 			/* translators: 1: accounts created 2: writers still without one */
 			echo '<div class="notice notice-success"><p>' . esc_html( sprintf( __( 'Created %1$d new writer accounts (Viewer class, no email yet). %2$d writers still need one: open SongPress > Link writers to finish.', 'songpress' ), absint( $_GET['accounts'] ), absint( $_GET['left'] ?? 0 ) ) ) . '</p></div>';
@@ -788,7 +795,17 @@ class Songpress_Admin {
 		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$out = Songpress_Import::run( $tmp['path'], 500, absint( $_POST['artist_id'] ?? 0 ) );
 		$people = null;
-		if ( $out['imported'] < 500 ) { // nothing left to import: remove the private copy
+		$more   = array();
+		if ( $out['imported'] < 500 ) { // nothing left to import: the same file also brings its photos, bios, statements, notes, art, agreements and registrations
+			@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+			$m = Songpress_Money::import_sqlite( $tmp['path'] );
+			if ( '' === ( $m['error'] ?? '' ) ) {
+				$more = array( 'xn' => (int) ( $m['journal'] ?? 0 ), 'xs' => (int) ( $m['earnings'] ?? 0 ) + (int) ( $m['person'] ?? 0 ) );
+			} else {
+				$more = array( 'xe' => rawurlencode( (string) $m['error'] ) );
+			}
+			$pr = Songpress_Profiles::import_sqlite( $tmp['path'] );
+			$more['xp'] = (int) ( $pr['people'] ?? 0 ) + (int) ( $pr['bands'] ?? 0 ) + (int) ( $pr['publishers'] ?? 0 );
 			@unlink( $tmp['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
 			delete_transient( 'songpress_import_' . get_current_user_id() );
 			// The first import is done: from now on writers get accounts, and the imported writers get theirs now.
@@ -799,7 +816,7 @@ class Songpress_Admin {
 				Songpress_People::schedule( 30 );
 			}
 		}
-		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ), 'filled' => (int) ( $out['filled'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
+		self::back( 'songpress-import', $more + ( $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ), 'filled' => (int) ( $out['filled'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) ) );
 	}
 
 	/* ---------- artists ---------- */
