@@ -887,6 +887,25 @@ JS;
 		return '<h3>' . esc_html__( 'Quarterly income', 'songpress' ) . '</h3><div class="songpress-qwrap"><p class="songpress-qtotal"><strong>' . esc_html( self::money( $all ) ) . '</strong> ' . esc_html( sprintf( /* translators: %d: number of quarters */ _n( 'in %d quarter', 'over %d quarters', $n, 'songpress' ), $n ) ) . '</p>' . $svg . '</svg>' . $lab . '</div></div>';
 	}
 
+	/** What one person has earned from each song, all sources: song id => total, and normalised title => total as a fallback. */
+	public static function my_song_totals( $display_name ) {
+		global $wpdb;
+		$key = self::person_key( $display_name );
+		$out = array( 'id' => array(), 'title' => array() );
+		if ( '' === $key ) {
+			return $out;
+		}
+		$t = self::t( 'person_earnings' );
+		foreach ( $wpdb->get_results( $wpdb->prepare( "SELECT song_id, work_title, SUM(amount) AS total FROM {$t} WHERE person_key = %s GROUP BY song_id, work_title", $key ) ) as $r ) { // phpcs:ignore WordPress.DB
+			if ( (int) $r->song_id ) {
+				$out['id'][ (int) $r->song_id ] = ( $out['id'][ (int) $r->song_id ] ?? 0 ) + (float) $r->total;
+			}
+			$k                  = self::norm_title( $r->work_title );
+			$out['title'][ $k ] = ( $out['title'][ $k ] ?? 0 ) + (float) $r->total;
+		}
+		return $out;
+	}
+
 	/** DistroKid earnings per song (song id => total). */
 	public static function song_dk( array $ids ) {
 		global $wpdb;

@@ -493,7 +493,7 @@ class Songpress_Frontend {
 			}
 		}
 		if ( $mine ) {
-			$dk   = Songpress_Money::song_dk( array_map( function ( $m ) { return (int) $m->id; }, $mine ) );
+			$dk   = Songpress_Money::my_song_totals( $u->display_name );
 			$cat  = self::main_id( 'catalog' );
 			$base = $cat ? get_permalink( $cat ) : home_url( '/' );
 			$out .= '<h3>' . esc_html__( 'Songs', 'songpress' ) . '</h3><ul class="songpress-mysongs">';
@@ -506,9 +506,10 @@ class Songpress_Frontend {
 					}
 				}
 				$title = Songpress_Songs::display_title( $s );
-				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle">' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk" title="DistroKid">' . ( isset( $dk[ $id ] ) ? esc_html( Songpress_Money::money( $dk[ $id ] ) ) : '&ndash;' ) . '</span></li>';
+				$amt   = $dk['id'][ $id ] ?? ( $dk['title'][ Songpress_Money::norm_title( $s->title ) ] ?? 0 );
+				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle">' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk">' . ( $amt ? esc_html( Songpress_Money::money( $amt ) ) : '&ndash;' ) . '</span></li>';
 			}
-			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what each song has made on DistroKid.', 'songpress' ) . '</p>';
+			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what you have earned from each song.', 'songpress' ) . '</p>';
 		}
 		$out .= wp_kses_post( songpress_public_donate_link() ) . ( wp_is_mobile() ? '' : self::tabs( 'profile' ) ) . '</div>';
 		return $out;

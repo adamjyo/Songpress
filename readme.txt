@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.59.3 =
+* Profile: each song shows what the signed-in person has earned from it, not the song's total.
+
 = 0.59.2 =
 * Works list: shorter search hint so it fits on a phone.
 
