@@ -29,7 +29,7 @@ class Songpress_Songs {
 	/** Columns a form may set. Anything else is ignored. */
 	const FIELDS = array(
 		'title', 'alt_titles', 'status', 'stage', 'writing_date', 'musical_key', 'tempo', 'time_signature', 'genre',
-		'artist', 'album', 'release_title', 'release_date', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
+		'artist', 'album', 'release_title', 'release_date', 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
 		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
 
@@ -138,10 +138,34 @@ class Songpress_Songs {
 		return array( 'rows' => $rows, 'total' => $total );
 	}
 
+	/** Fields the old catalog had that earlier loads dropped. Filled in on an already-imported song only where it is still blank. */
+	const BACKFILL = array( 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt' );
+
+	/** Returns 1 if the song (found by its old id) got something, else 0. Never overwrites anything you typed. */
+	public static function fill_blank( $legacy_id, array $incoming ) {
+		global $wpdb;
+		$t   = Songpress_Install::table( 'songs' );
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE legacy_id = %d", (int) $legacy_id ) ); // phpcs:ignore WordPress.DB
+		if ( ! $row ) {
+			return 0;
+		}
+		$set = array();
+		foreach ( self::BACKFILL as $f ) {
+			if ( '' !== trim( (string) ( $incoming[ $f ] ?? '' ) ) && '' === trim( (string) ( $row->$f ?? '' ) ) ) {
+				$set[ $f ] = $incoming[ $f ];
+			}
+		}
+		if ( ! $set ) {
+			return 0;
+		}
+		$wpdb->update( $t, $set, array( 'id' => (int) $row->id ) );
+		return 1;
+	}
+
 	/** Clean a posted array down to the allowed columns. */
 	public static function sanitize( array $in ) {
 		$out = array();
-		$long = array( 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes', 'alt_titles' );
+		$long = array( 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes', 'alt_titles', 'ai_prompt', 'art_prompt' );
 		foreach ( self::FIELDS as $f ) {
 			if ( ! array_key_exists( $f, $in ) ) {
 				continue;
@@ -193,7 +217,8 @@ class Songpress_Songs {
 				$data[ $f ] = '';
 			}
 		}
-		$data['status'] = 'writing';
+		$data['production_date'] = ''; // a new version is produced again
+		$data['status']          = 'writing';
 		$new = self::insert( false, (int) $from->family_id, $data, $owner_id );
 		if ( ! is_wp_error( $new ) ) {
 			self::copy_children( (int) $from->id, (int) $new );
@@ -354,7 +379,7 @@ class Songpress_Songs {
 	}
 
 	public static function export_header() {
-		return array( 'serial', 'title', 'catalog_owner', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'writers', 'publishers', 'labels', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
+		return array( 'serial', 'title', 'catalog_owner', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt', 'writers', 'publishers', 'labels', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
 	}
 
 	/** One CSV row. People are "Name 50%" joined by "; ". Cells that start with = + - @ get a leading apostrophe so a spreadsheet never runs them as formulas. */
@@ -373,7 +398,7 @@ class Songpress_Songs {
 			$links[] = $l->url;
 		}
 		$art = ! empty( $s->artist_id ) ? Songpress_Artists::get( (int) $s->artist_id ) : null;
-		$row = array( $s->serial, $s->title, $art ? $art->name : '', $s->status, $s->archived_at ? 'yes' : '', $s->musical_key, $s->tempo, $s->genre, $s->artist, $s->album, $s->release_title, $s->release_date,
+		$row = array( $s->serial, $s->title, $art ? $art->name : '', $s->status, $s->archived_at ? 'yes' : '', $s->musical_key, $s->tempo, $s->genre, $s->artist, $s->album, $s->release_title, $s->release_date, $s->copyright_date, $s->production_date, $s->format, $s->style, $s->themes, $s->ai_prompt, $s->art_prompt,
 			implode( '; ', $by['writer'] ), implode( '; ', $by['publisher'] ), implode( '; ', $by['label'] ), implode( '; ', $by['performer'] ), implode( '; ', $by['producer'] ), implode( '; ', $codes ), implode( '; ', $links ), Songpress_Media::audio_url( $s ), $s->notes );
 		return array_map( function ( $v ) {
 			$v = (string) $v;

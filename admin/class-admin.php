@@ -674,6 +674,10 @@ class Songpress_Admin {
 			/* translators: %d: number of links */
 			echo '<div class="notice notice-warning"><p>' . esc_html( sprintf( __( '%d cover art or audio links did not match a Media Library item. They were kept as outside links and still work. Re-upload them to the Media Library and choose them on the song to move them in.', 'songpress' ), absint( $_GET['nomedia'] ) ) ) . '</p></div>';
 		}
+		if ( ! empty( $_GET['filled'] ) ) {
+			/* translators: %d: number of songs */
+			echo '<div class="notice notice-info"><p>' . esc_html( sprintf( __( 'Filled in dates, style, themes or prompts on %d songs that were loaded earlier. Nothing you typed was changed.', 'songpress' ), absint( $_GET['filled'] ) ) ) . '</p></div>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
 		if ( isset( $_GET['done'] ) ) {
 			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html( sprintf( /* translators: 1: imported 2: skipped */ __( 'Imported %1$d songs, skipped %2$d already there. Run it again to continue if there are more.', 'songpress' ), absint( $_GET['done'] ), absint( $_GET['skipped'] ?? 0 ) ) ) );
 		}
@@ -820,7 +824,7 @@ class Songpress_Admin {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 			$people = Songpress_People::backfill_all( 20 );
 		}
-		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
+		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ), 'filled' => (int) ( $out['filled'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
 	}
 
 	/* ---------- artists ---------- */

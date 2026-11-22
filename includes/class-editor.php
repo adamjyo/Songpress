@@ -95,7 +95,14 @@ class Songpress_Editor {
 		$o .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song, '', 'adv' );
 		$o .= self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song, '', 'adv' );
 		$o .= self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song, '', 'adv' );
+		$o .= self::input( 'format', __( 'Format', 'songpress' ), $song, '', 'adv' );
+		$o .= self::input( 'style', __( 'Style', 'songpress' ), $song, '', 'adv' );
+		$o .= self::input( 'themes', __( 'Themes', 'songpress' ), $song, '', 'adv' );
+		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
+		$o .= self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'Other titles', 'songpress' ) . '</span><textarea name="alt_titles" rows="2">' . esc_textarea( self::f( $song, 'alt_titles' ) ) . '</textarea></label>';
+		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'AI prompt (lyrics or music)', 'songpress' ) . '</span><textarea name="ai_prompt" rows="3">' . esc_textarea( self::f( $song, 'ai_prompt' ) ) . '</textarea></label>';
+		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'Art prompt', 'songpress' ) . '</span><textarea name="art_prompt" rows="3">' . esc_textarea( self::f( $song, 'art_prompt' ) ) . '</textarea></label>';
 		$o .= '</div>';
 		if ( ! $song ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'The serial number is assigned for you. The original work is just four digits, like 0012. Each version after it adds two more, like 0012-01.', 'songpress' ) . '</p>';

@@ -6,7 +6,7 @@ defined( 'ABSPATH' ) || exit;
  * Long text (lyrics, charts, notes) is recorded as "changed" with the size, not copied each time.
  */
 class Songpress_History {
-	const LONG_FIELDS = array( 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes', 'alt_titles' );
+	const LONG_FIELDS = array( 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes', 'alt_titles', 'ai_prompt', 'art_prompt' );
 
 	public static function log( $song_id, $action, array $detail = array() ) {
 		global $wpdb;

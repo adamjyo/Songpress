@@ -35,7 +35,7 @@ class FakeWpdb {
 	function __construct() {
 		$this->pdo = new PDO( 'sqlite::memory:' ); $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_families (id INTEGER PRIMARY KEY AUTOINCREMENT, family_no INT UNIQUE, created_at TEXT)' );
-		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
+		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, copyright_date TEXT, production_date TEXT, format TEXT, style TEXT, themes TEXT, ai_prompt TEXT, art_prompt TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
 		$this->pdo->exec( "CREATE TABLE wp_songpress_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, $cols)" );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, role TEXT, name TEXT, ipi TEXT, share REAL, user_id INT, position INT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
@@ -80,6 +80,8 @@ require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
 require __DIR__ . '/../includes/class-audit.php';
+if ( ! defined( 'SONGPRESS_TESTING' ) ) { define( 'SONGPRESS_TESTING', 1 ); }
+require_once __DIR__ . '/../includes/class-import-analyzer.php';
 require __DIR__ . '/../includes/class-artists.php';
 require __DIR__ . '/../includes/class-profiles.php';
 require __DIR__ . '/../includes/class-media.php';
@@ -594,6 +596,20 @@ $ls = Songpress_Songs::query( array( 'search' => 'Zebra Sou', 'archived' => 'any
 check( 'search finds songs by label', array_map( function ( $r ) { return (int) $r->id; }, $ls['rows'] ), array( $lb ) );
 $lo = Songpress_Songs::query( array( 'order' => 'label', 'dir' => 'desc', 'archived' => 'any', 'per_page' => 100 ) );
 check( 'sort by label puts the labelled song first when descending', (int) $lo['rows'][0]->id, $lb );
+
+// Old song fields that now have a home
+$mm = Songpress_Import_Analyzer::map_row( array( 'id' => 900, 'serial_number' => '0900', 'song_title' => 'Old Fields', 'copyright_date' => '2020-01-02', 'production_date' => '2026-04-07', 'format' => 'Single', 'style' => 'Folk', 'themes' => 'home; road', 'ai_prompt' => 'warm folk', 'art_prompt' => 'a lighthouse' ) );
+check( 'importer reads the old extra fields', array( $mm['song']['copyright_date'], $mm['song']['production_date'], $mm['song']['format'], $mm['song']['style'], $mm['song']['themes'], $mm['song']['ai_prompt'], $mm['song']['art_prompt'] ), array( '2020-01-02', '2026-04-07', 'Single', 'Folk', 'home; road', 'warm folk', 'a lighthouse' ) );
+$of = Songpress_Songs::create( array( 'title' => 'Old Fields Song', 'status' => 'writing', 'lyrics' => 'la', 'style' => 'Typed style' ), 1 );
+$wpdb->update( 'wp_songpress_songs', array( 'legacy_id' => 9001 ), array( 'id' => $of ) );
+check( 'backfill fills blanks only', array( Songpress_Songs::fill_blank( 9001, array( 'style' => 'Folk', 'themes' => 'home', 'production_date' => '2026-04-07', 'format' => '' ) ), Songpress_Songs::get( $of )->style, Songpress_Songs::get( $of )->themes, Songpress_Songs::get( $of )->production_date ), array( 1, 'Typed style', 'home', '2026-04-07' ) );
+check( 'backfill twice changes nothing', Songpress_Songs::fill_blank( 9001, array( 'style' => 'Folk', 'themes' => 'home', 'production_date' => '2026-04-07' ) ), 0 );
+Songpress_Songs::update( $of, array( 'ai_prompt' => "line one\nline two", 'copyright_date' => '2019-05-05' ) );
+check( 'prompt keeps its line breaks', Songpress_Songs::get( $of )->ai_prompt, "line one\nline two" );
+$ov = Songpress_Songs::create_version( $of, 1 );
+check( 'new version keeps style and copyright but not the production date', array( Songpress_Songs::get( $ov )->style, Songpress_Songs::get( $ov )->copyright_date, Songpress_Songs::get( $ov )->production_date ), array( 'Typed style', '2019-05-05', '' ) );
+$oh = Songpress_Songs::export_header(); $or = Songpress_Songs::export_row( Songpress_Songs::get( $of ) );
+check( 'export has the extra fields', array( $or[ array_search( 'themes', $oh ) ], $or[ array_search( 'copyright_date', $oh ) ], count( $or ) === count( $oh ) ), array( 'home', '2019-05-05', true ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

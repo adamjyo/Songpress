@@ -57,6 +57,7 @@ class Songpress_Import {
 			$legacy = (int) $m['song']['legacy_id'];
 			if ( $legacy && $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM {$songs} WHERE legacy_id = %d", $legacy ) ) ) {
 				$out['skipped']++;
+				$out['filled'] = ( $out['filled'] ?? 0 ) + Songpress_Songs::fill_blank( $legacy, $m['song'] );
 				continue;
 			}
 			$serial = Songpress_Serial::format( $m['serial']['family'], $m['serial']['version'] );
