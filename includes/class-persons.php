@@ -112,6 +112,9 @@ class Songpress_Persons {
 				$plan[]         = array( 'rename', $id, $base, 0 );
 				$taken[ $base ] = $id;
 				unset( $taken[ $u['login'] ] );
+			} elseif ( $taken[ $base ] !== $id && isset( $users[ $taken[ $base ] ] ) && empty( $users[ $taken[ $base ] ]['admin'] ) && empty( $users[ $taken[ $base ] ]['classed'] ) ) {
+				// a leftover account from the old app, with no SongPress class: the numbered one takes its login
+				$plan[] = array( 'replace', $id, $base, $taken[ $base ] );
 			} elseif ( $taken[ $base ] !== $id && isset( $users[ $taken[ $base ] ] ) && Songpress_People::key_for( $users[ $taken[ $base ] ]['display'] ) === Songpress_People::key_for( $u['display'] ) ) {
 				$plan[] = array( 'merge', $id, $base, $taken[ $base ] );
 			}
@@ -128,7 +131,7 @@ class Songpress_Persons {
 		foreach ( array_unique( $ids ) as $id ) {
 			$u = get_userdata( $id );
 			if ( $u ) {
-				$users[ $id ] = array( 'login' => $u->user_login, 'display' => $u->display_name, 'admin' => Songpress_Caps::is_wp_admin( $id ) );
+				$users[ $id ] = array( 'login' => $u->user_login, 'display' => $u->display_name, 'admin' => Songpress_Caps::is_wp_admin( $id ), 'classed' => '' !== (string) get_user_meta( $id, Songpress_Caps::META, true ) );
 			}
 		}
 		return $users;
@@ -145,6 +148,12 @@ class Songpress_Persons {
 		$mer = 0;
 		foreach ( self::tidy_plan( self::tidy_users() ) as $a ) {
 			list( $act, $id, $to, $into ) = $a;
+			if ( 'replace' === $act ) {
+				$ct = Songpress_Install::table( 'credits' );
+				$wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET user_id = %d WHERE user_id = %d", $id, $into ) ); // phpcs:ignore WordPress.DB
+				wp_delete_user( $into, $id );
+				$act = 'rename';
+			}
 			if ( 'rename' === $act ) {
 				if ( username_exists( $to ) ) {
 					continue;

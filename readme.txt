@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.7.2 =
+* Tidy logins also replaces a leftover account from the old app that holds the plain login (it has no SongPress class), so abby.russ2 becomes abby.russ even then.
+
 = 0.7.1 =
 * People shows a "Tidy logins" button when logins end in a number (abby.russ2). It renames them to the plain first.last, or merges them into the plain account when it is the same person. Different people with the same name, and administrators, are left alone.
 * New writers whose plain login already belongs to the same person now use that account instead of getting a number.

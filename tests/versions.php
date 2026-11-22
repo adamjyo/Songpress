@@ -463,13 +463,15 @@ check( 'earned total for a person', Songpress_Persons::total_for( 'Zed Tester' )
 
 $pl = Songpress_Persons::tidy_plan( array(
 	1 => array( 'login' => 'abby.russ2', 'display' => 'Abby Russ', 'admin' => false ),
-	2 => array( 'login' => 'bob.lee', 'display' => 'Bob Lee', 'admin' => false ),
+	2 => array( 'login' => 'bob.lee', 'display' => 'Bob Lee', 'admin' => false, 'classed' => true ),
 	3 => array( 'login' => 'bob.lee2', 'display' => 'Bob Lee', 'admin' => false ),
-	4 => array( 'login' => 'cy.wu', 'display' => 'Cy Wu', 'admin' => false ),
-	5 => array( 'login' => 'cy.wu2', 'display' => 'Cy Wu Jr', 'admin' => false ),
+	4 => array( 'login' => 'cy.wu', 'display' => 'Cy Wu', 'admin' => false, 'classed' => true ),
+	7 => array( 'login' => 'di.fox', 'display' => 'D Fox old', 'admin' => false ),
+	8 => array( 'login' => 'di.fox2', 'display' => 'Di Fox', 'admin' => false, 'classed' => true ),
+	5 => array( 'login' => 'cy.wu2', 'display' => 'Cy Wu Jr', 'admin' => false, 'classed' => true ),
 	6 => array( 'login' => 'sam.kim2', 'display' => 'Sam Kim', 'admin' => true ),
 ) );
-check( 'tidy: rename when free, merge same person, leave different person and admins', $pl, array( array( 'rename', 1, 'abby.russ', 0 ), array( 'merge', 3, 'bob.lee', 2 ) ) );
+check( 'tidy: rename when free, merge same person, leave different person and admins', $pl, array( array( 'rename', 1, 'abby.russ', 0 ), array( 'merge', 3, 'bob.lee', 2 ), array( 'replace', 8, 'di.fox', 7 ) ) );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
