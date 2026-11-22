@@ -6,7 +6,7 @@ if ( '1' !== get_option( 'songpress_delete_on_uninstall' ) ) {
 	return;
 }
 global $wpdb;
-foreach ( array( 'history', 'credits', 'identifiers', 'links', 'songs', 'families' ) as $t ) {
+foreach ( array( 'artists', 'history', 'credits', 'identifiers', 'links', 'songs', 'families' ) as $t ) {
 	$wpdb->query( "DROP TABLE IF EXISTS {$wpdb->prefix}songpress_{$t}" ); // phpcs:ignore WordPress.DB.PreparedSQL
 }
 delete_option( 'songpress_db_version' );
@@ -16,6 +16,7 @@ delete_option( 'songpress_donate_prompt' );
 delete_option( 'songpress_classes_migrated' );
 delete_option( 'songpress_classes_v2' );
 delete_option( 'songpress_accounts_ready' );
+delete_option( 'songpress_default_artist' );
 delete_option( 'songpress_pages_done' ); // the pages themselves are left in place: they are yours
 delete_option( 'songpress_page_catalog' );
 delete_option( 'songpress_page_profile' );

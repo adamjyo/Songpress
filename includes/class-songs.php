@@ -30,7 +30,7 @@ class Songpress_Songs {
 	const FIELDS = array(
 		'title', 'alt_titles', 'status', 'stage', 'writing_date', 'musical_key', 'tempo', 'time_signature', 'genre',
 		'artist', 'album', 'release_title', 'release_date', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
-		'audio_url', 'audio_id', 'art_id', 'art_url',
+		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
 
 	public static function user_is_credited( $song_id, $user_id ) {
@@ -88,6 +88,10 @@ class Songpress_Songs {
 			$where[] = 's.status = %s';
 			$vals[]  = $args['status'];
 		}
+		if ( ! empty( $args['artist_id'] ) ) {
+			$where[] = 's.artist_id = %d';
+			$vals[]  = (int) $args['artist_id'];
+		}
 		if ( ! empty( $args['family_id'] ) ) {
 			$where[] = 's.family_id = %d';
 			$vals[]  = (int) $args['family_id'];
@@ -122,6 +126,8 @@ class Songpress_Songs {
 				// sanitize_textarea_field keeps line breaks; chord charts need leading spaces, which it also keeps.
 			} elseif ( in_array( $f, array( 'audio_url', 'art_url' ), true ) ) {
 				$out[ $f ] = esc_url_raw( $v );
+			} elseif ( 'artist_id' === $f ) {
+				$out[ $f ] = absint( $v );
 			} elseif ( in_array( $f, array( 'art_id', 'audio_id' ), true ) ) {
 				$out[ $f ] = absint( $v ) ?: null;
 			} elseif ( 'status' === $f ) {
@@ -135,6 +141,9 @@ class Songpress_Songs {
 
 	/** New song: gets the next family number, version 00. @return int|WP_Error song id */
 	public static function create( array $data, $owner_id ) {
+		if ( empty( $data['artist_id'] ) ) {
+			$data['artist_id'] = Songpress_Artists::default_id();
+		}
 		$id = self::insert( true, 0, $data, $owner_id );
 		if ( ! is_wp_error( $id ) ) {
 			Songpress_History::log( $id, 'created' );
@@ -319,7 +328,7 @@ class Songpress_Songs {
 	}
 
 	public static function export_header() {
-		return array( 'serial', 'title', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'writers', 'publishers', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
+		return array( 'serial', 'title', 'catalog_owner', 'status', 'archived', 'key', 'tempo', 'genre', 'artist', 'album', 'release_title', 'release_date', 'writers', 'publishers', 'performers', 'producers', 'codes', 'links', 'audio_url', 'notes' );
 	}
 
 	/** One CSV row. People are "Name 50%" joined by "; ". Cells that start with = + - @ get a leading apostrophe so a spreadsheet never runs them as formulas. */
@@ -337,7 +346,8 @@ class Songpress_Songs {
 		foreach ( self::links( (int) $s->id ) as $l ) {
 			$links[] = $l->url;
 		}
-		$row = array( $s->serial, $s->title, $s->status, $s->archived_at ? 'yes' : '', $s->musical_key, $s->tempo, $s->genre, $s->artist, $s->album, $s->release_title, $s->release_date,
+		$art = ! empty( $s->artist_id ) ? Songpress_Artists::get( (int) $s->artist_id ) : null;
+		$row = array( $s->serial, $s->title, $art ? $art->name : '', $s->status, $s->archived_at ? 'yes' : '', $s->musical_key, $s->tempo, $s->genre, $s->artist, $s->album, $s->release_title, $s->release_date,
 			implode( '; ', $by['writer'] ), implode( '; ', $by['publisher'] ), implode( '; ', $by['performer'] ), implode( '; ', $by['producer'] ), implode( '; ', $codes ), implode( '; ', $links ), Songpress_Media::audio_url( $s ), $s->notes );
 		return array_map( function ( $v ) {
 			$v = (string) $v;

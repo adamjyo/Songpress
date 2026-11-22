@@ -13,6 +13,7 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_export', array( __CLASS__, 'handle_export' ) );
 		add_action( 'wp_ajax_songpress_upload', array( 'Songpress_Media', 'ajax_upload' ) );
 		add_action( 'admin_post_songpress_members', array( __CLASS__, 'handle_members' ) );
+		add_action( 'admin_post_songpress_artist_save', array( __CLASS__, 'handle_artist_save' ) );
 		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
@@ -43,6 +44,7 @@ class Songpress_Admin {
 			array( 'import', 'songpress-import', 'page_import', __( 'Import', 'songpress' ) ),
 			array( 'link', 'songpress-link', 'page_link_writers', __( 'Link writers', 'songpress' ) ),
 			array( 'settings', 'songpress-settings', 'page_settings', __( 'Settings', 'songpress' ) ),
+			array( 'artists', 'songpress-artists', 'page_artists', __( 'Artists', 'songpress' ) ),
 		) as $m ) {
 			// The song editor is also how writers open their own songs, so it is registered for anyone who can edit any song.
 			if ( Songpress_Caps::can( $m[0] ) || ( 'songpress-song' === $m[1] && Songpress_Caps::can( 'edit_own' ) ) ) {
@@ -75,15 +77,19 @@ class Songpress_Admin {
 		$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
 		$status = isset( Songpress_Songs::STATUSES[ $status ] ) ? $status : '';
 		$paged  = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
+		$artist = isset( $_GET['artist'] ) ? absint( $_GET['artist'] ) : 0;
 		$arch   = Songpress_Caps::can( 'archive' ) && ! empty( $_GET['archived'] ) ? 1 : 0;
 		$res    = Songpress_Songs::query( array(
-			'search' => $q, 'status' => $status, 'page' => $paged, 'per_page' => 25, 'archived' => $arch,
+			'search' => $q, 'status' => $status, 'page' => $paged, 'per_page' => 25, 'archived' => $arch, 'artist_id' => $artist,
 			'user_id' => $all ? 0 : get_current_user_id(),
 		) );
 		$pages = max( 1, (int) ceil( $res['total'] / 25 ) );
 		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Catalog', 'songpress' ) . '</h1>';
 		if ( Songpress_Caps::can( 'create' ) ) {
-			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-song' ) ) . '">' . esc_html__( 'Add song', 'songpress' ) . '</a>';
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-song', $artist ? array( 'artist' => $artist ) : array() ) ) . '">' . esc_html__( 'Add song', 'songpress' ) . '</a>';
+		}
+		if ( Songpress_Caps::can( 'artists' ) ) {
+			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-artists' ) ) . '">' . esc_html__( 'Artists', 'songpress' ) . '</a>';
 		}
 		if ( Songpress_Caps::can( 'import' ) ) {
 			echo ' <a class="page-title-action" href="' . esc_url( self::url( 'songpress-import' ) ) . '">' . esc_html__( 'Import', 'songpress' ) . '</a>';
@@ -113,6 +119,14 @@ class Songpress_Admin {
 		}
 		echo '<form method="get"><input type="hidden" name="page" value="songpress">' . ( $arch ? '<input type="hidden" name="archived" value="1">' : '' ) . '<p class="search-box" style="float:none;margin:8px 0">';
 		echo '<input type="search" name="s" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Title, serial or artist', 'songpress' ) . '"> ';
+		$artists = Songpress_Artists::all();
+		if ( count( $artists ) > 1 ) {
+			echo '<select name="artist"><option value="">' . esc_html__( 'All artists', 'songpress' ) . '</option>';
+			foreach ( $artists as $a ) {
+				echo '<option value="' . (int) $a->id . '"' . selected( $artist, (int) $a->id, false ) . '>' . esc_html( $a->name ) . '</option>';
+			}
+			echo '</select> ';
+		}
 		echo '<select name="status"><option value="">' . esc_html__( 'All statuses', 'songpress' ) . '</option>';
 		foreach ( Songpress_Songs::STATUSES as $k => $label ) {
 			echo '<option value="' . esc_attr( $k ) . '"' . selected( $status, $k, false ) . '>' . esc_html( $label ) . '</option>';
@@ -129,6 +143,10 @@ class Songpress_Admin {
 			echo '<tr><td class="sp-serial">' . esc_html( $s->serial ) . '</td><td><a href="' . esc_url( $link ) . '"><strong>' . esc_html( '' !== $s->title ? $s->title : __( '(untitled)', 'songpress' ) ) . '</strong></a>';
 			if ( '' !== $by ) {
 				echo '<br><span class="sp-help">' . esc_html( $by ) . '</span>';
+			}
+			if ( count( $artists ) > 1 && ! empty( $s->artist_id ) ) {
+				$ao = Songpress_Artists::get( (int) $s->artist_id );
+				echo $ao ? '<br><span class="sp-help">' . esc_html( $ao->name ) . '</span>' : '';
 			}
 			echo '</td><td>' . esc_html( Songpress_Songs::STATUSES[ $s->status ] ?? $s->status ) . '</td></tr>';
 		}
@@ -210,6 +228,20 @@ class Songpress_Admin {
 		foreach ( $statuses as $k => $label ) {
 			$opts .= '<option value="' . esc_attr( $k ) . '"' . selected( $g( 'status' ) ?: 'idea', $k, false ) . '>' . esc_html( $label ) . '</option>';
 		}
+		$cur_artist = $song ? (int) $song->artist_id : ( isset( $_GET['artist'] ) ? absint( $_GET['artist'] ) : Songpress_Artists::default_id() );
+		$all_artists = Songpress_Artists::all();
+		if ( Songpress_Caps::can( 'create' ) && count( $all_artists ) > 1 ) {
+			$ao = '';
+			foreach ( $all_artists as $a ) {
+				$ao .= '<option value="' . (int) $a->id . '"' . selected( $cur_artist, (int) $a->id, false ) . '>' . esc_html( $a->name ) . '</option>';
+			}
+			self::row( 'artist_id', __( 'Artist', 'songpress' ), '<select name="artist_id">' . $ao . '</select>' );
+		} elseif ( $song && count( $all_artists ) > 1 ) {
+			$an = Songpress_Artists::get( $cur_artist );
+			self::row( 'artist_id', __( 'Artist', 'songpress' ), esc_html( $an ? $an->name : '' ) );
+		} else {
+			echo '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
+		}
 		self::row( 'status', __( 'Status', 'songpress' ), '<select name="status">' . $opts . '</select>' );
 		self::row( 'musical_key', __( 'Key', 'songpress' ), '<input name="musical_key" size="6" value="' . esc_attr( $g( 'musical_key' ) ) . '"> ' . esc_html__( 'Tempo', 'songpress' ) . ' <input name="tempo" size="5" value="' . esc_attr( $g( 'tempo' ) ) . '">' );
 		echo '</table></details>';
@@ -227,6 +259,11 @@ class Songpress_Admin {
 		foreach ( $song ? Songpress_Songs::credits( $id ) : array() as $c ) {
 			if ( isset( $by_role[ $c->role ] ) ) {
 				$by_role[ $c->role ][] = $c;
+			}
+		}
+		if ( ! $song ) { // a new song starts with this artist's usual writer and publisher
+			foreach ( Songpress_Artists::starting_credits( $cur_artist ) as $role => $rows ) {
+				$by_role[ $role ] = $rows;
 			}
 		}
 		self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true );
@@ -631,6 +668,13 @@ class Songpress_Admin {
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 			wp_nonce_field( 'songpress_import_run' );
 			echo '<input type="hidden" name="action" value="songpress_import_run">';
+			if ( count( Songpress_Artists::all() ) > 1 ) {
+				echo '<p><label>' . esc_html__( 'Import these songs for', 'songpress' ) . ' <select name="artist_id">';
+				foreach ( Songpress_Artists::all() as $a ) {
+					echo '<option value="' . (int) $a->id . '">' . esc_html( $a->name ) . '</option>';
+				}
+				echo '</select></label></p>';
+			}
 			submit_button( __( 'Import now (up to 500 songs at a time)', 'songpress' ), 'primary', 'submit', false );
 			echo '</form>';
 		}
@@ -739,7 +783,7 @@ class Songpress_Admin {
 			self::back( 'songpress-import', array( 'err' => rawurlencode( __( 'The checked file has expired. Choose it again.', 'songpress' ) ) ) );
 		}
 		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
-		$out = Songpress_Import::run( $tmp['path'], 500 );
+		$out = Songpress_Import::run( $tmp['path'], 500, absint( $_POST['artist_id'] ?? 0 ) );
 		$people = null;
 		if ( $out['imported'] < 500 ) { // nothing left to import: remove the private copy
 			@unlink( $tmp['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
@@ -750,6 +794,96 @@ class Songpress_Admin {
 			$people = Songpress_People::backfill_all( 20 );
 		}
 		self::back( 'songpress-import', $people ? array( 'accounts' => $people['created'], 'left' => $people['remaining'], 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) : array( 'done' => $out['imported'], 'skipped' => $out['skipped'], 'nomedia' => (int) ( $out['media_unmatched'] ?? 0 ) ) );
+	}
+
+	/* ---------- artists ---------- */
+
+	public static function page_artists() {
+		if ( ! Songpress_Caps::can( 'artists' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
+		}
+		wp_enqueue_media();
+		foreach ( array( 'saved' => 'notice-success', 'err' => 'notice-error' ) as $k => $cls ) {
+			if ( isset( $_GET[ $k ] ) ) {
+				echo '<div class="notice ' . esc_attr( $cls ) . '"><p>' . esc_html( sanitize_text_field( wp_unslash( $_GET[ $k ] ) ) ) . '</p></div>';
+			}
+		}
+		$edit = isset( $_GET['artist'] ) ? sanitize_text_field( wp_unslash( $_GET['artist'] ) ) : '';
+		if ( '' !== $edit ) {
+			self::artist_form( 'new' === $edit ? null : Songpress_Artists::get( absint( $edit ) ) );
+			return;
+		}
+		echo '<div class="wrap songpress-wrap"><h1 class="wp-heading-inline">' . esc_html__( 'Artists', 'songpress' ) . '</h1> <a class="page-title-action" href="' . esc_url( self::url( 'songpress-artists', array( 'artist' => 'new' ) ) ) . '">' . esc_html__( 'Add artist', 'songpress' ) . '</a><hr class="wp-header-end">';
+		echo '<p class="sp-help">' . esc_html__( 'An artist is a band, a solo act or a record label. Each has its own songs, its usual writer and publisher, and its own look. Serial numbers are shared, so every serial is unique across all artists.', 'songpress' ) . '</p>';
+		echo '<table class="widefat striped" style="max-width:720px"><thead><tr><th>' . esc_html__( 'Artist', 'songpress' ) . '</th><th>' . esc_html__( 'Songs', 'songpress' ) . '</th><th></th></tr></thead><tbody>';
+		foreach ( Songpress_Artists::all() as $a ) {
+			echo '<tr><td><strong>' . esc_html( $a->name ) . '</strong></td><td>' . (int) Songpress_Artists::song_count( (int) $a->id ) . '</td><td><a href="' . esc_url( self::url( 'songpress-artists', array( 'artist' => (int) $a->id ) ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a> · <a href="' . esc_url( self::url( 'songpress', array( 'artist' => (int) $a->id ) ) ) . '">' . esc_html__( 'Songs', 'songpress' ) . '</a></td></tr>';
+		}
+		echo '</tbody></table>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	private static function artist_form( $a ) {
+		$s = function ( $k, $d = '' ) use ( $a ) {
+			return $a ? (string) Songpress_Artists::setting( $a, $k, $d ) : $d;
+		};
+		echo '<div class="wrap songpress-wrap"><h1>' . ( $a ? esc_html( $a->name ) : esc_html__( 'Add artist', 'songpress' ) ) . '</h1>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'songpress_artist_save' );
+		echo '<input type="hidden" name="action" value="songpress_artist_save"><input type="hidden" name="artist_id" value="' . (int) ( $a->id ?? 0 ) . '">';
+		echo '<details open><summary>' . esc_html__( 'Name', 'songpress' ) . '</summary><table class="form-table" role="presentation">';
+		self::row( 'name', __( 'Band, artist or label', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $a->name ?? '' ) . '" required>' );
+		echo '</table></details>';
+		echo '<details open><summary>' . esc_html__( 'Usual writer and publisher', 'songpress' ) . '</summary><p class="sp-help">' . esc_html__( 'A new song for this artist starts with these filled in, so you do not retype them. Change them on any song.', 'songpress' ) . '</p><table class="form-table" role="presentation">';
+		self::row( 'writer_name', __( 'Writer', 'songpress' ), '<input name="writer_name" value="' . esc_attr( $s( 'writer_name' ) ) . '"> IPI <input name="writer_ipi" size="12" value="' . esc_attr( $s( 'writer_ipi' ) ) . '"> ' . esc_html__( 'Share %', 'songpress' ) . ' <input name="writer_share" size="5" value="' . esc_attr( $s( 'writer_share' ) ) . '">' );
+		self::row( 'publisher_name', __( 'Publisher', 'songpress' ), '<input name="publisher_name" value="' . esc_attr( $s( 'publisher_name' ) ) . '"> IPI <input name="publisher_ipi" size="12" value="' . esc_attr( $s( 'publisher_ipi' ) ) . '"> ' . esc_html__( 'Share %', 'songpress' ) . ' <input name="publisher_share" size="5" value="' . esc_attr( $s( 'publisher_share' ) ) . '">' );
+		echo '</table></details>';
+		echo '<details open><summary>' . esc_html__( 'Brand', 'songpress' ) . '</summary><p class="sp-help">' . esc_html__( 'Shown on this artist\'s share links and phone pages. Images come from the Media Library, and you can drag them onto this form.', 'songpress' ) . '</p><table class="form-table" role="presentation">';
+		self::row( 'logo_id', __( 'Logo', 'songpress' ), Songpress_Media::picker( 'logo', __( 'Choose a logo', 'songpress' ), 'image', (int) $s( 'logo_id', 0 ), '' ) );
+		self::row( 'default_art_id', __( 'Default cover art', 'songpress' ), Songpress_Media::picker( 'default_art', __( 'Choose default art', 'songpress' ), 'image', (int) $s( 'default_art_id', 0 ), '' ) );
+		self::row( 'accent', __( 'Accent color', 'songpress' ), '<input type="color" name="accent" value="' . esc_attr( $s( 'accent', '#f5a524' ) ) . '">' );
+		self::row( 'footer', __( 'Footer line', 'songpress' ), '<input class="regular-text" name="footer" value="' . esc_attr( $s( 'footer' ) ) . '">' );
+		self::row( 'pro_name', __( 'Performing rights organization', 'songpress' ), '<input name="pro_name" value="' . esc_attr( $s( 'pro_name' ) ) . '" placeholder="ASCAP, BMI, SESAC..."> <input class="regular-text" name="pro_url" value="' . esc_attr( $s( 'pro_url' ) ) . '" placeholder="https://">' );
+		self::row( 'radio_url', __( 'Radio or stream link', 'songpress' ), '<input class="regular-text" name="radio_url" value="' . esc_attr( $s( 'radio_url' ) ) . '" placeholder="https://"> <input name="radio_label" value="' . esc_attr( $s( 'radio_label' ) ) . '" placeholder="' . esc_attr__( 'Button label', 'songpress' ) . '">' );
+		echo '</table></details>';
+		Songpress_Media::picker_script();
+		submit_button( $a ? __( 'Save artist', 'songpress' ) : __( 'Create artist', 'songpress' ) );
+		echo '</form>';
+		if ( $a && ! Songpress_Artists::song_count( (int) $a->id ) && count( Songpress_Artists::all() ) > 1 ) {
+			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+			wp_nonce_field( 'songpress_artist_save' );
+			echo '<input type="hidden" name="action" value="songpress_artist_save"><input type="hidden" name="artist_id" value="' . (int) $a->id . '"><input type="hidden" name="do" value="delete">';
+			submit_button( __( 'Delete this artist (it has no songs)', 'songpress' ), 'delete', 'submit', false );
+			echo '</form>';
+		}
+		echo '<p><a href="' . esc_url( self::url( 'songpress-artists' ) ) . '">&lsaquo; ' . esc_html__( 'All artists', 'songpress' ) . '</a></p>' . wp_kses_post( songpress_donate_link() ) . '</div>';
+	}
+
+	public static function handle_artist_save() {
+		check_admin_referer( 'songpress_artist_save' );
+		if ( ! Songpress_Caps::can( 'artists' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$id = absint( $_POST['artist_id'] ?? 0 );
+		if ( 'delete' === sanitize_key( $_POST['do'] ?? '' ) ) {
+			$ok = $id && Songpress_Artists::delete( $id );
+			self::back( 'songpress-artists', array( ( $ok ? 'saved' : 'err' ) => rawurlencode( $ok ? __( 'Artist deleted.', 'songpress' ) : __( 'An artist with songs, or the only artist, cannot be deleted.', 'songpress' ) ) ) );
+		}
+		$in = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- cleaned by Songpress_Artists::clean_settings().
+		$s  = array();
+		foreach ( array_keys( Songpress_Artists::SETTINGS ) as $k ) {
+			$s[ $k ] = $in[ $k ] ?? '';
+		}
+		// logo and default art come from the pickers as logo_id and default_art_id; they keep their old value unless changed or removed
+		$old = $id ? Songpress_Artists::get( $id ) : null;
+		foreach ( array( 'logo' => 'logo_id', 'default_art' => 'default_art_id' ) as $f => $k ) {
+			$posted = absint( $in[ $f . '_id' ] ?? 0 );
+			$s[ $k ] = $posted ?: ( ( '1' === ( $in[ $f . '_clear' ] ?? '0' ) || ! $old ) ? 0 : (int) Songpress_Artists::setting( $old, $k, 0 ) );
+		}
+		$saved = Songpress_Artists::save( $id, sanitize_text_field( $in['name'] ?? '' ), $s );
+		if ( ! $saved ) {
+			self::back( 'songpress-artists', array( 'err' => rawurlencode( __( 'An artist needs a name.', 'songpress' ) ) ) );
+		}
+		self::back( 'songpress-artists', array( 'saved' => rawurlencode( __( 'Saved.', 'songpress' ) ) ) );
 	}
 
 	/* ---------- members ---------- */

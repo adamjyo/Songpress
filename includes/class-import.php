@@ -28,17 +28,17 @@ class Songpress_Import {
 		return $dir;
 	}
 
-	public static function run( $path, $limit = 0 ) {
+	public static function run( $path, $limit = 0, $artist_id = 0 ) {
 		$auto = Songpress_Songs::$auto_users;
 		Songpress_Songs::$auto_users = false; // thousands of accounts in one request is too slow: use SongPress > Link writers afterwards
 		try {
-			return self::run_batch( $path, $limit );
+			return self::run_batch( $path, $limit, $artist_id ? $artist_id : Songpress_Artists::default_id() );
 		} finally {
 			Songpress_Songs::$auto_users = $auto;
 		}
 	}
 
-	private static function run_batch( $path, $limit = 0 ) {
+	private static function run_batch( $path, $limit, $artist_id ) {
 		global $wpdb;
 		$songs = Songpress_Install::table( 'songs' );
 		$fam   = Songpress_Install::table( 'families' );
@@ -74,6 +74,7 @@ class Songpress_Import {
 				$data['status'] = 'idea';
 			}
 			$data = array_merge( $data, array(
+				'artist_id' => (int) $artist_id,
 				'family_id' => $family_id, 'version_no' => $m['serial']['version'], 'serial' => $serial,
 				'owner_id' => 0, 'created_at' => $now, 'updated_at' => $now,
 			) );

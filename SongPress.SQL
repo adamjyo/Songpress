@@ -49,12 +49,14 @@ CREATE TABLE {prefix}songpress_songs (
   revision int(10) unsigned NOT NULL DEFAULT 0,
   legacy_id bigint(20) unsigned NULL,
   legacy_outside_serial varchar(64) NOT NULL DEFAULT '',
+  artist_id bigint(20) unsigned NOT NULL DEFAULT 0,
   archived_at datetime NULL,
   share_token varchar(32) NULL,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   PRIMARY KEY  (id),
   KEY archived_at (archived_at),
+  KEY artist_id (artist_id),
   UNIQUE KEY share_token (share_token),
   UNIQUE KEY serial (serial),
   UNIQUE KEY family_version (family_id,version_no),
@@ -113,4 +115,16 @@ CREATE TABLE {prefix}songpress_history (
   created_at datetime NOT NULL,
   PRIMARY KEY  (id),
   KEY song_id (song_id)
+) {charset};
+
+-- An artist is a band, a solo act or a record label. One site can hold many. Serial numbers are shared across all of them.
+-- settings is JSON: default writer and publisher, logo, accent color, default art, links. New settings need no schema change.
+CREATE TABLE {prefix}songpress_artists (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  name varchar(191) NOT NULL,
+  slug varchar(100) NOT NULL,
+  settings longtext NULL,
+  created_at datetime NOT NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY slug (slug)
 ) {charset};

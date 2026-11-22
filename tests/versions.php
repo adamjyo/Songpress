@@ -17,17 +17,23 @@ function get_current_user_id() { return 7; }
 function wp_json_encode( $v ) { return json_encode( $v ); }
 function wp_unslash( $s ) { return $s; }
 function absint( $n ) { return abs( (int) $n ); }
+$GLOBALS['opts'] = array();
+function get_option( $k, $d = false ) { return $GLOBALS['opts'][ $k ] ?? $d; }
+function update_option( $k, $v ) { $GLOBALS['opts'][ $k ] = $v; return true; }
+function sanitize_title( $s ) { return trim( preg_replace( '/[^a-z0-9]+/', '-', strtolower( $s ) ), '-' ); }
+function get_bloginfo( $k = '' ) { return 'Test Site'; }
 
 class FakeWpdb {
 	public $prefix = 'wp_', $insert_id = 0; public $pdo;
 	function __construct() {
 		$this->pdo = new PDO( 'sqlite::memory:' ); $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_families (id INTEGER PRIMARY KEY AUTOINCREMENT, family_no INT UNIQUE, created_at TEXT)' );
-		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
+		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
 		$this->pdo->exec( "CREATE TABLE wp_songpress_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, $cols)" );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, role TEXT, name TEXT, ipi TEXT, share REAL, user_id INT, position INT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_history (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, user_id INT, action TEXT, detail TEXT, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_artists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT UNIQUE, settings TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_links (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, url TEXT)' );
 	}
 	function prepare( $sql, ...$a ) {
@@ -48,6 +54,7 @@ $wpdb = new FakeWpdb();
 require __DIR__ . '/../includes/class-serial.php';
 require __DIR__ . '/../includes/class-install.php';
 require __DIR__ . '/../includes/class-history.php';
+require __DIR__ . '/../includes/class-artists.php';
 require __DIR__ . '/../includes/class-media.php';
 require __DIR__ . '/../includes/class-songs.php';
 
@@ -191,6 +198,16 @@ check( 'sanitize keeps ids', array( $san['art_id'], $san['audio_id'] ), array( 4
 $ms = (object) array( 'art_id' => 7, 'art_url' => 'https://old.test/x.jpg', 'audio_id' => null, 'audio_url' => 'https://old.test/x.mp3' );
 check( 'library art wins', Songpress_Media::art_url( $ms, 'large' ), 'https://site.test/uploads/art-7-large.jpg' );
 check( 'outside audio is the fallback', Songpress_Media::audio_url( $ms ), 'https://old.test/x.mp3' );
+
+
+// artists
+$a2 = Songpress_Artists::save( 0, 'Second Band', array( 'writer_name' => 'Sam Writer', 'accent' => '#112233' ) );
+check( 'artist saved', (bool) $a2, true );
+$sid = Songpress_Songs::create( array( 'title' => 'Band Two Song', 'artist_id' => $a2 ), 1 );
+check( 'song keeps its artist', (int) Songpress_Songs::get( $sid )->artist_id, (int) $a2 );
+$q = Songpress_Songs::query( array( 'artist_id' => $a2 ) );
+check( 'artist filter', count( $q['rows'] ?? $q ), 1 );
+check( 'artist with songs cannot be deleted', Songpress_Artists::delete( $a2 ), false );
 
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

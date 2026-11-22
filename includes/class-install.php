@@ -18,7 +18,15 @@ class Songpress_Install {
 		add_option( 'songpress_accounts_ready', self::has_songs() ? '0' : '1' );
 		add_option( 'songpress_donate_prompt', 'pending' ); // asked once, on the first visit to a SongPress screen
 		update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
+		self::ensure_artist();
 		self::create_pages();
+	}
+
+	/** There is always at least one artist, and every song has one. Existing songs go to the first artist. */
+	public static function ensure_artist() {
+		global $wpdb;
+		$id = Songpress_Artists::default_id();
+		$wpdb->query( $wpdb->prepare( 'UPDATE ' . self::table( 'songs' ) . ' SET artist_id = %d WHERE artist_id = 0', $id ) );
 	}
 
 	public static function has_songs() {
@@ -37,6 +45,7 @@ class Songpress_Install {
 			Songpress_Caps::migrate_class_names();
 			update_option( 'songpress_db_version', SONGPRESS_DB_VERSION );
 		}
+		self::ensure_artist();
 		if ( ! get_option( 'songpress_pages_done' ) ) {
 			self::create_pages();
 		}
@@ -81,7 +90,7 @@ class Songpress_Install {
 	}
 
 	public static function table_names() {
-		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history' );
+		return array( 'families', 'songs', 'credits', 'identifiers', 'links', 'history', 'artists' );
 	}
 
 	/** Where the schema lives. Edit SongPress.SQL, not this file, to change the database. */
