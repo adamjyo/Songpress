@@ -100,7 +100,7 @@ class Songpress_Editor {
 				$by_role[ $role ] = $rows;
 			}
 		}
-		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version. Type a username or email in Account to let that person see this song on their own profile.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Type a username or email in Account to let that person see this song on their own profile. Add as many people as the song has.', 'songpress' ) ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Add as many people as the song has.', 'songpress' ) ) . '</p>';
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 2, true, true, true );
 		if ( ! $root ) {
 			$o .= self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
@@ -245,8 +245,8 @@ class Songpress_Editor {
 
 	private static function credit_group( $role, $title, $add_label, array $existing, $min, $with_user, $with_share, $simple ) {
 		$count = max( $min, count( $existing ) );
-		$o     = '<div class="spe-group' . ( $simple ? '' : ' adv' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
-		$o    .= '<div class="spe-head"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><span class="adv">IPI</span>' . ( $with_share ? '<span>' . esc_html__( 'Share %', 'songpress' ) . '</span>' : '<span></span>' ) . ( $with_user ? '<span class="adv">' . esc_html__( 'Account', 'songpress' ) . '</span>' : '<span class="adv"></span>' ) . '<span></span></div><div class="spe-rows">';
+		$o     = '<div class="spe-group' . ( $simple ? '' : ' adv' ) . ( $with_user ? ' spe-two' : '' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
+		$o    .= '<div class="spe-head' . ( $with_user ? ' spe-nohead' : '' ) . '"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><span class="adv">IPI</span>' . ( $with_share ? '<span>' . esc_html__( 'Share %', 'songpress' ) . '</span>' : '<span></span>' ) . ( $with_user ? '<span class="adv">' . esc_html__( 'Account', 'songpress' ) . '</span>' : '<span class="adv"></span>' ) . '<span></span></div><div class="spe-rows">';
 		for ( $i = 0; $i < $count; $i++ ) {
 			$o .= self::credit_row( $role, (string) $i, $existing[ $i ] ?? null, $with_user, $with_share );
 		}
@@ -267,12 +267,8 @@ class Songpress_Editor {
 			$h .= '<span></span>';
 		}
 		if ( $with_user ) {
-			$login = '';
-			if ( ! empty( $c->user_id ) ) {
-				$u     = get_userdata( (int) $c->user_id );
-				$login = $u ? $u->user_login : '';
-			}
-			$h .= '<input class="adv" name="' . esc_attr( $n ) . '[account]" value="' . esc_attr( $login ) . '" placeholder="' . esc_attr__( 'username or email', 'songpress' ) . '">';
+			// The account link is not shown; it is kept as it is so saving never unlinks a writer.
+			$h .= ! empty( $c->user_id ) ? '<input type="hidden" name="' . esc_attr( $n ) . '[user_id]" value="' . (int) $c->user_id . '">' : '';
 		} else {
 			$h .= '<span class="adv"></span>';
 		}

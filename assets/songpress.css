@@ -575,3 +575,13 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spp-badge.paid{background:#c0392b;color:#fff}
 .sp-side .sp-badge{background:#f5a524;color:#111;border-radius:9px;padding:0 7px;font-size:11px;font-weight:700;margin-left:auto}
 .spe-released small{display:block;margin:2px 0 8px 0}
+
+/* writers: two to a row, name and share on one line, IPI under it */
+.spe-group.spe-two .spe-nohead{display:none}
+.spe-group.spe-two .spe-rows{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.spe-group.spe-two .spe-credit{grid-template-columns:minmax(0,1fr) 72px 32px;grid-template-areas:"who share x" "ipi ipi ipi";gap:6px 8px;padding:10px;border:1px solid var(--sp-line);border-radius:10px;align-content:start}
+.spe-group.spe-two .spe-credit .spe-who{grid-area:who}
+.spe-group.spe-two .spe-credit > input[name$="[ipi]"]{grid-area:ipi}
+.spe-group.spe-two .spe-credit > input[name$="[share]"]{grid-area:share}
+.spe-group.spe-two .spe-credit .spe-x{grid-area:x}
+@media (max-width:640px){.spe-group.spe-two .spe-rows{grid-template-columns:minmax(0,1fr)}}

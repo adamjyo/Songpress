@@ -594,7 +594,7 @@ class Songpress_Admin {
 				if ( ! is_array( $r ) ) {
 					continue;
 				}
-				$uid = 0;
+				$uid = isset( $r['user_id'] ) && ! isset( $r['account'] ) ? absint( $r['user_id'] ) : 0;
 				$acc = trim( (string) ( $r['account'] ?? '' ) );
 				if ( '' !== $acc ) {
 					$u = false !== strpos( $acc, '@' ) ? get_user_by( 'email', $acc ) : get_user_by( 'login', $acc );
