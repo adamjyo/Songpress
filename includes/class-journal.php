@@ -443,6 +443,7 @@ class Songpress_Journal {
 			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
 		}		$o .= '<div class="spn-pop" id="spn-pop" hidden><button type="button" data-go="sel">' . esc_html__( 'Open or selected notes (.md)', 'songpress' ) . '</button><button type="button" data-go="md">' . esc_html__( 'All as .md', 'songpress' ) . '</button><button type="button" data-go="bear">' . esc_html__( 'All as .bear', 'songpress' ) . '</button><button type="button" data-go="tb">' . esc_html__( 'All for Bear (.textbundle)', 'songpress' ) . '</button><i></i><button type="button" data-go="days">' . esc_html__( 'Days', 'songpress' ) . '</button><button type="button" data-go="map">' . esc_html__( 'Map', 'songpress' ) . '</button>' . ( class_exists( 'Songpress_ChordTool' ) ? '<button type="button" data-go="tool">' . esc_html__( 'ChordPro tool', 'songpress' ) . '</button>' : '' ) . '</div>';
 
+		$o .= '<div class="spn-cal" id="spn-cal"></div>';
 		$o .= '<input class="spn-search" id="spn-search" type="search" placeholder="' . esc_attr__( 'Search', 'songpress' ) . '"></div><div class="spn-list" id="spn-list"></div></div>';
 		$o .= '<div class="spn-main"><button type="button" class="spn-tgl spn-tgl-list" data-act="list" title="' . esc_attr__( 'Show or hide the list', 'songpress' ) . '">◧</button><button type="button" class="spn-tgl spn-tgl-info" data-act="info" title="' . esc_attr__( 'Show or hide the details', 'songpress' ) . '">◨</button>';
 		$o .= '<div class="spn-editor" id="spn-editor"><input class="spn-title" id="spn-title" placeholder="' . esc_attr__( 'Title', 'songpress' ) . '"><div class="spn-card"><div class="spn-auds" id="spn-auds"></div><textarea class="spn-body" id="spn-body" placeholder="' . esc_attr__( 'Write here. ^0378 links a song, #tag adds a tag.', 'songpress' ) . '"></textarea><div class="spn-prev" id="spn-prev" hidden></div><div class="spn-audbox" id="spn-audbox" hidden><button type="button" class="spn-audx" id="spn-audx" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button><div class="spn-drop" id="spn-drop" tabindex="0" role="button">' . esc_html__( 'Drop audio here to add it to WordPress media, or click to search or upload', 'songpress' ) . '</div><div class="spn-audpick" id="spn-audpick" hidden><input type="search" id="spn-audq" placeholder="' . esc_attr__( 'Search WordPress media', 'songpress' ) . '"><div id="spn-audres" class="spn-audres"></div><button type="button" id="spn-audup" class="spn-audupb">' . esc_html__( 'Upload from this computer…', 'songpress' ) . '</button></div></div>';
@@ -487,6 +488,15 @@ function head(n){return (n.title||'').trim()||longDate(n.date)||'Untitled'}
 function prose(t){return String(t||'').replace(/```[\s\S]*?```/g,' ')}
 function tagsOf(n){var o={};prose(n.notes).replace(/(^|[\s(])#([A-Za-z][A-Za-z0-9\/_-]*)/g,function(_,a,t){o[t.toLowerCase()]=t});return Object.keys(o)}
 function preview(n){return prose(n.notes).replace(/[#*_>`\[\]]/g,'').replace(/\s+/g,' ').trim()}
+var day='',calY=0,calM=0;
+function two(x){return (x<10?'0':'')+x}
+function renderCal(){var c=$('spn-cal');if(!c)return;if(!calY){var b0=pd(cur&&cur.date)||new Date();calY=b0.getUTCFullYear();calM=b0.getUTCMonth()}
+ var has={};notes.forEach(function(n){if(!n.archived&&n.date)has[String(n.date).slice(0,10)]=1});
+ var first=new Date(Date.UTC(calY,calM,1)).getUTCDay(),dim=new Date(Date.UTC(calY,calM+1,0)).getUTCDate(),h='<div class="spn-calh"><button type="button" data-m="-1" aria-label="Previous month">‹</button><b>'+MON[calM].slice(0,3)+' '+calY+'</b><button type="button" data-m="1" aria-label="Next month">›</button></div><div class="spn-calg">',i;
+ ['S','M','T','W','T','F','S'].forEach(function(x){h+='<i>'+x+'</i>'});
+ for(i=0;i<first;i++)h+='<span></span>';
+ for(i=1;i<=dim;i++){var k=calY+'-'+two(calM+1)+'-'+two(i);h+='<button type="button" data-d="'+k+'" class="'+(has[k]?'has ':'')+(day===k?'on':'')+'">'+i+'</button>'}
+ c.innerHTML=h+'</div>'}
 function visible(){
  var k=q.toLowerCase();
  var r=notes.filter(function(n){
@@ -494,6 +504,7 @@ function visible(){
   if(n.archived)return false;
   if(tag==='@pin'&&!n.pinned)return false;
   if(tag&&tag.charAt(0)!=='@'&&tagsOf(n).indexOf(tag)<0)return false;
+  if(day&&String(n.date||'').slice(0,10)!==day)return false;
   if(k&&(n.title+' '+n.notes+' '+n.place+' '+n.authors).toLowerCase().indexOf(k)<0)return false;
   return true});
  r.sort(function(a,b){if(a.pinned!==b.pinned)return b.pinned-a.pinned;var c=(a.date<b.date?-1:a.date>b.date?1:0)||(a.id-b.id);return asc?c:-c});
@@ -513,7 +524,7 @@ function renderList(){
  r.forEach(function(n){
   var x=pd(n.date);
   h+='<div class="spn-row'+(cur&&cur.id===n.id?' on':'')+(sel[n.id]?' sel':'')+'" data-id="'+n.id+'"><span class="spn-date"><b>'+(x?DOW[x.getUTCDay()]:'')+'</b><em>'+(x?x.getUTCDate():'')+'</em><small>'+(x?x.getUTCFullYear():'')+'</small></span><span class="spn-info2"><span class="spn-t">'+(n.pinned?'★ ':'')+esc(head(n))+'</span><span class="spn-p">'+esc(preview(n))+'</span></span></div>'});
- $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>'}
+ $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>';renderCal()}
 function setStatus(s){$('spn-status').textContent=s||''}
 function fill(n){
  cur=n;pos=(n.lat!==''&&n.lat!=null&&n.lng!=='')?{lat:+n.lat,lng:+n.lng}:null;
@@ -627,6 +638,7 @@ function expSel(){var ids=Object.keys(sel).map(Number),ns=ids.length?notes.filte
  download(ns.length===1?(head(ns[0]).replace(/[^\w -]+/g,'').trim()||'note')+'.md':'notes.md',ns.map(mdFile).join('\n---\n\n'))}
 $('spn-pop').addEventListener('click',function(e){var x=e.target.closest('[data-go]');if(!x)return;var g=x.getAttribute('data-go');this.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on');if(g==='sel')expSel();else if(D.urls[g])location.href=D.urls[g]});
 document.addEventListener('click',function(e){var pm=$('spn-pop');if(!pm||pm.hidden)return;if(e.target.closest('#spn-pop')||e.target.closest('[data-act=exp]'))return;pm.hidden=true;var eb=root.querySelector('[data-act=exp]');if(eb)eb.classList.remove('on')});
+$('spn-cal').addEventListener('click',function(e){var m=e.target.closest('[data-m]'),d=e.target.closest('[data-d]');if(m){calM+=+m.getAttribute('data-m');if(calM<0){calM=11;calY--}if(calM>11){calM=0;calY++}renderCal();return}if(d){var v=d.getAttribute('data-d');day=day===v?'':v;renderList()}});
 function mdFile(n){return '# '+head(n)+'\n\n'+(n.notes||'')+'\n'}
 function download(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'text/markdown'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500)}
 function pick(id){var n=notes.find(function(x){return x.id===id});if(!n)return;(dirty?save(true):Promise.resolve()).then(function(){fill(n);if(window.innerWidth<=800)root.classList.remove('m-list')})}
