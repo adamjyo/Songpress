@@ -30,6 +30,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.50.0 =
+* The Share section is gone. Every song is shareable: each one has its public link from the moment it is made, and songs that had none get one on update. The link shows the song only, never splits, codes, notes or money.
+
 = 0.49.0 =
 * The Lists screen is gone. Statuses are the built-in set. The genre dropdown offers the built-in genres plus every genre typed on any work: a new one appears as soon as a work has it and disappears when no work does. Nothing to maintain.
 

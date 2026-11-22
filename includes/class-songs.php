@@ -336,6 +336,7 @@ class Songpress_Songs {
 				'version_no' => $ver,
 				'serial'     => $serial,
 				'owner_id'   => (int) $owner_id,
+				'share_token' => self::new_token(),
 				'created_at' => $now,
 				'updated_at' => $now,
 			) );
@@ -409,19 +410,24 @@ class Songpress_Songs {
 		return $n;
 	}
 
-	/** Sharing: a song has a public link only while it has a token. Turning sharing off, or making a new link, kills the old one. */
-	public static function share_set( $id, $on ) {
-		global $wpdb;
-		$t     = Songpress_Install::table( 'songs' );
-		$token = $on ? wp_generate_password( 24, false, false ) : null;
-		$wpdb->query( $on
-			? $wpdb->prepare( "UPDATE {$t} SET share_token = %s WHERE id = %d", $token, $id )
-			: $wpdb->prepare( "UPDATE {$t} SET share_token = NULL WHERE id = %d", $id ) );
-		Songpress_History::log( $id, 'sharing', array( 'after' => $on ? 'link on' : 'link off' ) );
-		return $token;
+	/** Every song is shareable: it gets its public link token when it is made, and keeps it. */
+	public static function new_token() {
+		return wp_generate_password( 24, false, false );
 	}
 
-	/** A shared song, or null. Archived songs are never served. */
+	/** One-time: give every song that has no link token one. Returns how many were changed. */
+	public static function ensure_tokens() {
+		global $wpdb;
+		$t = Songpress_Install::table( 'songs' );
+		$n = 0;
+		foreach ( (array) $wpdb->get_col( "SELECT id FROM {$t} WHERE share_token IS NULL OR share_token = ''" ) as $id ) { // phpcs:ignore WordPress.DB
+			$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET share_token = %s WHERE id = %d", self::new_token(), (int) $id ) ); // phpcs:ignore WordPress.DB
+			$n++;
+		}
+		return $n;
+	}
+
+	/** A song by its link token, or null. */
 	public static function by_token( $token ) {
 		global $wpdb;
 		if ( ! preg_match( '/^[A-Za-z0-9]{24}$/', (string) $token ) ) {

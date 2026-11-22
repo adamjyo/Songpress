@@ -413,7 +413,7 @@ class Songpress_Editor {
 
 	private static function versions_panel( $song ) {
 		$id = (int) $song->id;
-		$o  = '<section class="spe-panel adv" data-panel="versions"><h3>' . esc_html__( 'Versions and sharing', 'songpress' ) . '</h3>';
+		$o  = '<section class="spe-panel adv" data-panel="versions"><h3>' . esc_html__( 'Versions', 'songpress' ) . '</h3>';
 		$res = Songpress_Songs::query( array( 'family_id' => (int) $song->family_id, 'per_page' => 100, 'archived' => 'any' ) );
 		$o  .= '<h4>' . esc_html__( 'This song and its versions', 'songpress' ) . '</h4><ul class="spe-versions">';
 		foreach ( $res['rows'] as $v ) {
@@ -423,22 +423,6 @@ class Songpress_Editor {
 		if ( Songpress_Caps::can( 'create' ) ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'A version is a new recording, arrangement or release of this song. It gets the next number, like 0012-01. Writers and splits start as a copy of this one. Performers and producers start empty. Nothing you change on a version affects the original or the other versions.', 'songpress' ) . '</p>';
 			$o .= self::post_form( 'songpress_new_version', 'songpress_new_version', $id, array(), __( 'Add a version', 'songpress' ) );
-		}
-		if ( Songpress_Caps::can_share_song( $id ) ) {
-			$on   = ! empty( $song->share_token );
-			$link = $on ? add_query_arg( 'sp_share', $song->share_token, home_url( '/' ) ) : '';
-			$o   .= '<h4>' . esc_html__( 'Share', 'songpress' ) . '</h4>';
-			if ( Songpress_Songs::ARCHIVING && ! empty( $song->archived_at ) ) {
-				$o .= '<p class="spe-help">' . esc_html__( 'Archived songs cannot be shared.', 'songpress' ) . '</p>';
-			} else {
-				$o .= '<p class="spe-help">' . esc_html__( 'Anyone with the link can read this song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money. Turn it off, or make a new link, to stop an old one working.', 'songpress' ) . '</p>';
-				if ( $on ) {
-					$o .= '<p class="spe-sharebox"><input type="text" readonly id="spe-share" value="' . esc_attr( $link ) . '" onfocus="this.select()"> <button type="button" class="spe-btn" id="spe-copy">' . esc_html__( 'Copy link', 'songpress' ) . '</button></p>';
-				}
-				foreach ( $on ? array( 'new' => __( 'Make a new link', 'songpress' ), 'off' => __( 'Turn sharing off', 'songpress' ) ) : array( 'on' => __( 'Turn sharing on', 'songpress' ) ) as $do => $label ) {
-					$o .= self::post_form( 'songpress_share', 'songpress_share', $id, array( 'do' => $do ), $label );
-				}
-			}
 		}
 		if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 			$archived = ! empty( $song->archived_at );

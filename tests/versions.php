@@ -231,15 +231,14 @@ check( 'export neutralizes formulas', $row[ array_search( 'notes', $hdr ) ], "'=
 check( 'export has links', false !== strpos( $row[ array_search( 'links', $hdr ) ], 'https://x.test/a' ), true );
 
 // sharing
-$tok = Songpress_Songs::share_set( $v1, true );
-check( 'token shape', (bool) preg_match( '/^[A-Za-z0-9]{24}$/', $tok ), true );
+$wpdb->query( "UPDATE wp_songpress_songs SET share_token = NULL WHERE id = $v1" );
+check( 'tokens are filled for songs without one', Songpress_Songs::ensure_tokens() >= 1, true );
+$tok = $wpdb->get_var( "SELECT share_token FROM wp_songpress_songs WHERE id = $v1" );
 check( 'token finds song', (int) Songpress_Songs::by_token( $tok )->id, $v1 );
 check( 'bad token finds nothing', Songpress_Songs::by_token( 'short' ), null );
-$tok2 = Songpress_Songs::share_set( $v1, true );
-check( 'new link kills old link', Songpress_Songs::by_token( $tok ), null );
-check( 'new link works', (int) Songpress_Songs::by_token( $tok2 )->id, $v1 );
-Songpress_Songs::share_set( $v1, false );
-check( 'sharing off', Songpress_Songs::by_token( $tok2 ), null );
+check( 'every song has a token', (int) $wpdb->get_var( "SELECT COUNT(*) FROM wp_songpress_songs WHERE share_token IS NULL OR share_token = ''" ), 0 );
+$nv0 = Songpress_Songs::create_version( $v1, 1 );
+check( 'a new song or version is shareable at once', strlen( (string) $wpdb->get_var( "SELECT share_token FROM wp_songpress_songs WHERE id = " . (int) $nv0 ) ), 24 );
 
 // media library
 check( 'url to library id', Songpress_Media::id_from_url( 'https://site.test/uploads/art-42.jpg' ), 42 );

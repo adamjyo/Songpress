@@ -57,6 +57,10 @@ class Songpress_Install {
 		// The Lists screen is gone: statuses and genres now come from the built-in options and from what works carry.
 		delete_option( 'songpress_statuses' );
 		delete_option( 'songpress_genres' );
+		if ( '49' !== get_option( 'songpress_tokens' ) ) {
+			Songpress_Songs::ensure_tokens();
+			update_option( 'songpress_tokens', '49' );
+		}
 		if ( '48' !== get_option( 'songpress_unarchive' ) ) {
 			Songpress_Songs::unarchive_all();
 			update_option( 'songpress_unarchive', '48' );

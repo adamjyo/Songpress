@@ -21,7 +21,6 @@ class Songpress_Admin {
 		add_action( 'admin_post_songpress_start_fresh', array( __CLASS__, 'handle_start_fresh' ) );
 		add_action( 'admin_post_songpress_make_accounts', array( __CLASS__, 'handle_make_accounts' ) );
 		add_action( 'admin_post_songpress_pages', array( __CLASS__, 'handle_pages' ) );
-		add_action( 'admin_post_songpress_share', array( __CLASS__, 'handle_share' ) );
 		add_action( 'admin_post_songpress_archive', array( __CLASS__, 'handle_archive' ) );
 		add_action( 'admin_post_songpress_link_writers', array( __CLASS__, 'handle_link_writers' ) );
 		add_action( 'admin_post_songpress_donate_answer', array( __CLASS__, 'handle_donate_answer' ) );
@@ -345,9 +344,6 @@ class Songpress_Admin {
 			echo '</form>';
 			}
 			self::versions( (int) $song->family_id, $id );
-			if ( Songpress_Caps::can_share_song( $id ) ) {
-				self::share_box( $song );
-			}
 			if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 				self::archive_form( $song );
 			}
@@ -437,43 +433,6 @@ class Songpress_Admin {
 
 	private static function row( $name, $label, $html_field ) {
 		echo '<tr><th scope="row"><label for="' . esc_attr( $name ) . '">' . esc_html( $label ) . '</label></th><td>' . $html_field . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fields built with esc_attr above.
-	}
-
-	private static function share_box( $song ) {
-		$on   = ! empty( $song->share_token );
-		$link = $on ? add_query_arg( 'sp_share', $song->share_token, home_url( '/' ) ) : '';
-		echo '<h3 style="margin-top:18px">' . esc_html__( 'Share', 'songpress' ) . '</h3>';
-		if ( Songpress_Songs::ARCHIVING && ! empty( $song->archived_at ) ) {
-			echo '<p class="sp-help">' . esc_html__( 'Archived songs cannot be shared.', 'songpress' ) . '</p>';
-			return;
-		}
-		echo '<p class="sp-help">' . esc_html__( 'Anyone with the link can read this song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money. Turn it off, or make a new link, to stop an old link working.', 'songpress' ) . '</p>';
-		if ( $on ) {
-			echo '<p><input type="text" readonly class="large-text" id="sp-share-link" value="' . esc_attr( $link ) . '" onfocus="this.select()"></p>';
-			echo '<p><button type="button" class="button" id="sp-share-copy">' . esc_html__( 'Copy link', 'songpress' ) . '</button> <button type="button" class="button" id="sp-share-send" hidden>' . esc_html__( 'Share…', 'songpress' ) . '</button></p>';
-			echo '<script>(function(){var i=document.getElementById("sp-share-link"),c=document.getElementById("sp-share-copy"),s=document.getElementById("sp-share-send");c.addEventListener("click",function(){i.select();try{navigator.clipboard.writeText(i.value).then(function(){c.textContent="Copied";});}catch(e){document.execCommand("copy");c.textContent="Copied";}});if(navigator.share){s.hidden=false;s.addEventListener("click",function(){navigator.share({title:document.title,url:i.value}).catch(function(){});});}})();</script>';
-		}
-		foreach ( $on ? array( 'new' => __( 'Make a new link', 'songpress' ), 'off' => __( 'Turn sharing off', 'songpress' ) ) : array( 'on' => __( 'Turn sharing on', 'songpress' ) ) as $do => $label ) {
-			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline-block;margin-right:8px">';
-			wp_nonce_field( 'songpress_share' );
-			echo '<input type="hidden" name="action" value="songpress_share"><input type="hidden" name="song_id" value="' . (int) $song->id . '"><input type="hidden" name="do" value="' . esc_attr( $do ) . '">';
-			submit_button( $label, 'on' === $do ? 'primary' : 'secondary', 'submit', false );
-			echo '</form>';
-		}
-	}
-
-	public static function handle_share() {
-		check_admin_referer( 'songpress_share' );
-		$id   = absint( $_POST['song_id'] ?? 0 );
-		if ( ! Songpress_Caps::can_share_song( $id ) ) {
-			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
-		}
-		$do   = sanitize_key( $_POST['do'] ?? '' );
-		$song = Songpress_Songs::get( $id );
-		if ( $song && ( ! Songpress_Songs::ARCHIVING || empty( $song->archived_at ) ) && in_array( $do, array( 'on', 'new', 'off' ), true ) ) {
-			Songpress_Songs::share_set( $id, 'off' !== $do );
-		}
-		self::back( 'songpress-song', array( 'song' => $id, 'saved' => 1 ) );
 	}
 
 	private static function archive_form( $song ) {
