@@ -520,7 +520,7 @@ class Songpress_Journal {
 		foreach ( array( array( 'b', 'B', 'Bold' ), array( 'i', 'I', 'Italic' ), array( 'h', 'H', 'Heading' ), array( 'ul', '•', 'List' ), array( 'a', '🔗', 'Link' ), array( 'cp', '♫', 'ChordPro block' ), array( 'img', '▣', 'Image' ), array( 'aud', '♪', 'Audio' ), array( 'eye', '👁', 'Preview' ), '-', array( 'pin', '📌', 'Pin' ), array( 'arch', '🗄', 'Archive' ), array( 'del', '🗑', 'Delete' ) ) as $b ) {
 			$o .= is_array( $b ) ? '<button type="button" data-t="' . esc_attr( $b[0] ) . '" title="' . esc_attr( $b[2] ) . '" aria-label="' . esc_attr( $b[2] ) . '">' . esc_html( $b[1] ) . '</button>' : '<i class="spn-sep"></i>';
 		}
-		$o .= '</div><span class="spn-status" id="spn-status"></span><button type="button" class="spn-save" id="spn-save">' . esc_html__( 'Save', 'songpress' ) . '</button></div></div>';
+		$o .= '</div><span class="spn-status" id="spn-status"></span></div></div>';
 		$o .= '<aside class="spn-info" id="spn-info">';
 		foreach ( array(
 			array( 'date', __( 'Date', 'songpress' ), 'date' ),
@@ -548,7 +548,7 @@ class Songpress_Journal {
 var root=document.getElementById('spn');if(!root)return;
 var D=JSON.parse(document.getElementById('spn-data').textContent),notes=D.notes;
 var $=function(i){return document.getElementById(i)};
-var cur=null,tag='',q='',asc=false,sel={},selMode=false,busy=false,timer=null,dirty=false,showPrev=false;
+var cur=null,tag='',q='',asc=false,sel={},selMode=false,busy=false,again=false,timer=null,dirty=false,showPrev=false;
 var MON=['January','February','March','April','May','June','July','August','September','October','November','December'],DOW=['SUN','MON','TUE','WED','THU','FRI','SAT'];
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function pd(d){var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(d||'');return m?new Date(Date.UTC(+m[1],+m[2]-1,+m[3])):null}
@@ -621,16 +621,20 @@ function collect(){return {op:'save',entry_id:cur?cur.id:0,title:$('spn-title').
 function merge(n){
  var i=notes.findIndex(function(x){return x.id===n.id});
  if(i<0)notes.unshift(n);else notes[i]=n;return n}
+var edits=0;
 function save(quiet){
- if(busy)return Promise.resolve();
+ if(busy){again=true;return Promise.resolve()}
  var f=collect();if(!f.title.trim()&&!f.notes.trim()&&!f.entry_id)return Promise.resolve();
- busy=true;setStatus('Saving…');
+ busy=true;again=false;var mark=edits;setStatus('Saving…');
  return post(f).then(function(r){busy=false;
   if(!r.ok){setStatus(r.error||'Could not save');return}
-  var n=merge(r.note);cur=n;dirty=false;setStatus('Saved');renderTags();renderList();songs();
-  setTimeout(function(){if(!dirty)setStatus('')},1500)
- }).catch(function(){busy=false;setStatus('Could not save')})}
-function touch(){dirty=true;setStatus('');clearTimeout(timer);timer=setTimeout(function(){if(dirty)save(true)},1800)}
+  var n=merge(r.note);cur=n;dirty=(edits!==mark);renderTags();renderList();songs();
+  if(dirty||again){again=false;clearTimeout(timer);timer=setTimeout(function(){if(dirty)save(true)},300);setStatus('Saving…');return}
+  setStatus('Saved');setTimeout(function(){if(!dirty)setStatus('')},1500)
+ }).catch(function(){busy=false;setStatus('Could not save. Retrying…');clearTimeout(timer);timer=setTimeout(function(){if(dirty)save(true)},4000)})}
+function touch(){edits++;dirty=true;setStatus('');clearTimeout(timer);timer=setTimeout(function(){if(dirty)save(true)},700)}
+function flush(){if(!dirty||busy)return;var f=collect();if(!f.title.trim()&&!f.notes.trim()&&!f.entry_id)return;var fd=new FormData();fd.append('action','songpress_journal_ajax');fd.append('_wpnonce',D.nonce);Object.keys(f).forEach(function(k){fd.append(k,f[k])});try{navigator.sendBeacon(D.ajax,fd)}catch(e){}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flush()});window.addEventListener('pagehide',flush);
 function songs(){
  var box=$('spn-songs'),t=($('spn-title').value+'\n'+$('spn-body').value);
  if(!/[\^#]\d{3,5}/.test(t)){box.innerHTML='<small>None</small>';return}
@@ -762,7 +766,6 @@ $('spn-bar').addEventListener('click',function(e){
 $('spn-f-tag').addEventListener('keydown',function(e){
  if(e.key!=='Enter')return;e.preventDefault();var v=this.value.trim().replace(/^[#$]+/,'').replace(/\s+/g,'-');if(!v)return;
  var t=$('spn-body');t.value=t.value.replace(/\s*$/,'')+(t.value.trim()?'\n\n':'')+'#'+v;this.value='';sizeBody();touch()});
-$('spn-save').addEventListener('click',function(){save()});
 $('spn-body').addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='s'){e.preventDefault();save()}});
 document.addEventListener('keydown',function(e){if(e.key==='Escape')root.classList.remove('focus')});
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
