@@ -17,6 +17,9 @@ class Songpress_Songs {
 	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date' );
 	const RELEASE_IDENTIFIERS = array( 'isrc', 'distrokid' );
 
+	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
+	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url' );
+
 	/** The statuses in use: the Manager's own list (Lists screen) or the built-in six. key => label. */
 	public static function statuses() {
 		$o = get_option( 'songpress_statuses', array() );
@@ -223,13 +226,11 @@ class Songpress_Songs {
 		foreach ( self::FIELDS as $f ) {
 			$data[ $f ] = $from->$f;
 		}
-		// A new version is a new recording or arrangement: it starts unreleased, so release information is not carried over.
-		foreach ( self::RELEASE_FIELDS as $f ) {
-			if ( 'artist' !== $f ) {
-				$data[ $f ] = '';
-			}
+		// A new version is a new recording or arrangement and its own work: it keeps what is shared (title, lyrics, chords, story,
+		// writers and publishers) and starts with its own release, band, key, tempo, genre, art and audio left empty.
+		foreach ( self::VERSION_FIELDS as $f ) {
+			$data[ $f ] = in_array( $f, array( 'audio_id', 'art_id' ), true ) ? 0 : '';
 		}
-		$data['production_date'] = ''; // a new version is produced again
 		$data['status']          = 'writing';
 		$new = self::insert( false, (int) $from->family_id, $data, $owner_id );
 		if ( ! is_wp_error( $new ) ) {

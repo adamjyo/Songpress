@@ -178,7 +178,9 @@ $GLOBALS['wpdb']->update( 'wp_songpress_songs', array( 'album' => 'Album X', 're
 $v3 = Songpress_Songs::create_version( $v1, 1 );
 check( 'v3 no album', Songpress_Songs::get( $v3 )->album, '' );
 check( 'v3 no release date', Songpress_Songs::get( $v3 )->release_date, '' );
-check( 'v3 keeps artist', Songpress_Songs::get( $v3 )->artist, 'The Band' );
+$g3 = Songpress_Songs::get( $v3 );
+check( 'a new version starts with its own band, key, tempo, genre, art and audio empty', array( $g3->artist, $g3->musical_key, $g3->tempo, $g3->genre, $g3->audio_url, (int) $g3->art_id ), array( '', '', '', '', '', 0 ) );
+check( 'a new version keeps the shared title', $g3->title, Songpress_Songs::get( $v1 )->title );
 check( 'original cannot be released', isset( Songpress_Songs::statuses_for( 0 )['released'] ), false );
 check( 'version can be released', isset( Songpress_Songs::statuses_for( 1 )['released'] ), true );
 
