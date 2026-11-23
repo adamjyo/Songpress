@@ -13,6 +13,9 @@ class Songpress_Push {
 	const NOTICES = 'songpress_notices';
 	const ALERTS  = 'songpress_alert_users';
 
+	/** What the push services answered on the last send: code per phone (0 = no answer). For the test buttons. */
+	public static $last = array();
+
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'serve' ), 2 );
 		add_action( 'wp_ajax_songpress_push', array( __CLASS__, 'ajax' ) );
@@ -118,8 +121,9 @@ class Songpress_Push {
 		$list = get_user_meta( $uid, self::NOTICES, true );
 		$list = self::notice_add( is_array( $list ) ? $list : array(), array( 'id' => wp_generate_password( 8, false ), 'title' => (string) $title, 'body' => (string) $body, 'url' => '' !== $url ? $url : Songpress_Access::app_url(), 't' => time(), 'seen' => 0 ) );
 		update_user_meta( $uid, self::NOTICES, $list );
-		$reached = 0;
-		$keep    = array();
+		$reached    = 0;
+		self::$last = array();
+		$keep       = array();
 		foreach ( self::devices( $uid ) as $ep ) {
 			$jwt = self::jwt( $ep );
 			$k   = self::keys();
@@ -129,6 +133,7 @@ class Songpress_Push {
 			}
 			$r    = wp_remote_post( $ep, array( 'timeout' => 6, 'body' => '', 'headers' => array( 'Authorization' => 'vapid t=' . $jwt . ', k=' . $k['pub'], 'TTL' => '86400', 'Urgency' => 'normal' ) ) );
 			$code = is_wp_error( $r ) ? 0 : (int) wp_remote_retrieve_response_code( $r );
+			self::$last[] = $code;
 			if ( 404 === $code || 410 === $code ) {
 				continue; // the phone dropped it
 			}
@@ -325,9 +330,43 @@ JS;
 	public static function handle_test() {
 		check_admin_referer( 'songpress_push_test' );
 		self::guard_people();
-		$n = self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
-		wp_safe_redirect( add_query_arg( $n ? 'sp_saved' : 'sp_err', rawurlencode( $n ? sprintf( /* translators: %d: phones */ _n( 'Test sent. It reached %d phone.', 'Test sent. It reached %d phones.', $n, 'songpress' ), $n ) : __( 'It did not reach a phone. The person has to open the app from their Home Screen and tap the bell to turn notifications on.', 'songpress' ) ), Songpress_Persons::url() ) );
+		$me   = isset( $_POST['who'] ) && 'me' === $_POST['who']; // phpcs:ignore WordPress.Security.NonceVerification -- checked above.
+		$back = isset( $_POST['back'] ) && 'settings' === $_POST['back'] ? Songpress_Screens::url( 'settings' ) : Songpress_Persons::url(); // phpcs:ignore WordPress.Security.NonceVerification
+		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
+		if ( $n ) {
+			$msg = sprintf( /* translators: %d: phones */ _n( 'Test sent. It reached %d phone. If nothing shows, check the phone’s notification settings for SongPress.', 'Test sent. It reached %d phones. If nothing shows, check the phones’ notification settings for SongPress.', $n, 'songpress' ), $n );
+		} elseif ( ! self::keys() ) {
+			$msg = __( 'This server cannot make the signing key (PHP OpenSSL is missing), so notifications cannot be sent.', 'songpress' );
+		} elseif ( ! self::$last ) {
+			$msg = $me ? __( 'You have not turned notifications on for a phone yet. On the phone, open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' ) : __( 'Nobody chosen for alerts has turned notifications on yet. On their phone they open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' );
+		} else {
+			$msg = sprintf( /* translators: %s: codes */ __( 'The phone’s push service did not accept it (answers: %s). Turn notifications off and on again with the bell on the phone, then retry.', 'songpress' ), implode( ', ', array_map( function ( $c ) {
+				return $c ? (string) $c : __( 'no answer', 'songpress' );
+			}, self::$last ) ) );
+		}
+		wp_safe_redirect( add_query_arg( $n ? 'sp_saved' : 'sp_err', rawurlencode( $msg ), $back ) );
 		exit;
+	}
+
+	/** Settings: two buttons to check notifications, and what this site knows about them. */
+	public static function test_box() {
+		$mine = count( self::devices( get_current_user_id() ) );
+		$on   = 0;
+		foreach ( self::alert_ids() as $id ) {
+			$on += count( self::devices( $id ) );
+		}
+		$f = function ( $who, $label, $class ) {
+			return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'songpress_push_test', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_test"><input type="hidden" name="back" value="settings"><input type="hidden" name="who" value="' . esc_attr( $who ) . '"><button class="' . esc_attr( $class ) . '" type="submit">' . esc_html( $label ) . '</button></form> ';
+		};
+		$note = '';
+		if ( isset( $_GET['sp_saved'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$note = '<p class="spe-note ok">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_saved'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		} elseif ( isset( $_GET['sp_err'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$note = '<p class="spe-note bad" role="alert">' . esc_html( sanitize_text_field( wp_unslash( $_GET['sp_err'] ) ) ) . '</p>'; // phpcs:ignore WordPress.Security.NonceVerification
+		}
+		return '<div class="sp-app spm-testbox"><h3>' . esc_html__( 'Notifications', 'songpress' ) . '</h3>' . $note . '<p class="spe-help">'
+			. esc_html( sprintf( /* translators: 1: phones on for this account, 2: phones that get alerts */ __( 'Signing key: %1$s. Phones on for your account: %2$d. Phones that get alerts: %3$d.', 'songpress' ), self::keys() ? __( 'ready', 'songpress' ) : __( 'missing (PHP OpenSSL)', 'songpress' ), $mine, $on ) ) . '</p><p>'
+			. $f( 'me', __( 'Send a test to my phone', 'songpress' ), 'spe-save' ) . $f( 'alerts', __( 'Send a test alert', 'songpress' ), 'spe-btn' ) . '</p><p class="spe-help">' . esc_html__( 'Choose who gets alerts, and message people, under People. To turn notifications on for a phone, open SongPress from its Home Screen and tap the bell in the menu.', 'songpress' ) . '</p></div>';
 	}
 
 	/** People: choose who gets the alerts, and test them. */

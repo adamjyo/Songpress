@@ -101,7 +101,7 @@ class Songpress_Screens {
 			return self::rights_tabs( $slug ) . self::render_one( $slug );
 		}
 		if ( in_array( $slug, self::SETTINGS_TABS, true ) ) {
-			return self::settings_tabs( $slug ) . self::render_one( $slug );
+			return self::settings_tabs( $slug ) . self::render_one( $slug ) . ( 'settings' === $slug && Songpress_Caps::can( 'settings' ) ? Songpress_Push::test_box() : '' );
 		}
 		return self::render_one( $slug );
 	}

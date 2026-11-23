@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.67
+Stable tag: 0.63.68
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.68 =
+* Settings: a Notifications box with "Send a test to my phone" and "Send a test alert". It shows whether the signing key is ready and how many phones are on, and when a test does not arrive it says why (no phone turned on, key missing, or what the phone's push service answered).
 
 = 0.63.67 =
 * People: "Alerts to your phone". Choose who gets a phone notification when something happens that you would otherwise only see on the desktop (someone forgot their password, or chose one from a link). Until you choose, alerts go to adam.page, or to every Manager if there is no such login. A "Send a test alert" button checks it.
