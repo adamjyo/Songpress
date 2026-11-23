@@ -1056,3 +1056,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-sheetbar{justify-content:space-between;align-items:center;flex-wrap:wrap}.songpress-tr{display:flex;align-items:center;gap:8px;margin-right:auto}.songpress-tr .songpress-sheetbtn{font-size:22px;line-height:1;font-weight:600}.songpress-trkey{min-width:64px;text-align:center;display:flex;flex-direction:column;line-height:1.1}.songpress-trkey small{font-size:10px;color:var(--sp-mute,#a4a8b0);text-transform:uppercase;letter-spacing:.06em}.songpress-trkey b{font-size:20px;color:var(--sp-text,#e9eaec)}.songpress-sheetbar>.songpress-print,.songpress-sheetbar>.songpress-sharebtn{margin-left:0}
 .sp-cpref{margin:10px 0;font-size:13px}.sp-cpref summary{cursor:pointer;font-weight:600}.sp-cpref h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.7}.sp-cpref dl{margin:0}.sp-cpref dt{margin-top:6px}.sp-cpref dd{margin:2px 0 0;opacity:.8}.sp-cpref-hint{margin:6px 0;opacity:.7}.sp-cpref-ins{font:12px ui-monospace,Menlo,monospace;padding:3px 7px;border-radius:6px;border:1px solid #f5a52466;background:transparent;color:inherit;cursor:pointer}.sp-cpref-short{opacity:.8}
 .spe-trash{background:transparent;border:1.5px solid var(--sp-line,#2a2d33);color:var(--sp-mute,#a4a8b0);border-radius:8px;padding:5px 7px;cursor:pointer;line-height:0;vertical-align:middle}.spe-trash:hover{color:#ff6b6b;border-color:#ff6b6b}.spe-trash.armed{background:#c0392b;border-color:#c0392b;color:#fff}
+
+.spm-alertbox{margin:12px 0;border:1px solid var(--sp-line,#ddd);border-radius:10px;padding:8px 12px}
+.spm-alertbox summary{cursor:pointer;list-style:none}
+.spm-alertbox summary small{opacity:.65;margin-left:8px}
+.spm-alertbox[open] summary{margin-bottom:8px}
+.spm-alertbox .spm-alerts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px 12px;max-height:160px;overflow:auto;margin-bottom:8px}
+.spm-alertbox .spm-alerts label{display:flex;align-items:center;gap:6px;font-size:.9em}
+.spm-alertbox .spe-help{margin:6px 0 0;font-size:.85em}

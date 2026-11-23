@@ -545,16 +545,17 @@ JS;
 	/** People: choose who gets the alerts, and test them. */
 	public static function alerts_box() {
 		$on = self::alert_ids();
-		$o  = '<h3>' . esc_html__( 'Alerts to your phone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_push_alerts', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_alerts"><div class="spm-alerts">';
+		$n  = count( $on );
+		$o  = '<details class="spm-alertbox"><summary><b>' . esc_html__( 'Alerts to your phone', 'songpress' ) . '</b> <small>' . esc_html( sprintf( /* translators: %d: people */ _n( '%d person gets them', '%d people get them', $n, 'songpress' ), $n ) ) . '</small></summary><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_push_alerts', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_alerts"><div class="spm-alerts">';
 		foreach ( get_users( array( 'fields' => array( 'ID', 'display_name', 'user_login' ) ) ) as $u ) {
 			if ( '' === Songpress_Caps::class_of( (int) $u->ID ) ) {
 				continue;
 			}
-			$o .= '<label><input type="checkbox" name="alert[]" value="' . (int) $u->ID . '"' . ( in_array( (int) $u->ID, $on, true ) ? ' checked' : '' ) . '> ' . esc_html( $u->display_name ) . ' <small>' . esc_html( $u->user_login ) . ' · ' . esc_html( self::devices( (int) $u->ID ) ? __( 'phone on', 'songpress' ) : __( 'phone not on yet', 'songpress' ) ) . '</small></label>';
+			$o .= '<label><input type="checkbox" name="alert[]" value="' . (int) $u->ID . '"' . ( in_array( (int) $u->ID, $on, true ) ? ' checked' : '' ) . '> ' . esc_html( $u->display_name ) . ' <small title="' . esc_attr( self::devices( (int) $u->ID ) ? __( 'phone is on', 'songpress' ) : __( 'phone not on yet', 'songpress' ) ) . '">' . ( self::devices( (int) $u->ID ) ? '&#9679;' : '&#9675;' ) . '</small></label>';
 		}
 		$o .= '</div><button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>'
 			. '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'songpress_push_test', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_test"><button class="spe-btn" type="submit">' . esc_html__( 'Send a test alert', 'songpress' ) . '</button></form>'
-			. '<p class="spe-help">' . esc_html__( 'These people get a notification on their phone when something happens that you would otherwise only see on the desktop: someone forgot their password, or chose one from a link. Each person must open the app from their Home Screen and tap the bell once.', 'songpress' ) . '</p>';
+			. '<p class="spe-help">' . esc_html__( 'These people get a notification on their phone when something happens that you would otherwise only see on the desktop: someone forgot their password, or chose one from a link. Each person must open the app from their Home Screen and tap the bell once. A filled dot means their phone is on.', 'songpress' ) . '</p></details>';
 		return $o . self::test_script();
 	}
 
