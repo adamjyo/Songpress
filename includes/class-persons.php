@@ -335,13 +335,13 @@ class Songpress_Persons {
 		}
 		$o .= '<ul class="songpress-stats"><li>' . esc_html__( 'All time', 'songpress' ) . '<strong>' . esc_html( Songpress_Money::money( $rep['total'] ) ) . '</strong></li>';
 		foreach ( $rep['sources'] as $s => $v ) {
-			$lab = Songpress_Money::SOURCES[ $s ] ?? strtoupper( $s );
+			$lab = Songpress_Money::STREAMS[ $s ] ?? strtoupper( $s );
 			$o  .= '<li>' . esc_html( 'distrokid' === $s ? $lab . ' ' . __( '(as performer)', 'songpress' ) : $lab ) . '<strong>' . esc_html( Songpress_Money::money( $v ) ) . '</strong></li>';
 		}
 		$o .= '</ul><div class="spm-scroll"><table class="spm-table"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th>';
 		$cols = array_keys( $rep['sources'] );
 		foreach ( $cols as $s ) {
-			$o .= '<th class="n">' . esc_html( Songpress_Money::SOURCES[ $s ] ?? strtoupper( $s ) ) . '</th>';
+			$o .= '<th class="n">' . esc_html( Songpress_Money::STREAMS[ $s ] ?? strtoupper( $s ) ) . '</th>';
 		}
 		$o .= '<th class="n">' . esc_html__( 'Total', 'songpress' ) . '</th></tr></thead><tbody>';
 		foreach ( $rep['quarters'] as $q => $by ) {

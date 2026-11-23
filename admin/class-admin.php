@@ -1044,6 +1044,13 @@ class Songpress_Admin {
 		self::row( 'email', __( 'Email', 'songpress' ), '<input type="email" class="regular-text" name="email" value="' . esc_attr( $p->email ?? '' ) . '"> ' . esc_html__( 'Phone', 'songpress' ) . ' <input name="phone" value="' . esc_attr( $p->phone ?? '' ) . '">' );
 		self::row( 'website', __( 'Website', 'songpress' ), '<input class="regular-text" name="website" value="' . esc_attr( $p->website ?? '' ) . '"> ' );
 		self::row( 'ipi', __( 'IPI and PRO', 'songpress' ), '<input name="ipi" size="14" value="' . esc_attr( $p->ipi ?? '' ) . '"> <input name="pro" size="10" value="' . esc_attr( $p->pro ?? '' ) . '">' );
+		if ( 'band' === $kind ) {
+			$dl = '';
+			foreach ( (array) $GLOBALS['wpdb']->get_col( 'SELECT name FROM ' . Songpress_Install::table( 'profiles' ) . " WHERE kind = 'person' ORDER BY name LIMIT 1000" ) as $pn ) { // phpcs:ignore WordPress.DB
+				$dl .= '<option value="' . esc_attr( $pn ) . '">';
+			}
+			self::row( 'payee', __( 'Paid to (payee)', 'songpress' ), '<input class="regular-text" name="payee" list="sp-payees" value="' . esc_attr( $p->payee ?? '' ) . '" placeholder="' . esc_attr__( 'The person this band\'s earnings are paid to', 'songpress' ) . '"><datalist id="sp-payees">' . $dl . '</datalist><p class="description">' . esc_html__( 'The band\'s DistroKid earnings (every song released under this band) show up in Money as a "Band" income stream for this person.', 'songpress' ) . '</p>' );
+		}
 		echo '</table>';
 		Songpress_Media::picker_script();
 		submit_button( __( 'Save', 'songpress' ) );
@@ -1095,6 +1102,7 @@ class Songpress_Admin {
 			'website'    => esc_url_raw( $in['website'] ?? '' ),
 			'ipi'        => sanitize_text_field( $in['ipi'] ?? '' ),
 			'pro'        => sanitize_text_field( $in['pro'] ?? '' ),
+			'payee'      => 'band' === $kind ? sanitize_text_field( $in['payee'] ?? '' ) : '',
 			'updated_at' => current_time( 'mysql' ),
 		);
 		$row['photo_url'] = ( $old && ! $row['photo_id'] && '1' !== ( $in['photo_clear'] ?? '0' ) ) ? (string) $old->photo_url : '';

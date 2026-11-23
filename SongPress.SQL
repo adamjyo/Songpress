@@ -152,6 +152,7 @@ CREATE TABLE {prefix}songpress_profiles (
   website text,
   ipi varchar(32) NOT NULL DEFAULT '',
   pro varchar(64) NOT NULL DEFAULT '',
+  payee varchar(190) NOT NULL DEFAULT '',
   updated_at datetime DEFAULT NULL,
   PRIMARY KEY  (id),
   UNIQUE KEY kind_key (kind,name_key)

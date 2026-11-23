@@ -17,6 +17,15 @@ class Songpress_Money {
 		'ccli'      => 'CCLI',
 	);
 
+	/** Every income stream a person can have: the statement sources, plus what a band they are paid for earns. */
+	const STREAMS = array(
+		'distrokid' => 'DistroKid',
+		'mlc'       => 'MLC',
+		'ascap'     => 'ASCAP',
+		'ccli'      => 'CCLI',
+		'band'      => 'Band',
+	);
+
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
@@ -374,8 +383,56 @@ class Songpress_Money {
 	/** Earnings of one person (by name key), newest quarter first. */
 	public static function my_rows( $key ) {
 		global $wpdb;
-		$t = self::t( 'person_earnings' );
-		return $wpdb->get_results( $wpdb->prepare( "SELECT quarter, src, SUM(amount) AS total FROM {$t} WHERE person_key = %s GROUP BY quarter, src ORDER BY quarter DESC", $key ) ); // phpcs:ignore WordPress.DB
+		$t    = self::t( 'person_earnings' );
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT quarter, src, SUM(amount) AS total FROM {$t} WHERE person_key = %s GROUP BY quarter, src ORDER BY quarter DESC", $key ) ); // phpcs:ignore WordPress.DB
+		foreach ( self::band_rows( $key ) as $b ) {
+			$rows[] = (object) array( 'quarter' => $b->quarter, 'src' => 'band', 'total' => $b->total );
+		}
+		usort( $rows, function ( $a, $b ) {
+			return strcmp( $b->quarter, $a->quarter );
+		} );
+		return $rows;
+	}
+
+	/**
+	 * What the bands a person is paid for have earned: the DistroKid earnings of every song released under each band whose profile names them as payee.
+	 * Rows of person_key, person, quarter, src ('band') and total; limited to one person when $only is a person key.
+	 */
+	public static function band_rows( $only = '' ) {
+		global $wpdb;
+		$pt    = self::t( 'profiles' );
+		$payee = array();
+		foreach ( (array) $wpdb->get_results( "SELECT name, name_key, aliases, payee FROM {$pt} WHERE kind = 'band' AND payee <> ''" ) as $b ) { // phpcs:ignore WordPress.DB
+			$k = self::person_key( $b->payee );
+			if ( '' === $k || ( '' !== $only && $k !== $only ) ) {
+				continue;
+			}
+			$payee[ $b->name_key ] = array( $k, trim( $b->payee ) );
+			foreach ( preg_split( '/[,\n]+/', (string) $b->aliases ) as $al ) {
+				$ak = Songpress_Profiles::key( $al );
+				if ( '' !== $ak ) {
+					$payee[ $ak ] = array( $k, trim( $b->payee ) );
+				}
+			}
+		}
+		if ( ! $payee ) {
+			return array();
+		}
+		$e   = self::t( 'earnings' );
+		$s   = self::t( 'songs' );
+		$out = array();
+		foreach ( (array) $wpdb->get_results( "SELECT s.artist AS artist, e.quarter AS quarter, SUM(e.amount) AS total FROM {$e} e JOIN {$s} s ON s.id = e.song_id WHERE e.src = 'distrokid' AND s.artist <> '' GROUP BY s.artist, e.quarter" ) as $r ) { // phpcs:ignore WordPress.DB
+			$hit = $payee[ Songpress_Profiles::key( $r->artist ) ] ?? null;
+			if ( ! $hit ) {
+				continue;
+			}
+			$id = $hit[0] . '|' . $r->quarter;
+			if ( ! isset( $out[ $id ] ) ) {
+				$out[ $id ] = (object) array( 'person_key' => $hit[0], 'person' => $hit[1], 'quarter' => $r->quarter, 'src' => 'band', 'total' => 0.0 );
+			}
+			$out[ $id ]->total += (float) $r->total;
+		}
+		return array_values( $out );
 	}
 
 	public static function my_songs( $key, $limit = 10 ) {
@@ -521,7 +578,8 @@ class Songpress_Money {
 	public static function person_grid() {
 		global $wpdb;
 		$t = self::t( 'person_earnings' );
-		return $wpdb->get_results( "SELECT person_key, MIN(person) AS person, quarter, src, SUM(amount) AS total FROM {$t} GROUP BY person_key, quarter, src" ); // phpcs:ignore WordPress.DB
+		$rows = (array) $wpdb->get_results( "SELECT person_key, MIN(person) AS person, quarter, src, SUM(amount) AS total FROM {$t} GROUP BY person_key, quarter, src" ); // phpcs:ignore WordPress.DB
+		return array_merge( $rows, self::band_rows() );
 	}
 
 	/** What each person has been paid so far, by person key; and the payments themselves. */
@@ -579,7 +637,7 @@ class Songpress_Money {
 			}
 			$o .= '<td class="n"><b>' . esc_html( self::money( $sum[ $k ] ) ) . '</b></td></tr>';
 			if ( $split ) {
-				foreach ( self::SOURCES as $sk => $label ) {
+				foreach ( self::STREAMS as $sk => $label ) {
 					$tot = 0;
 					$cells = '';
 					foreach ( $cols as $q ) {

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.39
+Stable tag: 0.63.40
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.40 =
+* Bands: a "Paid to (payee)" field on each band's page. That band's DistroKid earnings (every song released under the band) now show in Money as a Band income stream for the payee, in the income table, in Accounting (owed to date), and in the payee's own earnings.
 
 = 0.63.39 =
 * Money (was Stats) on the desktop menu: an income table with every person by quarter across all streams (switch to see each stream), and an Accounting table showing earned, paid and owed to date per person, with a Pay form that records a payment against any quarter and a payment history you can undo.
