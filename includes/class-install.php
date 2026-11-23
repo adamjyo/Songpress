@@ -81,8 +81,9 @@ class Songpress_Install {
 			update_option( 'songpress_titles', '47' );
 		}
 		self::ensure_artist();
-		if ( ! get_option( 'songpress_pages_done' ) ) {
+		if ( ! get_option( 'songpress_pages_done' ) || '1' !== get_option( 'songpress_pages_v2' ) ) {
 			self::create_pages();
+			update_option( 'songpress_pages_v2', '1' );
 		}
 		self::move_main_page();
 	}
@@ -92,6 +93,7 @@ class Songpress_Install {
 		return array(
 			'songpress_page_catalog' => array( 'title' => __( 'SongPress', 'songpress' ), 'slug' => 'desktop', 'code' => '[songpress_catalog]' ),
 			'songpress_page_profile' => array( 'title' => __( 'My songs', 'songpress' ), 'slug' => 'my-songs', 'code' => '[songpress_profile]' ),
+			'songpress_page_app'     => array( 'title' => __( 'SongPress', 'songpress' ), 'slug' => 'app', 'code' => '[songpress_catalog]' ),
 		);
 	}
 
@@ -121,6 +123,16 @@ class Songpress_Install {
 		$made = 0;
 		foreach ( self::pages() as $opt => $def ) {
 			if ( self::page_ok( get_option( $opt ) ) ) {
+				continue;
+			}
+			// A page at the old plugin's address (/desktop, /app) is taken over, so the links people already have keep working.
+			$old = get_page_by_path( $def['slug'] );
+			if ( $old && 'trash' !== $old->post_status ) {
+				if ( false === strpos( (string) $old->post_content, '[songpress_' ) ) {
+					wp_update_post( array( 'ID' => $old->ID, 'post_status' => 'publish', 'post_content' => '<!-- wp:shortcode -->' . $def['code'] . '<!-- /wp:shortcode -->' ) );
+				}
+				update_option( $opt, (int) $old->ID );
+				++$made;
 				continue;
 			}
 			$id = wp_insert_post( array(

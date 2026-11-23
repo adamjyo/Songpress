@@ -110,6 +110,7 @@ require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
 require __DIR__ . '/../includes/class-earnings.php';
+require __DIR__ . '/../includes/class-access.php';
 require __DIR__ . '/../includes/class-legacy.php';
 require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
@@ -665,6 +666,19 @@ check( 'earnings screen shows rules, recalculate and the person trace with a sha
 unset( $_GET['who'] );
 Songpress_Profiles::upsert( 'band', 'Test Band', array( 'payee' => '' ) );
 check( 'clearing the payee stops the band money', Songpress_Money::band_rows(), array() );
+// links and old accounts
+check( 'link packs and unpacks', array( Songpress_Access::unpack( Songpress_Access::pack( 12, 'abcdefghijklmnopqrstuvwxyz012345' ) ), Songpress_Access::unpack( 'nonsense' ), Songpress_Access::unpack( '5.short' ) ), array( array( 12, 'abcdefghijklmnopqrstuvwxyz012345' ), null, null ) );
+$rec = array( 'hash' => hash( 'sha256', 'tok' ), 'exp' => 1000 );
+check( 'a link works before it lapses, once the token matches', array( Songpress_Access::accepts( $rec, 'tok', 999 ), Songpress_Access::accepts( $rec, 'tok', 1001 ), Songpress_Access::accepts( $rec, 'bad', 999 ), Songpress_Access::accepts( '', 'tok', 999 ) ), array( true, false, false, false ) );
+check( 'chosen passwords are checked', array( Songpress_Access::check_password( 'short', 'short' ) !== '', Songpress_Access::check_password( 'longenough1', 'different11' ) !== '', Songpress_Access::check_password( 'longenough1', 'longenough1' ) ), array( true, true, '' ) );
+$old = array(
+	array( 'username' => 'abby.russ', 'email' => 'a@x.com', 'display_name' => 'Abby Russ', 'pass_hash' => '$2y$10$abc', 'role' => 'contributor', 'person_name' => 'Abby Russ', 'active' => 1 ),
+	array( 'username' => 'sam.new', 'email' => '', 'display_name' => 'Sam New', 'pass_hash' => '$2y$10$def', 'role' => 'member', 'person_name' => '', 'active' => 1 ),
+	array( 'username' => 'old.gone', 'email' => '', 'display_name' => 'Old Gone', 'pass_hash' => '', 'role' => 'member', 'person_name' => '', 'active' => 0 ),
+	array( 'username' => 'has.class', 'email' => '', 'display_name' => 'Has Class', 'pass_hash' => '', 'role' => 'editor', 'person_name' => '', 'active' => 1 ),
+);
+$pl = Songpress_Access::plan_accounts( $old, array( 'abby.russ' => array( 7, false ), 'has.class' => array( 9, true ) ) );
+check( 'old accounts: give a class, create the missing, skip classed, drop inactive', array_map( function ( $p ) { return $p['login'] . ':' . $p['action'] . ':' . $p['class']; }, $pl ), array( 'abby.russ:class:writer', 'sam.new:create:viewer', 'has.class:skip:writer' ) );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
 check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
 check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );

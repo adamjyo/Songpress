@@ -56,23 +56,52 @@ class Songpress_Frontend {
 	}
 
 	/** Any page that holds [songpress_catalog] or [songpress_profile] is shown as the SongPress app on its own, without the theme around it. */
+	/** The old plugin lived at /desktop and /app. When no page holds those addresses, they still open the app. Returns the address, or ''. */
+	public static function legacy_url() {
+		$req  = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$home = (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+		$path = trim( substr( $req, strlen( rtrim( $home, '/' ) ) ), '/' );
+		return in_array( strtolower( $path ), array( 'desktop', 'app' ), true ) ? home_url( '/' . strtolower( $path ) . '/' ) : '';
+	}
+
+	/** Links from the old plugin (?swp_view=people and the like) go to the matching screen here. */
+	public static function legacy_screen( $view ) {
+		$map = array( 'people' => 'people', 'pay' => 'money', 'accounting' => 'money', 'royalties' => 'money', 'stats' => 'stats', 'sessions' => 'sessions', 'notes' => 'notes', 'journal' => 'notes', 'art' => 'art', 'pitch' => 'pitch', 'agreements' => 'agreements', 'registrations' => 'registrations', 'bands' => 'people' );
+		return $map[ strtolower( (string) $view ) ] ?? '';
+	}
+
 	public static function app_page() {
-		if ( is_admin() || ! is_singular( 'page' ) || ! empty( $_GET['sp_share'] ) ) {
+		if ( is_admin() || ! empty( $_GET['sp_share'] ) ) {
 			return;
 		}
-		$post = get_queried_object();
-		$which = self::app_code( $post );
+		$legacy = '';
+		if ( is_singular( 'page' ) ) {
+			$post  = get_queried_object();
+			$which = self::app_code( $post );
+		} elseif ( is_404() && '' !== self::legacy_url() ) {
+			$post   = null;
+			$which  = 'catalog';
+			$legacy = self::legacy_url();
+			status_header( 200 );
+		} else {
+			return;
+		}
 		if ( '' === $which ) {
 			return;
 		}
-		if ( (int) get_option( 'songpress_app_' . $which ) !== (int) $post->ID ) {
+		if ( isset( $_GET['swp_view'] ) && ! isset( $_GET['sp_page'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- only picks a screen.
+			$to = self::legacy_screen( sanitize_key( wp_unslash( $_GET['swp_view'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			wp_safe_redirect( '' !== $to ? add_query_arg( 'sp_page', $to, remove_query_arg( 'swp_view' ) ) : remove_query_arg( 'swp_view' ) );
+			exit;
+		}
+		if ( $post && (int) get_option( 'songpress_app_' . $which ) !== (int) $post->ID ) {
 			update_option( 'songpress_app_' . $which, (int) $post->ID );
 		}
 		nocache_headers();
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		header( 'Content-Type: text/html; charset=utf-8' );
 		$css  = esc_url( SONGPRESS_URL . 'assets/songpress.css?ver=' . SONGPRESS_VERSION );
-		$here = get_permalink( $post );
+		$here = $post ? get_permalink( $post ) : $legacy;
 		echo '<!doctype html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>' . esc_html( 'SongPress' ) . '</title><link rel="icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" type="image/svg+xml"><link rel="stylesheet" href="' . $css . '"></head><body class="sp-body">'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( ! is_user_logged_in() ) {
 			echo self::login_screen( $here ); // phpcs:ignore WordPress.Security.EscapeOutput -- built from escaped parts.
@@ -98,12 +127,15 @@ class Songpress_Frontend {
 		if ( $failed ) {
 			$o .= '<p class="sp-err" role="alert">' . esc_html__( 'That username or password did not work. Check them and try again.', 'songpress' ) . '</p>';
 		}
+		if ( isset( $_GET['sp_login'] ) && 'expired' === $_GET['sp_login'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$o .= '<p class="sp-err" role="alert">' . esc_html__( 'That link has already been used or has lapsed. Ask for a new one.', 'songpress' ) . '</p>';
+		}
 		$o .= '<form method="post" action="' . esc_url( site_url( 'wp-login.php', 'login_post' ) ) . '">';
 		$o .= '<label for="sp-u">' . esc_html__( 'Username', 'songpress' ) . '</label><input id="sp-u" name="log" type="text" value="' . esc_attr( isset( $_GET['sp_user'] ) ? sanitize_user( wp_unslash( $_GET['sp_user'] ) ) : '' ) . '" autocomplete="username" autocapitalize="none" required>';
 		$o .= '<label for="sp-p">' . esc_html__( 'Password', 'songpress' ) . '</label><input id="sp-p" name="pwd" type="password" autocomplete="current-password" required>';
 		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $dest ) ) . '">';
 		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
-		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to set a new one.', 'songpress' ) . '</p></section>';
+		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to send you a new link.', 'songpress' ) . '</p></section>';
 		$o .= '<p class="sp-forgot">' . sprintf( /* translators: %s: link to the ChordPro tool */ esc_html__( 'Looking for a chord-sheet program like Songpress (Skeed / Lallulli)? Use the %s, free, no login.', 'songpress' ), '<a href="' . esc_url( Songpress_ChordTool::url() ) . '">' . esc_html__( 'web ChordPro tool', 'songpress' ) . '</a>' ) . '</p>';
 		$o .= wp_kses_post( songpress_public_donate_link() ) . '</main></div>';
 		return $o;

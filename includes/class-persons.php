@@ -275,6 +275,7 @@ class Songpress_Persons {
 		if ( $plan ) {
 			$o .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-tidy">' . wp_nonce_field( 'songpress_person_tidy', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_person_tidy"><p class="spe-help">' . esc_html( sprintf( /* translators: %d: logins */ _n( '%d login ends in a number (like abby.russ2).', '%d logins end in a number (like abby.russ2).', count( $plan ), 'songpress' ), count( $plan ) ) ) . ' ' . esc_html__( 'Tidy them to the plain first.last. If the plain login already belongs to the same person, the two accounts are merged into it.', 'songpress' ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Tidy logins', 'songpress' ) . '</button></form>';
 		}
+		$o .= Songpress_Access::old_box();
 		$o .= '<h3>' . esc_html__( 'Everyone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_member_update', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_update">';
 		$o .= '<div class="spe-head spe-mhead"><span>' . esc_html__( 'Person', 'songpress' ) . '</span><span>' . esc_html__( 'Class', 'songpress' ) . '</span><span>' . esc_html__( 'New password', 'songpress' ) . '</span><span>' . esc_html__( 'Earned', 'songpress' ) . '</span></div>';
 		foreach ( $all as $k => $r ) {
@@ -326,6 +327,10 @@ class Songpress_Persons {
 				$o .= '<option value="' . esc_attr( $ck ) . '"' . selected( 'viewer', $ck, false ) . '>' . esc_html( $c[0] ) . '</option>';
 			}
 			$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Password (blank makes one)', 'songpress' ) . '</span><input name="pass" autocomplete="off"></label><button class="spe-save" type="submit">' . esc_html__( 'Create login', 'songpress' ) . '</button></form>';
+		}
+
+		if ( $u ) {
+			$o .= Songpress_Access::link_box( $u->ID );
 		}
 
 		$rep = self::report( $name );
