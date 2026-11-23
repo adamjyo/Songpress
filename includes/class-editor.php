@@ -205,7 +205,7 @@ class Songpress_Editor {
 		};
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="lyrics" rows="14"' . $ph( 'lyrics' ) . '>' . esc_textarea( self::f( $song, 'lyrics' ) ) . '</textarea>' . $hint( 'lyrics' ) . '</label>';
 		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'Chords and lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="chords_lyrics" rows="14"' . $ph( 'chords_lyrics' ) . '>' . esc_textarea( self::f( $song, 'chords_lyrics' ) ) . '</textarea>' . $hint( 'chords_lyrics' ) . '</label>';
-		$o .= '<label class="spe-field adv"><span class="spe-lbrow">ChordPro <button type="button" class="spe-toolico" id="spe-cp-open" title="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button></span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' . ( $song ? '&song=' . (int) $song->id : '' ) ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box, or the music note beside ChordPro, to open the ChordPro tool.', 'songpress' ) . '</small></label>' . self::chordpro_popup() . '</section>';
+		$o .= '<label class="spe-field adv"><span class="spe-lbrow">ChordPro <button type="button" class="spe-toolico" id="spe-cp-open" title="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button></span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' . ( $song ? '&song=' . (int) $song->id : '' ) ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box, or the music note beside ChordPro, to open the ChordPro tool.', 'songpress' ) . '</small></label>' . self::sheet_preview( $song ) . self::chordpro_popup() . '</section>';
 
 		/* Links: streaming, store and video links belong to one version. */
 		if ( ! $root ) {
@@ -545,6 +545,18 @@ class Songpress_Editor {
 			$o .= '<a class="spe-st" href="' . esc_url( $u ) . '" target="_blank" rel="noopener" style="background:' . esc_attr( $cols[ $k ] ) . '" title="' . esc_attr( $t ) . '" aria-label="' . esc_attr( $t ) . '"><img src="' . esc_url( $icon[ $k ] ) . '" alt="" width="28" height="28" loading="lazy" onerror="this.outerHTML=\'<b>' . esc_attr( $names[ $k ][0] ) . '</b>\'"></a>';
 		}
 		return '' === $o ? '' : '<div class="spe-streams" aria-label="' . esc_attr__( 'Listen on', 'songpress' ) . '">' . $o . '</div>';
+	}
+
+	/** The printable chord sheet, shown under the ChordPro box and kept in step with it. */
+	private static function sheet_preview( $song ) {
+		$src = Songpress_ChordTool::url() . '&sheet=1' . ( $song ? '&song=' . (int) $song->id : '' );
+		return '<details class="spe-sheet adv" open><summary>' . esc_html__( 'Chord sheet (PDF)', 'songpress' ) . '</summary><iframe id="spe-sheet-frame" title="' . esc_attr__( 'Chord sheet preview', 'songpress' ) . '" data-src="' . esc_url( $src ) . '" loading="lazy"></iframe></details>'
+			. '<script>(function(){var d=document.querySelector(".spe-sheet"),f=document.getElementById("spe-sheet-frame"),t=document.getElementById("spe-chordpro");if(!d||!f||!t)return;var ready=false,tm;'
+			. 'function send(){if(ready&&f.contentWindow)f.contentWindow.postMessage({spChart:t.value},location.origin)}'
+			. 'function load(){if(!f.getAttribute("src"))f.setAttribute("src",f.getAttribute("data-src"))}'
+			. 'window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||!e.data.spSheetReady)return;ready=true;send()});'
+			. 't.addEventListener("input",function(){clearTimeout(tm);tm=setTimeout(send,350)});'
+			. 'd.addEventListener("toggle",function(){if(d.open)load()});if(d.open)load();})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped parts and a fixed script.
 	}
 
 	/** Streaming icons above the player, built from this version's Links rows and kept current as they change. Tapping one opens that service (its app, on a phone). */

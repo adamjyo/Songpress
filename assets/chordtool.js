@@ -276,4 +276,24 @@
     });
     window.parent.postMessage({ type: 'ct-ready' }, location.origin);
   }
+  /* sheet view: the printable sheet shown on screen, fed by the work editor */
+  if (document.body.getAttribute('data-sheetview') === '1') {
+    var sh = document.getElementById('ct-sheet');
+    if (!sh) { sh = document.createElement('div'); sh.id = 'ct-sheet'; document.body.appendChild(sh); }
+    var fit = function () {
+      var sc = Math.min(1, (document.documentElement.clientWidth - 16) / 816);
+      sh.style.transform = 'scale(' + sc + ')';
+      document.getElementById('ct-sheetbox').style.height = Math.ceil(sh.offsetHeight * sc) + 'px';
+    };
+    var paint = function (t) { ed.value = t; sh.innerHTML = buildSheet(t); fit(); };
+    window.addEventListener('message', function (e) {
+      if (e.origin !== location.origin || !e.data || typeof e.data.spChart !== 'string') return;
+      paint(e.data.spChart);
+    });
+    window.addEventListener('resize', fit);
+    var pb = document.getElementById('ct-sheet-print');
+    if (pb) pb.addEventListener('click', function () { printSheet(); });
+    paint('');
+    window.parent.postMessage({ spSheetReady: 1 }, location.origin);
+  }
 })();

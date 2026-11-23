@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.127
+Stable tag: 0.63.128
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.128 =
+* The work editor shows the printable chord sheet under the ChordPro box ("Chord sheet (PDF)"), updating as you type, with a Print / Save PDF button.
 
 = 0.63.127 =
 * New Settings > Chord sheet: publisher information (printed on the bottom line) and a branding logo (top right of the sheet). The bottom line shows the work's CCLI number, or its ISWC when there is no CCLI number. Opened from a work, the ChordPro tool reads those numbers from the work (or its original).
