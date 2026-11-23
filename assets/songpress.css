@@ -1032,3 +1032,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-artsel select{flex:1;min-width:0}
 .sp-app .spe-artchip{flex:none;display:inline-flex;min-width:28px}
 .sp-app .spe-artchip .sp-face{margin-right:0!important}
+
+.spe-who select.spe-pick{flex:1;min-width:0}.spe-who input.spe-pickname[hidden]{display:none}

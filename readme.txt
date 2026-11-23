@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.111
+Stable tag: 0.63.112
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.112 =
+* Writers, publishers and performers are now drop-downs filled from People (and Publishers), with the profile icon beside each. "+ Someone new…" lets you type a name that is not in the list. Choosing a writer fills their IPI.
 
 = 0.63.111 =
 * Works editor: the Performing artist or band drop-down shows the band's icon (its photo, or its initials) beside the name, and changes as you pick.

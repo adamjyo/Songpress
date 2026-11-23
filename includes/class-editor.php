@@ -302,7 +302,7 @@ class Songpress_Editor {
 
 	private static function credit_group( $role, $title, $add_label, array $existing, $min, $with_user, $with_share, $simple ) {
 		$count = max( $min, count( $existing ) );
-		$o     = $with_user ? self::people_list() : '';
+		$o     = in_array( $role, array( 'writer', 'publisher', 'performer' ), true ) ? self::people_list() : '';
 		$o    .= '<div class="spe-group' . ( $simple ? '' : ' adv' ) . ( $with_user ? ' spe-two' : '' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
 		$o    .= '<div class="spe-head' . ( $with_user ? ' spe-nohead' : '' ) . '"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><span class="adv">IPI</span>' . ( $with_share ? '<span>' . esc_html__( 'Share %', 'songpress' ) . '</span>' : '<span></span>' ) . ( $with_user ? '<span class="adv">' . esc_html__( 'Account', 'songpress' ) . '</span>' : '<span class="adv"></span>' ) . '<span></span></div><div class="spe-rows">';
 		for ( $i = 0; $i < $count; $i++ ) {
@@ -395,25 +395,62 @@ class Songpress_Editor {
 	}
 
 	/** The People table as a pick list for writers. Choosing a name fills in that person's IPI. */
+	private static $pick_done = false;
+	private static $pick_cache = array();
+
+	/** Profiles of one kind for the credit drop-downs: name => array( name, ipi ). */
+	private static function pick_profiles( $kind ) {
+		if ( ! isset( self::$pick_cache[ $kind ] ) ) {
+			global $wpdb;
+			$t   = Songpress_Install::table( 'profiles' );
+			$out = array();
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT name, ipi FROM {$t} WHERE kind = %s ORDER BY name", $kind ) ) as $r ) {
+				$out[ $r->name ] = array( $r->name, (string) $r->ipi );
+			}
+			uksort( $out, 'strnatcasecmp' );
+			self::$pick_cache[ $kind ] = $out;
+		}
+		return self::$pick_cache[ $kind ];
+	}
+
+	/** Script for the writer, publisher and performer drop-downs; printed once per page. */
 	private static function people_list() {
-		global $wpdb;
-		$t   = Songpress_Install::table( 'profiles' );
-		$o   = '<datalist id="spe-people">';
+		if ( self::$pick_done ) {
+			return '';
+		}
+		self::$pick_done = true;
 		$map = array();
-		foreach ( (array) $wpdb->get_results( "SELECT name, ipi FROM {$t} WHERE kind = 'person' ORDER BY name" ) as $r ) {
-			$o .= '<option value="' . esc_attr( $r->name ) . '">';
-			{
-				$map[ strtolower( $r->name ) ] = array( $r->name, $r->ipi, Songpress_Profiles::chip( $r->name, 28, 'person' ) );
+		foreach ( array( 'person', 'publisher' ) as $k ) {
+			foreach ( self::pick_profiles( $k ) as $n => $r ) {
+				$map[ $k ][ $n ] = array( $r[1], Songpress_Profiles::chip( $n, 28, $k ) );
 			}
 		}
-		$o .= '</datalist><script>(function(){var M=' . wp_json_encode( $map ) . ';document.addEventListener("input",function(e){var i=e.target;if(!i.matches||!i.matches("input[list=spe-people]")){return;}var v=M[i.value.trim().toLowerCase()],w=i.closest(".spe-who"),f=w&&w.querySelector(".sp-face");if(f){f.remove();}if(!v){return;}if(w){i.insertAdjacentHTML("beforebegin",v[2]);}var c=i.closest(".spe-credit"),p=c&&c.querySelector("input[name$=\"[ipi]\"]");if(p&&v[1]){p.value=v[1];}});})();</script>';
-		return $o;
+		return '<script>(function(){var M=' . wp_json_encode( $map ) . ';document.addEventListener("change",function(e){var s=e.target;if(!s.matches||!s.matches("select.spe-pick")){return;}var w=s.closest(".spe-who"),t=w.querySelector("input.spe-pickname"),f=w.querySelector(".sp-face"),c=s.closest(".spe-credit"),p=c&&c.querySelector("input[name$=\"[ipi]\"]");if(f){f.remove();}if(s.value==="__new"){t.hidden=false;t.value="";t.focus();return;}t.hidden=true;t.value=s.value;var v=(M[s.dataset.kind]||{})[s.value];if(!v){return;}s.insertAdjacentHTML("beforebegin",v[1]);if(p&&v[0]){p.value=v[0];}});})();</script>';
 	}
 
 	private static function credit_row( $role, $i, $c, $with_user, $with_share ) {
 		$n    = 'credits[' . $role . '][' . $i . ']';
 		$name = (string) ( $c->name ?? '' );
-		$h    = '<div class="spe-credit"><span class="spe-who">' . ( '' !== trim( $name ) ? Songpress_Profiles::chip( $name, 28, Songpress_Profiles::kind_for_role( $role ) ) : '' ) . '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $name ) . '" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '"' . ( $with_user ? ' list="spe-people" autocomplete="off"' : '' ) . '></span>';
+		$kind = Songpress_Profiles::kind_for_role( $role );
+		$pick = in_array( $role, array( 'writer', 'publisher', 'performer' ), true );
+		$h    = '<div class="spe-credit"><span class="spe-who">' . ( '' !== trim( $name ) ? Songpress_Profiles::chip( $name, 28, $kind ) : '' );
+		if ( $pick ) {
+			$list = self::pick_profiles( $kind );
+			$h   .= '<select class="spe-pick" data-kind="' . esc_attr( $kind ) . '"><option value="">' . esc_html__( 'Choose…', 'songpress' ) . '</option>';
+			$seen = false;
+			foreach ( $list as $pn => $r ) {
+				$on   = 0 === strcasecmp( $pn, trim( $name ) );
+				$seen = $seen || $on;
+				$h   .= '<option value="' . esc_attr( $pn ) . '"' . ( $on ? ' selected' : '' ) . '>' . esc_html( $pn ) . '</option>';
+			}
+			if ( '' !== trim( $name ) && ! $seen ) {
+				$h .= '<option value="' . esc_attr( $name ) . '" selected>' . esc_html( $name ) . '</option>';
+			}
+			$h .= '<option value="__new">' . esc_html__( '+ Someone new…', 'songpress' ) . '</option></select>';
+			$h .= '<input class="spe-pickname" hidden name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $name ) . '" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '"></span>';
+		} else {
+			$h .= '<input name="' . esc_attr( $n ) . '[name]" value="' . esc_attr( $name ) . '" placeholder="' . esc_attr__( 'Name', 'songpress' ) . '"></span>';
+		}
 		$h   .= '<input class="' . ( $with_user ? '' : 'adv' ) . '" name="' . esc_attr( $n ) . '[ipi]" value="' . esc_attr( $c->ipi ?? '' ) . '" placeholder="IPI">';
 		if ( $with_share ) {
 			$share = ( isset( $c->share ) && null !== $c->share ) ? rtrim( rtrim( (string) $c->share, '0' ), '.' ) : '';
