@@ -985,3 +985,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 
 .sp-app a.spe-toolico{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;color:var(--sp-accent,#f5a524);border:1px solid transparent;text-decoration:none}
 .sp-app a.spe-toolico:hover{background:rgba(245,165,36,.14);border-color:var(--sp-accent,#f5a524)}
+
+.sp-app button.spe-topsave[hidden],.spe-topsave[hidden]{display:none!important}
