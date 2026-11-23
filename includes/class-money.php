@@ -867,25 +867,41 @@ class Songpress_Money {
 		}
 		$o .= '<ul class="songpress-stats spm-cards"><li>' . esc_html__( 'Earned, all time', 'songpress' ) . '<strong>' . esc_html( self::money( $earned ) ) . '</strong></li><li>' . esc_html__( 'Paid out', 'songpress' ) . '<strong>' . esc_html( self::money( $paid ) ) . '</strong></li><li>' . esc_html__( 'Expenses', 'songpress' ) . '<strong>' . esc_html( self::money( $spent ) ) . '</strong></li></ul>';
 
-		// by quarter
+		// by quarter, laid out like each person's block
 		$grid = array();
 		foreach ( self::by_quarter() as $r ) {
 			$grid[ $r->quarter ][ $r->src ] = (float) $r->total;
 		}
 		if ( $grid ) {
-			$o .= '<h3>' . esc_html__( 'By quarter', 'songpress' ) . '</h3><div class="spm-scroll"><table class="spm-table"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th>';
-			foreach ( self::SOURCES as $label ) {
-				$o .= '<th class="n">' . esc_html( $label ) . '</th>';
+			$all   = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
+			$cols  = array_reverse( $all ? $qs : array_slice( $qs, 0, 8 ) );
+			$o    .= '<h3>' . esc_html__( 'All earnings by quarter', 'songpress' ) . '</h3><section class="spm-block spm-all"><div class="spm-scroll"><table class="spm-table spm-income"><thead><tr><th></th>';
+			foreach ( $cols as $q ) {
+				$o .= '<th class="n">' . esc_html( $q ) . '</th>';
 			}
-			$o .= '<th class="n">' . esc_html__( 'Total', 'songpress' ) . '</th></tr></thead><tbody>';
-			foreach ( $grid as $q => $row ) {
-				$o .= '<tr><td><a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'q' => $q ), Songpress_Editor::list_url() ) ) . '">' . esc_html( $q ) . '</a></td>';
-				foreach ( array_keys( self::SOURCES ) as $s ) {
-					$o .= '<td class="n">' . ( isset( $row[ $s ] ) ? esc_html( self::money( $row[ $s ] ) ) : '' ) . '</td>';
+			$o .= '<th class="n">' . esc_html__( 'All time', 'songpress' ) . '</th></tr></thead><tbody>';
+			$coltot = array();
+			foreach ( self::SOURCES as $sk => $label ) {
+				$at = 0;
+				foreach ( $grid as $bys ) {
+					$at += $bys[ $sk ] ?? 0;
 				}
-				$o .= '<td class="n"><b>' . esc_html( self::money( array_sum( $row ) ) ) . '</b></td></tr>';
+				if ( ! $at ) {
+					continue;
+				}
+				$o .= '<tr class="spm-sub"><td>' . esc_html( $label ) . '</td>';
+				foreach ( $cols as $q ) {
+					$v            = $grid[ $q ][ $sk ] ?? 0;
+					$coltot[ $q ] = ( $coltot[ $q ] ?? 0 ) + $v;
+					$o           .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
+				}
+				$o .= '<td class="n">' . esc_html( self::money( $at ) ) . '</td></tr>';
 			}
-			$o .= '</tbody></table></div>';
+			$o .= '<tr class="spm-tot"><td>' . esc_html__( 'Total', 'songpress' ) . '</td>';
+			foreach ( $cols as $q ) {
+				$o .= '<td class="n">' . ( ! empty( $coltot[ $q ] ) ? esc_html( self::money( $coltot[ $q ] ) ) : '' ) . '</td>';
+			}
+			$o .= '<td class="n"><b>' . esc_html( self::money( self::earned_total() ) ) . '</b></td></tr></tbody></table></div></section>';
 		}
 
 		// top songs
