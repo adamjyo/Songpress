@@ -12,6 +12,7 @@ class Songpress_Push {
 	const SUBS    = 'songpress_push_subs';
 	const LABELS  = 'songpress_push_labels';
 	public static $names = array();
+	public static $report = array();
 	const NOTICES = 'songpress_notices';
 	const ALERTS  = 'songpress_alert_users';
 
@@ -152,7 +153,8 @@ class Songpress_Push {
 		update_user_meta( $uid, self::NOTICES, $list );
 		$reached    = 0;
 		self::$last = array();
-		self::$names = array();
+		self::$names  = array();
+		self::$report = array();
 		$keep       = array();
 		foreach ( self::devices( $uid ) as $ep ) {
 			$jwt = self::jwt( $ep );
@@ -164,6 +166,8 @@ class Songpress_Push {
 			$r    = wp_remote_post( $ep, array( 'timeout' => 6, 'body' => '', 'headers' => array( 'Authorization' => 'vapid t=' . $jwt . ', k=' . $k['pub'], 'TTL' => '86400', 'Urgency' => 'normal' ) ) );
 			$code = is_wp_error( $r ) ? 0 : (int) wp_remote_retrieve_response_code( $r );
 			self::$last[] = $code;
+			$why          = $code >= 200 && $code < 300 ? '' : ' ' . trim( wp_strip_all_tags( is_wp_error( $r ) ? $r->get_error_message() : substr( (string) wp_remote_retrieve_body( $r ), 0, 120 ) ) );
+			self::$report[] = self::label_of( $uid, $ep ) . ' = ' . ( $code ? $code : 'no answer' ) . $why . ( ( 404 === $code || 410 === $code ) ? ' (removed)' : '' );
 			if ( 404 === $code || 410 === $code ) {
 				continue; // the phone dropped it
 			}
@@ -450,13 +454,13 @@ JS;
 		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
 		if ( $n ) {
 			/* translators: %s: device names */
-			$msg = sprintf( __( 'Test sent. It reached: %s. If nothing shows on that device, check its notification settings for SongPress, and that Focus or Do Not Disturb is off.', 'songpress' ), implode( '; ', array_unique( self::$names ) ) );
+			$msg = sprintf( __( 'Test sent. It reached: %s. If nothing shows on that device, check its notification settings for SongPress, and that Focus or Do Not Disturb is off.', 'songpress' ), implode( '; ', array_unique( self::$names ) ) ) . ' [' . implode( ' | ', self::$report ) . ']';
 		} elseif ( ! self::keys() ) {
 			$msg = __( 'This server cannot make the signing key (PHP OpenSSL is missing), so notifications cannot be sent.', 'songpress' );
 		} elseif ( ! self::$last ) {
 			$msg = $me ? __( 'You have not turned notifications on for a phone yet. On the phone, open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' ) : __( 'Nobody chosen for alerts has turned notifications on yet. On their phone they open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' );
 		} else {
-			$msg = sprintf( /* translators: %s: codes */ __( 'The phone’s push service did not accept it (answers: %s). Turn notifications off and on again with the bell on the phone, then retry.', 'songpress' ), implode( ', ', array_map( function ( $c ) {
+			$msg = sprintf( /* translators: %s: codes */ __( 'The phone’s push service did not accept it (answers: %s). Turn notifications off and on again with the bell on the phone, then retry.', 'songpress' ) . ' [' . implode( ' | ', self::$report ) . ']', implode( ', ', array_map( function ( $c ) {
 				return $c ? (string) $c : __( 'no answer', 'songpress' );
 			}, self::$last ) ) );
 		}
