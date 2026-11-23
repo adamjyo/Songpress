@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.117
+Stable tag: 0.63.118
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.118 =
+* The streaming widget above the editor player is always shown, with a hint until the version has links.
 
 = 0.63.117 =
 * The work page in the app now shows the streaming icons above its player, and the band and writer icons there are larger (48px).
