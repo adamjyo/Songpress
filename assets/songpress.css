@@ -1015,3 +1015,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 
 .sp-app .spe-h3row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px}
 .sp-app .spe-h3row .spe-legend{margin:0;font-weight:400;text-transform:none;letter-spacing:0;flex:1 1 280px;min-width:0}
+.spe-hero{grid-template-columns:minmax(300px,360px) minmax(0,1fr)}
+@media (max-width:760px){.spe-hero{grid-template-columns:1fr}}
+.sp-app .spe-prev.spe-player{padding:0;border-width:0;min-height:48px;overflow:visible}
+.sp-app .spe-prev.spe-player:has(audio){border-width:0}
+.sp-app .spe-prev.spe-player audio{width:100%;min-width:240px;height:48px}
