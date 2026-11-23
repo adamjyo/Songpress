@@ -13,6 +13,7 @@ class Songpress_Push {
 	const LABELS  = 'songpress_push_labels';
 	public static $names = array();
 	public static $report = array();
+	public static $kind   = '';
 	const NOTICES = 'songpress_notices';
 	const ALERTS  = 'songpress_alert_users';
 
@@ -157,6 +158,14 @@ class Songpress_Push {
 		self::$report = array();
 		$keep       = array();
 		foreach ( self::devices( $uid ) as $ep ) {
+			if ( '' !== self::$kind ) {
+				$lab = self::label_of( $uid, $ep );
+				$ph  = (bool) preg_match( '/^(iPhone|iPad|Android)/', $lab );
+				if ( preg_match( '/^(iPhone|iPad|Android|Mac|Windows|Computer)/', $lab ) && ( 'phone' === self::$kind ) !== $ph ) {
+					$keep[] = $ep;
+					continue;
+				}
+			}
 			$jwt = self::jwt( $ep );
 			$k   = self::keys();
 			if ( '' === $jwt || ! $k ) {
@@ -306,11 +315,11 @@ JS;
 			update_user_meta( $uid, self::SUBS, array_values( array_diff( $subs, array( $ep ) ) ) );
 			wp_send_json_success();
 		}
-		if ( 'testme' === $mode || 'testalerts' === $mode ) {
+		if ( in_array( $mode, array( 'testme', 'testalerts', 'testdesktop', 'testphone' ), true ) ) {
 			if ( ! Songpress_Caps::can( 'members' ) ) {
 				wp_send_json_error( 'no access', 403 );
 			}
-			$r = self::run_test( 'testme' === $mode );
+			$r = self::run_test( 'testalerts' !== $mode, 'testdesktop' === $mode ? 'desktop' : ( 'testphone' === $mode ? 'phone' : '' ) );
 			wp_send_json_success( array( 'ok' => $r[0], 'msg' => $r[1] ) );
 		}
 		if ( 'done' === $mode ) {
@@ -450,7 +459,8 @@ JS;
 	}
 
 	/** Sends the test and says what happened. Returns array( ok, message ). */
-	public static function run_test( $me ) {
+	public static function run_test( $me, $kind = '' ) {
+		self::$kind = $kind;
 		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
 		if ( $n ) {
 			/* translators: %s: device names */
@@ -458,21 +468,23 @@ JS;
 		} elseif ( ! self::keys() ) {
 			$msg = __( 'This server cannot make the signing key (PHP OpenSSL is missing), so notifications cannot be sent.', 'songpress' );
 		} elseif ( ! self::$last ) {
-			$msg = $me ? __( 'You have not turned notifications on for a phone yet. On the phone, open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' ) : __( 'Nobody chosen for alerts has turned notifications on yet. On their phone they open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' );
+			$msg = $me ? ( 'phone' === $kind ? __( 'No phone has notifications on yet. On the iPhone, open SongPress from its Home Screen icon and tap the bell next to your name.', 'songpress' ) : ( 'desktop' === $kind ? __( 'No computer has notifications on yet. Click the bell next to your name in the left rail.', 'songpress' ) : __( 'You have not turned notifications on for a phone yet. On the phone, open SongPress from the Home Screen and tap the bell beside your name.', 'songpress' ) ) ) : __( 'Nobody chosen for alerts has turned notifications on yet. On their phone they open SongPress from the Home Screen and tap the bell in the menu.', 'songpress' );
 		} else {
 			$msg = sprintf( /* translators: %s: codes */ __( 'The phone’s push service did not accept it (answers: %s). Turn notifications off and on again with the bell on the phone, then retry.', 'songpress' ) . ' [' . implode( ' | ', self::$report ) . ']', implode( ', ', array_map( function ( $c ) {
 				return $c ? (string) $c : __( 'no answer', 'songpress' );
 			}, self::$last ) ) );
 		}
+		self::$kind = '';
 		return array( (bool) $n, $msg );
 	}
 
 	public static function handle_test() {
 		check_admin_referer( 'songpress_push_test' );
 		self::guard_people();
-		$me   = isset( $_POST['who'] ) && 'me' === $_POST['who']; // phpcs:ignore WordPress.Security.NonceVerification -- checked above.
+		$who  = isset( $_POST['who'] ) ? sanitize_key( wp_unslash( $_POST['who'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- checked above.
+		$me   = 'alerts' !== $who;
 		$back = isset( $_POST['back'] ) && 'settings' === $_POST['back'] ? Songpress_Screens::url( 'settings' ) : Songpress_Persons::url(); // phpcs:ignore WordPress.Security.NonceVerification
-		$r    = self::run_test( $me );
+		$r    = self::run_test( $me, in_array( $who, array( 'desktop', 'phone' ), true ) ? $who : '' );
 		wp_safe_redirect( add_query_arg( $r[0] ? 'sp_saved' : 'sp_err', rawurlencode( $r[1] ), $back ) );
 		exit;
 	}
@@ -485,7 +497,7 @@ JS;
 		}
 		$done = true;
 		$cfg  = wp_json_encode( array( 'ajax' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_push' ), 'busy' => __( 'Sending…', 'songpress' ) ) );
-		return '<script>(function(){var C=' . $cfg . ';document.addEventListener("submit",function(e){var f=e.target,a=f.querySelector&&f.querySelector("[name=action][value=songpress_push_test]");if(!a)return;e.preventDefault();var w=f.querySelector("[name=who]"),m=document.getElementById("sp-testmsg");if(!m){m=document.createElement("p");m.id="sp-testmsg";m.className="spe-note";m.setAttribute("role","status");f.parentNode.parentNode.insertBefore(m,f.parentNode.nextSibling)}var b=f.querySelector("button");m.className="spe-note";m.textContent=C.busy;if(b)b.disabled=true;var d=new FormData();d.append("action","songpress_push");d.append("nonce",C.nonce);d.append("mode",w&&w.value==="me"?"testme":"testalerts");fetch(C.ajax,{method:"POST",body:d,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){m.className="spe-note "+(j&&j.success&&j.data.ok?"ok":"bad");m.textContent=j&&j.data&&j.data.msg?j.data.msg:"Could not send the test."}).catch(function(){m.className="spe-note bad";m.textContent="Could not reach the site."}).then(function(){if(b)b.disabled=false})})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+		return '<script>(function(){var C=' . $cfg . ';document.addEventListener("submit",function(e){var f=e.target,a=f.querySelector&&f.querySelector("[name=action][value=songpress_push_test]");if(!a)return;e.preventDefault();var w=f.querySelector("[name=who]"),m=document.getElementById("sp-testmsg");if(!m){m=document.createElement("p");m.id="sp-testmsg";m.className="spe-note";m.setAttribute("role","status");f.parentNode.parentNode.insertBefore(m,f.parentNode.nextSibling)}var b=f.querySelector("button");m.className="spe-note";m.textContent=C.busy;if(b)b.disabled=true;var d=new FormData();d.append("action","songpress_push");d.append("nonce",C.nonce);d.append("mode",w&&w.value==="me"?"testme":(w&&w.value==="desktop"?"testdesktop":(w&&w.value==="phone"?"testphone":"testalerts")));fetch(C.ajax,{method:"POST",body:d,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){m.className="spe-note "+(j&&j.success&&j.data.ok?"ok":"bad");m.textContent=j&&j.data&&j.data.msg?j.data.msg:"Could not send the test."}).catch(function(){m.className="spe-note bad";m.textContent="Could not reach the site."}).then(function(){if(b)b.disabled=false})})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
 	/** Settings: two buttons to check notifications, and what this site knows about them. */
@@ -506,7 +518,7 @@ JS;
 		}
 		return '<div class="sp-app spm-testbox"><h3>' . esc_html__( 'Notifications', 'songpress' ) . '</h3>' . $note . '<p class="spe-help">'
 			. esc_html( sprintf( /* translators: 1: phones on for this account, 2: phones that get alerts */ __( 'Signing key: %1$s. Phones on for your account: %2$d. Phones that get alerts: %3$d.', 'songpress' ), self::keys() ? __( 'ready', 'songpress' ) : __( 'missing (PHP OpenSSL)', 'songpress' ), $mine, $on ) ) . '</p><p>'
-			. $f( 'me', __( 'Send a test to my phone', 'songpress' ), 'spe-save' ) . $f( 'alerts', __( 'Send a test alert', 'songpress' ), 'spe-btn' ) . '</p><p class="spe-help">' . esc_html__( 'Choose who gets alerts, and message people, under People. To turn notifications on for a phone, open SongPress from its Home Screen and tap the bell in the menu.', 'songpress' ) . '</p></div>' . self::test_script();
+			. $f( 'desktop', __( 'Send a test to my computer', 'songpress' ), 'spe-save' ) . $f( 'phone', __( 'Send a test to my phone', 'songpress' ), 'spe-save' ) . $f( 'alerts', __( 'Send a test alert', 'songpress' ), 'spe-btn' ) . '</p><p class="spe-help">' . esc_html__( 'Choose who gets alerts, and message people, under People. To turn notifications on for a phone, open SongPress from its Home Screen and tap the bell in the menu.', 'songpress' ) . '</p></div>' . self::test_script();
 	}
 
 	/** People: choose who gets the alerts, and test them. */
