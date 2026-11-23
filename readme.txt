@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.144
+Stable tag: 0.63.145
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.145 =
+* Fix: the page a login link opens was blank (a broken placeholder in its greeting). It now shows "Choose your password". Added a test so this cannot return.
 
 = 0.63.144 =
 * People: names that are bands no longer appear in the Everyone list (unless someone has a login under that name).

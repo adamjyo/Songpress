@@ -972,6 +972,17 @@ Songpress_Songs::delete( $last );
 $after = Songpress_Songs::get( Songpress_Songs::create( array( 'title' => 'After The Delete' ), 1 ) )->serial;
 check( 'a deleted serial is not reused', $after !== $gone && (int) $after > (int) $gone, true );
 
+// a numbered placeholder must not be escaped in a single-quoted string ('%1\\$s' makes sprintf throw and the page go blank)
+$bad = array();
+foreach ( array_merge( glob( SONGPRESS_DIR . 'includes/*.php' ), glob( SONGPRESS_DIR . 'admin/*.php' ) ) as $f ) {
+	foreach ( file( $f ) as $i => $l ) {
+		if ( false === strpos( $l, '__( "' ) && preg_match( '/\'[^\'"]*%\d\\\\\$[sd]/', $l ) ) {
+			$bad[] = basename( $f ) . ':' . ( $i + 1 );
+		}
+	}
+}
+check( 'no escaped placeholder in a single-quoted string', $bad, array() );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
