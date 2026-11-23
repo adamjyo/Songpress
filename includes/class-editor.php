@@ -169,7 +169,7 @@ class Songpress_Editor {
 
 		/* Release: everything that belongs to one recording or release, so only versions have it. */
 		$legacy = $song && 0 === $version && ( '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
-		$rel    = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="release"><h3>' . esc_html__( 'Release', 'songpress' ) . '</h3>';
+		$rel    = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="release"><h3 class="spe-relh">' . esc_html__( 'Release', 'songpress' ) . ( ( $song && Songpress_Caps::can( 'create' ) ) ? ' <button type="submit" form="spe-nv-form" class="spe-nvbtn" title="' . esc_attr__( 'Create a new version of this work', 'songpress' ) . '">+ ' . esc_html__( 'Create a version', 'songpress' ) . '</button>' : '' ) . '</h3>';
 		if ( $song && ( $version > 0 || $legacy ) ) {
 			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. The ISRC, DistroKid and UPC numbers go in Publishing.', 'songpress' ) . '</p>';
 			if ( $legacy ) {
@@ -226,6 +226,9 @@ class Songpress_Editor {
 		$o .= '</section>';
 
 		$o .= '</form>';
+		if ( $song && Songpress_Caps::can( 'create' ) ) { // the Create a version button in the Release heading submits this separate form
+			$o .= '<form method="post" id="spe-nv-form" hidden action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_new_version', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_new_version"><input type="hidden" name="song_id" value="' . (int) $id . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '"></form>';
+		}
 
 		if ( $song ) {
 			$o .= self::versions_panel( $song );
