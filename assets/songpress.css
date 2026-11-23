@@ -991,3 +991,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-topdel button.armed{width:auto;gap:8px;padding:0 14px;background:#d63638;border-color:#d63638;color:#fff;font-size:13px;font-weight:600;white-space:nowrap}
 .sp-app .spe-topdel .spe-delt[hidden]{display:none}
 @media (max-width:900px){.spe-group.spe-two .spe-rows{grid-template-columns:minmax(0,1fr)}}
+
+.sp-app .spe-lbrow{display:inline-flex;align-items:center;gap:6px}
+.sp-app button.spe-toolico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border-radius:8px;background:none;color:var(--sp-accent,#f5a524);border:1px solid transparent;cursor:pointer}
+.sp-app button.spe-toolico:hover{background:rgba(245,165,36,.14);border-color:var(--sp-accent,#f5a524)}
