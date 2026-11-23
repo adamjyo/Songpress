@@ -688,7 +688,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-authors{display:flex;flex-wrap:nowrap;gap:6px;margin:8px 0 0;overflow-x:auto;scrollbar-width:none}
 .songpress-authors::-webkit-scrollbar{display:none}
 .songpress-authors .songpress-icon{flex:none;display:inline-flex}
-.songpress-authors .sp-face{width:48px!important;height:48px!important;font-size:18px!important;margin:0!important}
+.songpress-authors .sp-face{width:64px!important;height:64px!important;font-size:22px!important;margin:0!important}
 
 .songpress-userbar{justify-content:space-between}
 .songpress-sharebtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:auto;border:0;border-radius:50%;background:transparent;color:var(--sp-text);cursor:pointer}
@@ -1039,5 +1039,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-st{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-weight:700;font-size:17px;box-shadow:0 1px 3px rgba(0,0,0,.25)}.spe-st b{font-weight:700}.spe-st:active{transform:scale(.94)}
 @media (max-width:760px){.spe-who .sp-face,.spe-artchip .sp-face{width:44px!important;height:44px!important;font-size:17px!important}.sp-app .spe-artchip{min-width:44px}}
 @media (min-width:761px){#spe-streams{display:none}}
-.songpress-band .sp-face{width:48px!important;height:48px!important;font-size:18px!important}.songpress-band{display:flex;align-items:center;gap:4px}
+.songpress-band .sp-face{width:64px!important;height:64px!important;font-size:22px!important}.songpress-band{display:flex;align-items:center;gap:4px}
 .songpress-header .spe-streams,.songpress .spe-streams{margin:10px 0}
+.songpress-topl .spe-streams{flex-wrap:nowrap;overflow-x:auto;gap:10px;margin:12px 0 0;scrollbar-width:none}.songpress-topl .spe-streams::-webkit-scrollbar{display:none}
+.songpress-topl .spe-st{flex:none;width:56px;height:56px;font-size:24px}.sp-app .spe-st,.sp-app .spe-st b{color:#fff!important}

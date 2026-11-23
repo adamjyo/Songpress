@@ -470,7 +470,7 @@ class Songpress_Frontend {
 			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>' . ( '' !== trim( (string) $s->genre ) ? '<p class="songpress-sub">' . esc_html( $s->genre ) . '</p>' : '' );
 		}
 		if ( '' !== trim( (string) $s->artist ) ) {
-			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 48, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
+			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 64, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
 		}
 		$seen  = array();
 		$icons = '';
@@ -480,13 +480,12 @@ class Songpress_Frontend {
 				continue;
 			}
 			$seen[ $k ] = 1;
-			$icons     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 48, 'person' ) . '</span>';
+			$icons     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 64, 'person' ) . '</span>';
 		}
 		if ( '' !== $icons ) {
 			$out .= '<p class="songpress-authors" aria-label="' . esc_attr__( 'Authors', 'songpress' ) . '">' . $icons . '</p>';
 		}
-		$out  .= '</div>';
-		$out  .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
+		$out  .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) ) . '</div>';
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
