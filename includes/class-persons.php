@@ -340,9 +340,9 @@ class Songpress_Persons {
 			} else {
 				$o .= '<span><small>' . esc_html__( 'Open the person to give them a login', 'songpress' ) . '</small></span><span></span>';
 			}
-			$o .= '<span class="n">' . esc_html( $earn ) . ' <a class="spe-btn" href="' . esc_url( self::url( array( 'person' => $k ) ) . '#sp-link' ) . '">' . esc_html__( 'Login link', 'songpress' ) . '</a> ' . self::del_button( $r['name'] ) . '</span></div>';
+			$o .= '<span class="n">' . esc_html( $earn ) . ' ' . ( $u ? '<button type="button" class="spe-btn sp-copylink" data-uid="' . (int) $u->ID . '" title="' . esc_attr__( 'Make a one-time link and copy it to send to them', 'songpress' ) . '">' . esc_html__( 'Copy login link', 'songpress' ) . '</button> ' : '' ) . self::del_button( $r['name'] ) . '</span></div>';
 		}
-		return $o . '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form></div>';
+		return $o . '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form>' . Songpress_Access::copy_script() . '</div>';
 	}
 
 	private static function render_one( array $r ) {

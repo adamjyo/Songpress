@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.142
+Stable tag: 0.63.143
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.143 =
+* People: the button on each row is now "Copy login link". It makes a one-time link and copies a ready-to-send message to the clipboard instead of opening the person page.
 
 = 0.63.142 =
 * People: "Alerts to your phone" is now a collapsed section with a one-line summary, and a compact grid of names when opened.

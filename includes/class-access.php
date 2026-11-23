@@ -15,6 +15,7 @@ class Songpress_Access {
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'forgot' ), 1 );
 		add_action( 'init', array( __CLASS__, 'consume' ), 1 );
+		add_action( 'wp_ajax_songpress_access_copy', array( __CLASS__, 'ajax_copy' ) );
 		foreach ( array( 'link', 'mail', 'oldusers', 'dismiss' ) as $a ) {
 			add_action( 'admin_post_songpress_access_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
@@ -147,6 +148,41 @@ class Songpress_Access {
 		self::clear_ask( $u->ID );
 		Songpress_Audit::log( 'people', 'Made a password link', $u->display_name, array( 'login' => $u->user_login ) );
 		self::back( $uid, array( 'sp_saved' => rawurlencode( __( 'Link made. It opens a page where they choose their own password. It works once and lapses in a week.', 'songpress' ) ) ) );
+	}
+
+	/** Make a fresh link and hand it back as text, so the button on a People row can copy it. */
+	public static function ajax_copy() {
+		check_ajax_referer( 'songpress_access_copy', 'n' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_send_json_error( array( 'msg' => __( 'Not allowed.', 'songpress' ) ), 403 );
+		}
+		$u = self::target( absint( $_POST['uid'] ?? 0 ) );
+		if ( ! $u ) {
+			wp_send_json_error( array( 'msg' => __( 'They need a login with a class first. Open their page to set that up.', 'songpress' ) ) );
+		}
+		$url = self::make_link( $u->ID );
+		self::clear_ask( $u->ID );
+		Songpress_Audit::log( 'people', 'Copied a password link', $u->display_name, array( 'login' => $u->user_login ) );
+		$first = (string) get_user_meta( $u->ID, 'first_name', true );
+		wp_send_json_success( array( 'url' => $url, 'text' => sprintf( /* translators: 1: first name, 2: link */ __( "Hi %1\$s, here is your personal SongPress link. Open it to choose your password:\n%2\$s", 'songpress' ), '' !== $first ? $first : $u->display_name, $url ) ) );
+	}
+
+	/** Script for the Login link buttons: asks for a link, copies it. Printed once per page. */
+	public static function copy_script() {
+		static $done = false;
+		if ( $done ) {
+			return '';
+		}
+		$done = true;
+		$cfg  = wp_json_encode( array( 'ajax' => admin_url( 'admin-ajax.php' ), 'n' => wp_create_nonce( 'songpress_access_copy' ) ) );
+		return '<script>(function(){var C=' . $cfg . ';document.addEventListener("click",function(e){var b=e.target.closest(".sp-copylink");if(!b)return;e.preventDefault();if(b.disabled)return;var old=b.getAttribute("data-l")||b.textContent;b.setAttribute("data-l",old);b.disabled=true;b.textContent="\u2026";'
+			. 'var fd=new FormData();fd.append("action","songpress_access_copy");fd.append("n",C.n);fd.append("uid",b.getAttribute("data-uid"));'
+			. 'function say(t){b.disabled=false;b.textContent=t;setTimeout(function(){b.textContent=old},3500)}'
+			. 'fetch(C.ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){'
+			. 'if(!j||!j.success){say("\u26a0 "+((j&&j.data&&j.data.msg)||"Failed"));if(j&&j.data&&j.data.msg)alert(j.data.msg);return}'
+			. 'var t=j.data.text;function fb(){var a=document.createElement("textarea");a.value=t;a.style.position="fixed";a.style.opacity="0";document.body.appendChild(a);a.focus();a.select();var ok=false;try{ok=document.execCommand("copy")}catch(x){}document.body.removeChild(a);if(ok){say("Copied \u2713")}else{say("Copy failed");window.prompt("Copy this link:",t)}}'
+			. 'if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){say("Copied \u2713")},fb)}else{fb()}'
+			. '}).catch(function(){say("Failed")})});})();</script>';
 	}
 
 	public static function handle_mail() {
