@@ -976,3 +976,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 #sp-install .sp-install-go{background:#111;color:#f5a524;font-weight:700;padding:9px 16px;border-radius:999px}
 #sp-install .sp-install-x{background:none;color:#111;font-size:24px;line-height:1;padding:4px 8px}
 @media(min-width:760px){#sp-install{display:none!important}}
+
+.songpress-lencount{opacity:.7;margin-left:4px}

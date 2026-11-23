@@ -273,7 +273,8 @@ class Songpress_Frontend {
 			for ( $i = 100; $i <= 1000; $i += 100 ) {
 				$ov .= '<option value="' . $i . '"' . selected( $len, $i, false ) . '>' . $i . '</option>';
 			}
-			$ov .= '</select> ' . esc_html__( 'works', 'songpress' ) . '</label>';
+			$all = Songpress_Songs::query( array( 'per_page' => 1, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
+			$ov .= '</select> ' . esc_html__( 'works', 'songpress' ) . ' <span class="songpress-lencount">' . esc_html( sprintf( /* translators: %s: number of works */ __( '(%s in the system)', 'songpress' ), number_format_i18n( (int) $all['total'] ) ) ) . '</span></label>';
 			foreach ( array( 'sp_q' => $q, 'sp_status' => $status, 'sp_sort' => $order, 'sp_dir' => $dir ) as $k => $v ) {
 				if ( '' !== $v ) {
 					$ov .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v ) . '">';
