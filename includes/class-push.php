@@ -565,6 +565,29 @@ JS;
 		return '<link rel="manifest" href="' . esc_url( add_query_arg( 'sp_manifest', '1', home_url( '/' ) ) ) . '"><link rel="apple-touch-icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon-180.png' ) . '"><meta name="theme-color" content="#0f1012"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SongPress"><meta name="apple-mobile-web-app-status-bar-style" content="black">';
 	}
 
+	/** A bar at the top of the app in a phone browser: add SongPress to the Home Screen. Hidden once it runs as a Home Screen app. */
+	public static function install_banner() {
+		if ( ! is_user_logged_in() || ! wp_is_mobile() ) {
+			return '';
+		}
+		$cfg = wp_json_encode( array(
+			'ios'     => array(
+				__( 'Add SongPress to your Home Screen', 'songpress' ),
+				__( '1. Tap the Share button in Safari (the square with an arrow, at the bottom or top).', 'songpress' ),
+				__( '2. Scroll down and tap Add to Home Screen, then Add.', 'songpress' ),
+				__( '3. Open SongPress from the new icon on your Home Screen.', 'songpress' ),
+			),
+			'android' => array(
+				__( 'Add SongPress to your Home Screen', 'songpress' ),
+				__( '1. Open the browser menu (the three dots).', 'songpress' ),
+				__( '2. Tap Add to Home screen or Install app, then confirm.', 'songpress' ),
+				__( '3. Open SongPress from the new icon.', 'songpress' ),
+			),
+			'ok'      => __( 'OK', 'songpress' ),
+		) );
+		return '<div id="sp-install" hidden><span class="sp-install-t"><b>' . esc_html__( 'Add SongPress to your Home Screen', 'songpress' ) . '</b><small>' . esc_html__( 'Opens like an app, and lets you get notifications.', 'songpress' ) . '</small></span><button type="button" class="sp-install-go">' . esc_html__( 'Add', 'songpress' ) . '</button><button type="button" class="sp-install-x" aria-label="' . esc_attr__( 'Not now', 'songpress' ) . '">&times;</button></div><script>(function(){var C=' . $cfg . ',el=document.getElementById("sp-install");if(!el)return;var app=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone,K="sp-install-hide";if(app)return;try{var t=+localStorage.getItem(K);if(t&&Date.now()-t<6048e5)return}catch(e){}var ios=/iphone|ipad|ipod/i.test(navigator.userAgent),dp=null;window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();dp=e});window.addEventListener("appinstalled",function(){el.hidden=true});el.hidden=false;function sheet(L){var d=document.createElement("div");d.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px";var c=document.createElement("div");c.style.cssText="background:#1b1e24;color:#f2f3f5;max-width:420px;width:100%;border-radius:14px;padding:18px 18px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif";L.forEach(function(x,i){var p=document.createElement(i?"p":"h3");p.textContent=x;p.style.cssText=i?"margin:8px 0":"margin:0 0 6px;font-size:17px";c.appendChild(p)});var o=document.createElement("button");o.type="button";o.textContent=C.ok;o.style.cssText="margin-top:10px;width:100%;padding:12px;border:0;border-radius:10px;background:#f5a524;color:#111;font-weight:600;font-size:16px";o.onclick=function(){d.remove()};c.appendChild(o);d.appendChild(c);d.addEventListener("click",function(e){if(e.target===d)d.remove()});document.body.appendChild(d)}el.querySelector(".sp-install-go").onclick=function(){if(dp){dp.prompt();dp=null;return}sheet(ios?C.ios:C.android)};el.querySelector(".sp-install-x").onclick=function(){el.hidden=true;try{localStorage.setItem(K,Date.now())}catch(e){}}})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+	}
+
 	/** The bell beside the person's name: bell with a slash when off, solid amber when on. Markup only; script_tag() drives every bell on the page. */
 	public static function item() {
 		if ( ! is_user_logged_in() || ! self::keys() ) {

@@ -967,3 +967,12 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-notelist li.done{opacity:.55}
 .sp-notelist small{opacity:.7;margin-left:6px}
 .songpress-userbar .sp-bell{margin:0 6px}
+
+#sp-install{display:flex;align-items:center;gap:10px;padding:10px 12px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:#f5a524;color:#111}
+#sp-install[hidden]{display:none}
+#sp-install .sp-install-t{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+#sp-install small{font-size:12px;opacity:.8}
+#sp-install button{border:0;font:inherit;cursor:pointer}
+#sp-install .sp-install-go{background:#111;color:#f5a524;font-weight:700;padding:9px 16px;border-radius:999px}
+#sp-install .sp-install-x{background:none;color:#111;font-size:24px;line-height:1;padding:4px 8px}
+@media(min-width:760px){#sp-install{display:none!important}}
