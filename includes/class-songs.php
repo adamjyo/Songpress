@@ -38,7 +38,7 @@ class Songpress_Songs {
 	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
 	/** The writing stages offered in the editor. Any other stage a work already carries is kept in the list. */
-	const STAGES = array( 'Starter', 'Idea', 'Draft', 'Demo', 'Recorded', 'Mixed', 'Finished' );
+	const STAGES = array( 'Idea', 'Starter', 'Pre-production', 'Production', 'Post-production', 'Finished', 'Released', 'Taken down' );
 
 	/** Statuses and genres found on works, read once per request. */
 	private static $in_use = null;
