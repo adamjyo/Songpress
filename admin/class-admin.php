@@ -7,6 +7,7 @@ class Songpress_Admin {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_post_songpress_save', array( __CLASS__, 'handle_save' ) );
 		add_action( 'wp_ajax_songpress_autosave', array( __CLASS__, 'handle_autosave' ) );
+		add_action( 'wp_ajax_songpress_sheet', array( __CLASS__, 'handle_sheet_ajax' ) );
 		add_action( 'admin_post_songpress_new_version', array( __CLASS__, 'handle_new_version' ) );
 		add_action( 'admin_post_songpress_import_check', array( __CLASS__, 'handle_import_check' ) );
 		add_action( 'admin_post_songpress_import_run', array( __CLASS__, 'handle_import_run' ) );
@@ -1450,8 +1451,16 @@ class Songpress_Admin {
 		$sh  = wp_parse_args( (array) get_option( 'songpress_sheet', array() ), array( 'publisher' => '', 'logo_id' => 0 ) );
 		$lg  = $sh['logo_id'] ? wp_get_attachment_url( (int) $sh['logo_id'] ) : '';
 		echo '<h2>' . esc_html__( 'Chord sheet', 'songpress' ) . '</h2><p class="sp-help">' . esc_html__( 'How the ChordPro tool prints a chart (Print / Save PDF). The title, writers, key, tempo and time come from the chart. The bottom line shows the work\'s CCLI number, or its ISWC when it has no CCLI number, then your publisher information.', 'songpress' ) . '</p>';
-		echo '<p><label>' . esc_html__( 'Publisher information (bottom of every sheet)', 'songpress' ) . '<br><textarea name="sheet_publisher" rows="3" style="width:100%;max-width:520px" placeholder="' . esc_attr__( '(c) 2026 Red Beard and Company. Used by permission. All rights reserved.', 'songpress' ) . '">' . esc_textarea( $sh['publisher'] ) . '</textarea></label></p>';
-		echo '<p>' . esc_html__( 'Branding logo (top right of every sheet)', 'songpress' ) . '<br>' . ( $lg ? '<img src="' . esc_url( $lg ) . '" alt="" style="max-height:48px;max-width:200px;background:#fff;padding:4px;border:1px solid #ccc;border-radius:4px;display:block;margin:6px 0">' : '' ) . '<input type="file" name="sheet_logo" accept="image/*">' . ( $lg ? ' <label><input type="checkbox" name="sheet_logo_remove" value="1"> ' . esc_html__( 'Remove the logo', 'songpress' ) . '</label>' : '' ) . '</p>';
+		echo '<p><label>' . esc_html__( 'Publisher information (bottom of every sheet)', 'songpress' ) . '<br><textarea name="sheet_publisher" id="sp-sheet-pub" rows="3" style="width:100%;max-width:520px" placeholder="' . esc_attr__( '(c) 2026 Red Beard and Company. Used by permission. All rights reserved.', 'songpress' ) . '">' . esc_textarea( $sh['publisher'] ) . '</textarea></label></p>';
+		echo '<p>' . esc_html__( 'Branding logo (top right of every sheet)', 'songpress' ) . '<br>' . ( $lg ? '<img id="sp-sheet-img" src="' . esc_url( $lg ) . '" alt="" style="max-height:48px;max-width:200px;background:#fff;padding:4px;border:1px solid #ccc;border-radius:4px;display:block;margin:6px 0">' : '' ) . '<input type="file" name="sheet_logo" id="sp-sheet-logo" accept="image/*">' . ( $lg ? ' <label><input type="checkbox" name="sheet_logo_remove" value="1"> ' . esc_html__( 'Remove the logo', 'songpress' ) . '</label>' : '' ) . '</p>';
+		echo '<p class="sp-help" id="sp-sheet-msg" aria-live="polite">' . esc_html__( 'These save as soon as you change them.', 'songpress' ) . '</p>';
+		echo '<script>(function(){var u=' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ',n=' . wp_json_encode( wp_create_nonce( 'songpress_settings' ) ) . ',p=document.getElementById("sp-sheet-pub"),f=document.getElementById("sp-sheet-logo"),m=document.getElementById("sp-sheet-msg"),rm=document.querySelector("input[name=sheet_logo_remove]"),t;if(!p||!f)return;'
+			. 'function say(x){m.textContent=x}'
+			. 'function send(fd){fd.append("action","songpress_sheet");fd.append("n",n);say("Saving…");fetch(u,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(!j||!j.success){say((j&&j.data&&j.data.message)||"Could not save.");return}say("Saved.");var i=document.getElementById("sp-sheet-img");if(j.data.logo){if(!i){i=document.createElement("img");i.id="sp-sheet-img";i.style.cssText="max-height:48px;max-width:200px;background:#fff;padding:4px;border:1px solid #ccc;border-radius:4px;display:block;margin:6px 0";f.parentNode.insertBefore(i,f)}i.src=j.data.logo}else if(i){i.remove()}f.value=""}).catch(function(){say("Could not save.")})}'
+			. 'p.addEventListener("input",function(){clearTimeout(t);t=setTimeout(function(){var d=new FormData();d.append("publisher",p.value);send(d)},700)});'
+			. 'p.addEventListener("blur",function(){clearTimeout(t);var d=new FormData();d.append("publisher",p.value);send(d)});'
+			. 'f.addEventListener("change",function(){if(!f.files.length)return;var d=new FormData();d.append("sheet_logo",f.files[0]);send(d)});'
+			. 'if(rm)rm.addEventListener("change",function(){if(!rm.checked)return;var d=new FormData();d.append("remove_logo","1");send(d);rm.checked=false})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed script and JSON.
 		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
 		self::update_box();
 		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
@@ -1575,6 +1584,33 @@ class Songpress_Admin {
 		}
 		Songpress_Install::create_pages();
 		self::back( 'songpress-settings', array( 'saved' => 1 ) );
+	}
+
+	/** Chord sheet settings save themselves as you change them (no need to press Save changes). */
+	public static function handle_sheet_ajax() {
+		check_ajax_referer( 'songpress_settings', 'n' );
+		if ( ! Songpress_Caps::can( 'settings' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Not allowed.', 'songpress' ) ), 403 );
+		}
+		$sh = wp_parse_args( (array) get_option( 'songpress_sheet', array() ), array( 'publisher' => '', 'logo_id' => 0 ) );
+		if ( isset( $_POST['publisher'] ) ) {
+			$sh['publisher'] = sanitize_textarea_field( wp_unslash( $_POST['publisher'] ) );
+		}
+		if ( ! empty( $_POST['remove_logo'] ) ) {
+			$sh['logo_id'] = 0;
+		}
+		if ( ! empty( $_FILES['sheet_logo']['name'] ) && current_user_can( 'upload_files' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			$aid = media_handle_upload( 'sheet_logo', 0 );
+			if ( is_wp_error( $aid ) ) {
+				wp_send_json_error( array( 'message' => $aid->get_error_message() ) );
+			}
+			$sh['logo_id'] = (int) $aid;
+		}
+		update_option( 'songpress_sheet', $sh, false );
+		wp_send_json_success( array( 'logo' => $sh['logo_id'] ? (string) wp_get_attachment_url( (int) $sh['logo_id'] ) : '' ) );
 	}
 
 	public static function handle_settings() {
