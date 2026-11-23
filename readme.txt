@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.140
+Stable tag: 0.63.141
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.141 =
+* People: deleting a person no longer refuses when they have credits or earnings. Their credits stay on the songs.
 
 = 0.63.140 =
 * People: every person now has a Login link section (and a Login link button on their row) to send or copy a password link; people without a login or class are told what to do first.

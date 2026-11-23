@@ -207,18 +207,7 @@ class Songpress_Persons {
 		if ( $u && ( Songpress_Caps::is_wp_admin( $u->ID ) || get_current_user_id() === (int) $u->ID ) ) {
 			self::go( array( 'sp_err' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s is a manager or is you, so they cannot be deleted here.', 'songpress' ), $name ) ) ) );
 		}
-		$ct    = Songpress_Install::table( 'credits' );
-		$uid   = $u ? (int) $u->ID : 0;
-		$count = 0;
-		foreach ( (array) $wpdb->get_results( "SELECT name, user_id FROM {$ct}" ) as $c ) { // phpcs:ignore WordPress.DB
-			if ( Songpress_Profiles::key( $c->name ) === $key || ( $uid && (int) $c->user_id === $uid ) ) {
-				++$count;
-			}
-		}
-		$earn = abs( self::total_for( $name ) );
-		if ( $count || $earn > 0.004 ) {
-			self::go( array( 'sp_err' => rawurlencode( sprintf( /* translators: 1: name 2: credits */ __( '%1$s is credited on %2$d songs or has earnings, so they were not deleted. Take them off the songs first, or rename them to the person they should become.', 'songpress' ), $name, $count ) ) ) );
-		}
+		// Credits and earnings are left alone: they live on the songs by name, so the history stays intact.
 		if ( $r['profile'] ) {
 			$wpdb->delete( Songpress_Install::table( 'profiles' ), array( 'id' => (int) $r['profile']->id ) );
 			Songpress_Profiles::reset_cache();
@@ -226,7 +215,7 @@ class Songpress_Persons {
 		if ( $u ) {
 			Songpress_Caps::assign( (int) $u->ID, '' );
 		}
-		self::go( array( 'sp_saved' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s was deleted.', 'songpress' ), $name ) . ( $u ? ' ' . __( 'Their login was kept but no longer has access to SongPress.', 'songpress' ) : '' ) ) ) );
+		self::go( array( 'sp_saved' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s was deleted. Their credits and earnings stay on the songs.', 'songpress' ), $name ) . ( $u ? ' ' . __( 'Their login was kept but no longer has access to SongPress.', 'songpress' ) : '' ) ) ) );
 	}
 
 	/* ---------- rename ---------- */
