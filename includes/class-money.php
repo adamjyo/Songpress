@@ -20,7 +20,7 @@ class Songpress_Money {
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
-		foreach ( array( 'import', 'pay', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
+		foreach ( array( 'import', 'pay', 'payment', 'payment_delete', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
 			add_action( 'admin_post_songpress_money_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
 	}
@@ -517,6 +517,196 @@ class Songpress_Money {
 		self::go( 'money', array( 'q' => $q, 'm_ok' => sprintf( /* translators: %s: person */ __( 'Saved the payout for %s.', 'songpress' ), $party ) ) );
 	}
 
+	/** Income per person for every quarter, summed over all streams (or split by stream when asked). Rows: person, quarter, src, total. */
+	public static function person_grid() {
+		global $wpdb;
+		$t = self::t( 'person_earnings' );
+		return $wpdb->get_results( "SELECT person_key, MIN(person) AS person, quarter, src, SUM(amount) AS total FROM {$t} GROUP BY person_key, quarter, src" ); // phpcs:ignore WordPress.DB
+	}
+
+	/** What each person has been paid so far, by person key; and the payments themselves. */
+	public static function paid_by_person() {
+		global $wpdb;
+		$t   = self::t( 'payments' );
+		$out = array();
+		foreach ( $wpdb->get_results( "SELECT party_key, SUM(amount) AS total FROM {$t} WHERE paid = 1 AND kind = 'writer' GROUP BY party_key" ) as $r ) { // phpcs:ignore WordPress.DB
+			$out[ $r->party_key ] = (float) $r->total;
+		}
+		return $out;
+	}
+
+	public static function payments_of( $key ) {
+		global $wpdb;
+		$t = self::t( 'payments' );
+		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE paid = 1 AND kind = 'writer' AND party_key = %s ORDER BY pay_year DESC, pay_quarter DESC", $key ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/** A table of what each person earned in each quarter, all streams together (with a switch to see every stream). */
+	private static function income_html( array $qs ) {
+		$rows = self::person_grid();
+		if ( ! $rows ) {
+			return '';
+		}
+		$split = ! empty( $_GET['streams'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$all   = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$cols  = $all ? $qs : array_slice( $qs, 0, 8 );
+		$cols  = array_reverse( $cols ); // oldest to newest, left to right
+		$grid  = array();
+		$names = array();
+		$sum   = array();
+		foreach ( $rows as $r ) {
+			$names[ $r->person_key ]                          = $r->person;
+			$grid[ $r->person_key ][ $r->quarter ][ $r->src ] = (float) $r->total;
+			$sum[ $r->person_key ]                            = ( $sum[ $r->person_key ] ?? 0 ) + (float) $r->total;
+		}
+		arsort( $sum );
+		$base = Songpress_Editor::list_url();
+		$o    = '<h3>' . esc_html__( 'Income by person', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'What each person earned in each quarter, from every income stream.', 'songpress' ) . ' '
+			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'streams' => $split ? '' : '1', 'allq' => $all ? '1' : '' ), $base ) ) . '">' . esc_html( $split ? __( 'Show totals only', 'songpress' ) : __( 'Split by stream', 'songpress' ) ) . '</a> · '
+			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'streams' => $split ? '1' : '', 'allq' => $all ? '' : '1' ), $base ) ) . '">' . esc_html( $all ? __( 'Last 8 quarters', 'songpress' ) : __( 'Every quarter', 'songpress' ) ) . '</a></p>';
+		$o   .= '<div class="spm-scroll"><table class="spm-table spm-income"><thead><tr><th>' . esc_html__( 'Person', 'songpress' ) . '</th>';
+		foreach ( $cols as $q ) {
+			$o .= '<th class="n">' . esc_html( $q ) . '</th>';
+		}
+		$o   .= '<th class="n">' . esc_html__( 'All time', 'songpress' ) . '</th></tr></thead><tbody>';
+		$colt = array();
+		foreach ( array_keys( $sum ) as $k ) {
+			$o .= '<tr><td><b>' . esc_html( $names[ $k ] ) . '</b></td>';
+			foreach ( $cols as $q ) {
+				$v           = isset( $grid[ $k ][ $q ] ) ? array_sum( $grid[ $k ][ $q ] ) : 0;
+				$colt[ $q ]  = ( $colt[ $q ] ?? 0 ) + $v;
+				$o          .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
+			}
+			$o .= '<td class="n"><b>' . esc_html( self::money( $sum[ $k ] ) ) . '</b></td></tr>';
+			if ( $split ) {
+				foreach ( self::SOURCES as $sk => $label ) {
+					$tot = 0;
+					$cells = '';
+					foreach ( $cols as $q ) {
+						$v      = $grid[ $k ][ $q ][ $sk ] ?? 0;
+						$tot   += $v;
+						$cells .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
+					}
+					$all_t = 0;
+					foreach ( $grid[ $k ] as $qq => $bys ) {
+						$all_t += $bys[ $sk ] ?? 0;
+					}
+					if ( $all_t ) {
+						$o .= '<tr class="spm-sub"><td>' . esc_html( $label ) . '</td>' . $cells . '<td class="n">' . esc_html( self::money( $all_t ) ) . '</td></tr>';
+					}
+				}
+			}
+		}
+		$o .= '</tbody><tfoot><tr><th>' . esc_html__( 'Everyone', 'songpress' ) . '</th>';
+		foreach ( $cols as $q ) {
+			$o .= '<th class="n">' . esc_html( self::money( $colt[ $q ] ?? 0 ) ) . '</th>';
+		}
+		return $o . '<th class="n">' . esc_html( self::money( array_sum( $sum ) ) ) . '</th></tr></tfoot></table></div>';
+	}
+
+	/** Accounting: what each person has earned, been paid, and is still owed, with a form to record a payment against a quarter. */
+	private static function accounts_html( array $qs, $sel ) {
+		$rows = self::person_grid();
+		if ( ! $rows ) {
+			return '';
+		}
+		$earned = array();
+		$names  = array();
+		foreach ( $rows as $r ) {
+			$names[ $r->person_key ]  = $r->person;
+			$earned[ $r->person_key ] = ( $earned[ $r->person_key ] ?? 0 ) + (float) $r->total;
+		}
+		$paid = self::paid_by_person();
+		foreach ( $paid as $k => $v ) {
+			if ( ! isset( $earned[ $k ] ) ) {
+				$earned[ $k ] = 0;
+				$names[ $k ]  = $k;
+			}
+		}
+		$owed = array();
+		foreach ( $earned as $k => $v ) {
+			$owed[ $k ] = round( $v - ( $paid[ $k ] ?? 0 ), 2 );
+		}
+		arsort( $owed );
+		$qopts = $qs;
+		$cur   = self::quarter( gmdate( 'Y' ) . ' Q' . (int) ceil( (int) gmdate( 'n' ) / 3 ) );
+		if ( $cur && ! in_array( $cur, $qopts, true ) ) {
+			array_unshift( $qopts, $cur );
+		}
+		$def = '' !== $sel ? $sel : ( $qopts ? $qopts[0] : '' );
+		$o   = '<h3>' . esc_html__( 'Accounting', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'What each person is owed to date: everything they have earned less everything paid to them. Record a payment and choose the quarter it counts toward.', 'songpress' ) . '</p>';
+		$o  .= '<div class="spm-scroll"><table class="spm-table spm-acct"><thead><tr><th>' . esc_html__( 'Person', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Earned', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Paid', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Owed', 'songpress' ) . '</th><th>' . esc_html__( 'Record a payment', 'songpress' ) . '</th></tr></thead><tbody>';
+		$te = $tp = $to = 0;
+		foreach ( $owed as $k => $ow ) {
+			$te += $earned[ $k ];
+			$tp += $paid[ $k ] ?? 0;
+			$to += $ow;
+			$o  .= '<tr><td><b>' . esc_html( $names[ $k ] ) . '</b></td><td class="n">' . esc_html( self::money( $earned[ $k ] ) ) . '</td><td class="n">' . esc_html( self::money( $paid[ $k ] ?? 0 ) ) . '</td><td class="n"><b>' . esc_html( self::money( $ow ) ) . '</b></td><td>';
+			$o  .= self::form_open( 'songpress_money_payment', 'spm-pay' ) . '<input type="hidden" name="person" value="' . esc_attr( $names[ $k ] ) . '"><input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $ow > 0 ? number_format( $ow, 2, '.', '' ) : '' ) . '" placeholder="0.00" aria-label="' . esc_attr__( 'Amount paid', 'songpress' ) . '" required>'
+				. '<select name="quarter" aria-label="' . esc_attr__( 'Counts toward quarter', 'songpress' ) . '">';
+			foreach ( $qopts as $q ) {
+				$o .= '<option value="' . esc_attr( $q ) . '"' . selected( $q, $def, false ) . '>' . esc_html( $q ) . '</option>';
+			}
+			$o .= '</select><input type="date" name="paid_on" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '" aria-label="' . esc_attr__( 'Date paid', 'songpress' ) . '"><input name="notes" placeholder="' . esc_attr__( 'Note', 'songpress' ) . '" aria-label="' . esc_attr__( 'Note', 'songpress' ) . '"><button class="spe-save" type="submit">' . esc_html__( 'Pay', 'songpress' ) . '</button></form>';
+			$hist = self::payments_of( $k );
+			if ( $hist ) {
+				$o .= '<details class="spm-hist"><summary>' . esc_html( sprintf( /* translators: %d: number of payments */ _n( '%d payment', '%d payments', count( $hist ), 'songpress' ), count( $hist ) ) ) . '</summary><ul>';
+				foreach ( $hist as $h ) {
+					$q  = $h->pay_year . '-Q' . $h->pay_quarter;
+					$o .= '<li><span>' . esc_html( $q . ' · ' . ( $h->paid_on ?: '' ) ) . '</span> <b>' . esc_html( self::money( $h->amount ) ) . '</b>' . ( $h->notes ? ' <small>' . esc_html( preg_replace( '/\s+/', ' ', trim( (string) $h->notes ) ) ) . '</small>' : '' ) . ' '
+						. self::form_open( 'songpress_money_payment_delete', 'spm-del' ) . '<input type="hidden" name="id" value="' . (int) $h->id . '"><button type="submit" class="spe-btn" title="' . esc_attr__( 'Remove this payment', 'songpress' ) . '">&times;</button></form></li>';
+				}
+				$o .= '</ul></details>';
+			}
+			$o .= '</td></tr>';
+		}
+		return $o . '</tbody><tfoot><tr><th>' . esc_html__( 'Everyone', 'songpress' ) . '</th><th class="n">' . esc_html( self::money( $te ) ) . '</th><th class="n">' . esc_html( self::money( $tp ) ) . '</th><th class="n">' . esc_html( self::money( $to ) ) . '</th><th></th></tr></tfoot></table></div>';
+	}
+
+	/** Record a payment to one person against a quarter. A quarter holds one running row per person: more payments in it are added on, and a planned (unpaid) amount is replaced. */
+	public static function handle_payment() {
+		self::guard( 'songpress_money_payment' );
+		global $wpdb;
+		$in     = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned below.
+		$q      = self::quarter( $in['quarter'] ?? '' );
+		$party  = sanitize_text_field( $in['person'] ?? '' );
+		$key    = self::person_key( $party );
+		$amount = round( (float) str_replace( array( '$', ',' ), '', (string) ( $in['amount'] ?? 0 ) ), 2 );
+		if ( '' === $q || '' === $key || $amount <= 0 ) {
+			self::go( 'money', array( 'm_err' => __( 'Choose a person, a quarter and an amount above zero.', 'songpress' ) ) );
+		}
+		$year = (int) substr( $q, 0, 4 );
+		$qn   = (int) substr( $q, -1 );
+		$on   = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) ( $in['paid_on'] ?? '' ) ) ? $in['paid_on'] : gmdate( 'Y-m-d' );
+		$note = sanitize_text_field( $in['notes'] ?? '' );
+		$line = $on . ': ' . number_format( $amount, 2, '.', '' ) . ( '' !== $note ? ' ' . $note : '' );
+		$p    = self::t( 'payments' );
+		$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, amount, paid, notes FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $year, $qn, $key ) ); // phpcs:ignore WordPress.DB
+		if ( $have ) {
+			$was = (int) $have->paid;
+			$wpdb->update( $p, array(
+				'amount'     => $was ? round( (float) $have->amount + $amount, 2 ) : $amount,
+				'paid'       => 1,
+				'paid_on'    => $on,
+				'notes'      => ( $was && '' !== trim( (string) $have->notes ) ? trim( (string) $have->notes ) . "\n" : '' ) . $line,
+				'updated_at' => current_time( 'mysql' ),
+			), array( 'id' => (int) $have->id ) );
+		} else {
+			$wpdb->insert( $p, array( 'pay_year' => $year, 'pay_quarter' => $qn, 'kind' => 'writer', 'party' => $party, 'party_key' => $key, 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $line, 'updated_at' => current_time( 'mysql' ) ) );
+		}
+		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: amount, 2: person, 3: quarter */ __( 'Recorded %1$s paid to %2$s for %3$s.', 'songpress' ), self::money( $amount ), $party, $q ) ) );
+	}
+
+	public static function handle_payment_delete() {
+		self::guard( 'songpress_money_payment_delete' );
+		global $wpdb;
+		$id = absint( $_POST['id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
+		if ( $id ) {
+			$wpdb->delete( self::t( 'payments' ), array( 'id' => $id ) );
+		}
+		self::go( 'money', array( 'm_ok' => __( 'Payment removed.', 'songpress' ) ) );
+	}
+
 	public static function handle_expense_add() {
 		self::guard( 'songpress_money_expense_add' );
 		global $wpdb;
@@ -602,7 +792,7 @@ class Songpress_Money {
 		$earned = self::earned_total();
 		$spent  = self::expense_total();
 		$paid   = self::paid_total();
-		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Stats', 'songpress' ) . '</h2></div>' . self::notes();
+		$o      = '<div class="songpress sp-app sp-editor sp-money"><div class="spe-top"><h2>' . esc_html__( 'Money', 'songpress' ) . '</h2></div>' . self::notes();
 		if ( ! $qs ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'No earnings loaded yet. Load your old catalog file at the bottom of this page.', 'songpress' ) . '</p>';
 		}
@@ -639,24 +829,7 @@ class Songpress_Money {
 			$o .= '<h3>' . esc_html__( 'Top earning songs', 'songpress' ) . '</h3>' . self::bars( $items );
 		}
 
-		// payouts
-		if ( '' !== $sel ) {
-			$year = (int) substr( $sel, 0, 4 );
-			$qn   = (int) substr( $sel, -1 );
-			$have = self::payments_for( $year, $qn );
-			$o   .= '<h3>' . esc_html( sprintf( /* translators: %s: quarter such as 2026-Q2 */ __( 'Payouts for %s', 'songpress' ), $sel ) ) . '</h3><form method="get" class="spm-qpick"><input type="hidden" name="sp_page" value="money"><select name="q" onchange="this.form.submit()">';
-			foreach ( $qs as $q ) {
-				$o .= '<option value="' . esc_attr( $q ) . '"' . selected( $q, $sel, false ) . '>' . esc_html( $q ) . '</option>';
-			}
-			$o .= '</select></form><div class="spm-scroll"><table class="spm-table"><thead><tr><th>' . esc_html__( 'Person', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Earned', 'songpress' ) . '</th><th>' . esc_html__( 'Pay', 'songpress' ) . '</th></tr></thead><tbody>';
-			foreach ( self::owed( $sel ) as $r ) {
-				$p  = $have[ 'writer|' . $r->person_key ] ?? null;
-				$o .= '<tr><td>' . esc_html( $r->person ) . '</td><td class="n">' . esc_html( self::money( $r->total ) ) . '</td><td>' . self::form_open( 'songpress_money_pay', 'spm-pay' ) . '<input type="hidden" name="quarter" value="' . esc_attr( $sel ) . '"><input type="hidden" name="party" value="' . esc_attr( $r->person ) . '">';
-				$o .= '<input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $p ? number_format( (float) $p->amount, 2, '.', '' ) : number_format( (float) $r->total, 2, '.', '' ) ) . '" aria-label="' . esc_attr__( 'Amount paid', 'songpress' ) . '">';
-				$o .= '<label class="spm-chk"><input type="checkbox" name="paid" value="1"' . checked( $p && (int) $p->paid, true, false ) . '> ' . esc_html__( 'Paid', 'songpress' ) . '</label><input type="date" name="paid_on" value="' . esc_attr( $p && $p->paid_on ? $p->paid_on : '' ) . '" aria-label="' . esc_attr__( 'Paid on', 'songpress' ) . '"><button class="spe-btn" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form></td></tr>';
-			}
-			$o .= '</tbody></table></div>';
-		}
+		$o .= self::income_html( $qs ) . self::accounts_html( $qs, $sel );
 
 		// expenses
 		$o .= '<h3>' . esc_html__( 'Expenses', 'songpress' ) . '</h3>' . self::form_open( 'songpress_money_expense_add', 'spm-exp' ) . '<div class="spe-grid">';
