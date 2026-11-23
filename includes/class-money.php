@@ -205,8 +205,16 @@ class Songpress_Money {
 				return 1;
 			};
 			if ( $has( 'paid_entry' ) ) {
-				foreach ( $pdo->query( 'SELECT y, q, party, kind, amount, notes FROM paid_entry' ) as $r ) {
-					$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $r['party'], $r['amount'], false, '', $r['notes'] );
+				// Every paid_entry line is money that was actually paid out, so it comes across as paid (a zero line has nothing to count and waits for the pay board).
+				foreach ( $pdo->query( 'SELECT y, q, party, kind, amount, notes, updated_at FROM paid_entry' ) as $r ) {
+					$amt  = (float) $r['amount'];
+					$on   = $amt > 0 ? substr( (string) $r['updated_at'], 0, 10 ) : '';
+					$kind = $r['kind'] ?: 'writer';
+					$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $kind, $r['party'], $amt, $amt > 0, $on, $r['notes'] );
+					if ( $amt > 0 ) {
+						// an earlier load left these as unpaid, untouched: mark them paid now (an amount changed here is left alone)
+						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s AND paid = 0 AND ABS(amount - %d / 100) < 0.005", $on ?: null, (int) $r['y'], (int) $r['q'], $kind, self::person_key( $r['party'] ), (int) round( $amt * 100 ) ) ); // phpcs:ignore WordPress.DB
+					}
 				}
 			}
 			if ( $has( 'pay_board' ) ) {
@@ -219,6 +227,7 @@ class Songpress_Money {
 							$pe = self::t( 'person_earnings' );
 							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET amount = COALESCE((SELECT SUM(amount) FROM {$pe} WHERE person_key = %s AND quarter = %s), 0) WHERE id = %d AND paid = 0 AND amount = 0", $key, (int) $r['y'] . '-Q' . (int) $r['q'], (int) $row->id ) ); // phpcs:ignore WordPress.DB
 							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE id = %d AND paid = 0", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
+							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid_on = %s WHERE id = %d AND paid = 1 AND paid_on IS NULL", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
 						}
 					} else {
 						$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $r['party'], 0, (int) $r['paid'], (string) $r['paid_on'], '' );

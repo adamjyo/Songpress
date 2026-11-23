@@ -359,9 +359,10 @@ check( 'quarters newest first', Songpress_Money::quarters(), array( '2026-Q2', '
 check( 'top song is Harbor Lights', Songpress_Money::top_songs( 5 )[0]->title, 'Harbor Lights' );
 $ow = Songpress_Money::owed( '2026-Q2' );
 check( 'owed Adam', array( $ow[0]->person, round( (float) $ow[0]->total, 2 ) ), array( 'Adam Page', 8.0 ) );
+check( 'Mack old payment line imported as paid', (int) Songpress_Money::payments_for( 2026, 2 )['writer|mackbutts']->paid, 1 );
 $pp = Songpress_Money::payments_for( 2026, 2 );
 check( 'Adam marked paid from the board', array( (int) $pp['writer|adampage']->paid, $pp['writer|adampage']->paid_on, round( (float) $pp['writer|adampage']->amount, 2 ) ), array( 1, '2026-09-05', 8.0 ) );
-check( 'paid total', round( Songpress_Money::paid_total(), 2 ), 8.0 );
+check( 'paid total (old payment lines count as paid)', round( Songpress_Money::paid_total(), 2 ), 9.0 );
 $mn = Songpress_Money::months();
 check( 'stats by month', array( $mn[0]->month, (int) $mn[0]->units ), array( '2026-07', 165 ) );
 $ts = Songpress_Money::top_streamed( 5 );

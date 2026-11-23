@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.50
+Stable tag: 0.63.51
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.51 =
+* Money: payment lines from the old catalog (paid_entry) now come across as paid, so what each person is owed is no longer overstated. Loading the catalog again also fixes lines imported earlier as unpaid.
 
 = 0.63.50 =
 * Money chart is now one bar per quarter: income above the zero line (kept part in stream colors, the part that went out in translucent grey, total on top), payouts and expenses below it, with the net shown when a quarter ran at a loss.
