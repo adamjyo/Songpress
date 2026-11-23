@@ -122,14 +122,13 @@ class Songpress_Editor {
 			$o .= '<label class="spe-field wide spe-own"><span>' . esc_html__( 'Release title', 'songpress' ) . '</span><input name="release_title" value="' . esc_attr( self::f( $song, 'release_title' ) ) . '" placeholder="' . esc_attr( self::f( $song, 'title' ) ) . '"><small class="spe-help">' . esc_html( sprintf( /* translators: %s: the work title */ __( 'The name of this release, which is often different from the work title. The work title, "%s", is set on the original work.', 'songpress' ), self::f( $song, 'title' ) ) ) . '</small></label>';
 		}
 		$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . ( $root ? $artist_hidden : '' );
-		if ( ! $root ) {
 			$cur_stage = trim( (string) self::f( $song, 'stage' ) );
 			$so        = '<option value=""></option>';
 			foreach ( Songpress_Songs::merge_options( Songpress_Songs::stages(), array( $cur_stage ) ) as $st ) {
 				$so .= '<option value="' . esc_attr( $st ) . '"' . selected( strtolower( $cur_stage ), strtolower( $st ), false ) . '>' . esc_html( $st ) . '</option>';
 			}
-			$o .= '<label class="spe-field adv spe-own"><span>' . esc_html__( 'Writing stage', 'songpress' ) . '</span><select name="stage">' . $so . '</select></label>';
-		}
+			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Writing stage', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
+		$o .= '<script>(function(){var s=document.getElementById("spe-stage"),t=document.querySelector("input[name=title]");if(!s||!t)return;function f(){t.required=s.value.toLowerCase()!=="starter"}s.addEventListener("change",f);f()})()</script>';
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'Other titles', 'songpress' ) . '</span><textarea name="alt_titles" rows="2">' . esc_textarea( self::f( $song, 'alt_titles' ) ) . '</textarea></label>';

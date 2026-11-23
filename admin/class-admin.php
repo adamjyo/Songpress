@@ -603,7 +603,7 @@ class Songpress_Admin {
 		if ( ! empty( $_POST['audio_clear'] ) && '1' === $_POST['audio_clear'] && empty( $data['audio_id'] ) ) {
 			$data['audio_url'] = '';
 		}
-		if ( ! isset( $data['title'] ) || '' === $data['title'] ) {
+		if ( ( ! isset( $data['title'] ) || '' === $data['title'] ) && 'starter' !== strtolower( trim( (string) ( $data['stage'] ?? '' ) ) ) ) {
 			self::back( 'songpress-song', array( 'song' => $id, 'err' => rawurlencode( __( 'A title is required.', 'songpress' ) ) ) );
 		}
 		if ( $id ) {
