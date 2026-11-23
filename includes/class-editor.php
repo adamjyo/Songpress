@@ -233,7 +233,7 @@ class Songpress_Editor {
 		if ( $song ) {
 			$o .= self::versions_panel( $song );
 		}
-		$o .= '</div></div>' . self::autosave_script() . self::script() . '</div>';
+		$o .= '</div></div>' . self::autosave_script() . self::script() . self::player_script() . '</div>';
 		return $o;
 	}
 
@@ -441,7 +441,7 @@ class Songpress_Editor {
 		$o  .= '<input type="hidden" name="' . esc_attr( $field ) . '_id" value="' . (int) $id . '"><input type="hidden" class="spe-clr" name="' . esc_attr( $field ) . '_clear" value="0"><input type="hidden" name="' . esc_attr( $field ) . '_url" value="' . esc_attr( $url ) . '">';
 		$rml = $is_img ? __( 'Remove the cover art', 'songpress' ) : __( 'Remove the audio', 'songpress' );
 		$o  .= '<div class="spe-mrow ' . ( $is_img ? 'art' : 'audio' ) . '"><button type="button" class="spe-rm spe-ib danger" title="' . esc_attr( $rml ) . '" aria-label="' . esc_attr( $rml ) . '"' . ( '' === $src ? ' hidden' : '' ) . '>' . self::ico( 'trash' ) . '</button>';
-		$o  .= '<div class="spe-prev' . ( $is_img ? ' spe-dz' : ' spe-player' ) . '" data-ph="' . esc_attr( $ph ) . '" title="' . esc_attr( $ph ) . '" tabindex="0" role="button">' . ( '' !== $src ? ( $is_img ? '<img src="' . esc_url( $src ) . '" alt="">' : '<audio controls preload="metadata" src="' . esc_url( $src ) . '"></audio>' ) : ( $is_img ? '' : '<audio controls class="spe-empty"></audio>' ) ) . '</div></div>';
+		$o  .= '<div class="spe-prev' . ( $is_img ? ' spe-dz' : ' spe-player' ) . '" data-ph="' . esc_attr( $ph ) . '" title="' . esc_attr( $ph ) . '" tabindex="0" role="button">' . ( '' !== $src ? ( $is_img ? '<img src="' . esc_url( $src ) . '" alt="">' : '<audio preload="metadata" src="' . esc_url( $src ) . '"></audio>' ) : '' ) . '</div></div>';
 		$o  .= '<input type="file" class="spe-pick" accept="' . esc_attr( $accept ) . '" hidden></div>';
 		return $o;
 	}
@@ -547,6 +547,20 @@ class Songpress_Editor {
 			. '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
+	/** The audio player: play and pause, a playhead you can drag, and the length. Built from the plain audio element so it looks the same in every browser. */
+	private static function player_script() {
+		$cfg = wp_json_encode( array( 'play' => __( 'Play', 'songpress' ), 'pause' => __( 'Pause', 'songpress' ), 'head' => __( 'Playhead', 'songpress' ) ) );
+		return '<script>(function(){var C=' . $cfg . ';var P=\'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>\',Q=\'<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>\';'
+			. 'function fmt(s){if(!isFinite(s)||s<0)s=0;var m=Math.floor(s/60),x=Math.floor(s%60);return m+":"+(x<10?"0":"")+x}'
+			. 'function mk(p){var au=p.querySelector("audio");if(!au||p.querySelector(".spe-ap"))return;au.controls=false;au.preload="metadata";var w=document.createElement("div");w.className="spe-ap";w.innerHTML=\'<button type="button" class="spe-ap-b"></button><input type="range" class="spe-ap-r" min="0" max="1000" value="0" step="1"><span class="spe-ap-t">0:00 / 0:00</span>\';p.appendChild(w);'
+			. 'var b=w.querySelector(".spe-ap-b"),r=w.querySelector(".spe-ap-r"),t=w.querySelector(".spe-ap-t"),drag=false;r.setAttribute("aria-label",C.head);'
+			. 'function ico(){var pl=!au.paused;b.innerHTML=pl?Q:P;b.setAttribute("aria-label",pl?C.pause:C.play)}function upd(){var d=au.duration;t.textContent=fmt(au.currentTime)+" / "+fmt(d);if(!drag&&isFinite(d)&&d>0)r.value=Math.round(au.currentTime/d*1000)}'
+			. 'ico();b.addEventListener("click",function(e){e.stopPropagation();if(au.paused){au.play()}else{au.pause()}});'
+			. 'au.addEventListener("play",ico);au.addEventListener("pause",ico);au.addEventListener("ended",function(){ico();upd()});au.addEventListener("timeupdate",upd);au.addEventListener("loadedmetadata",upd);au.addEventListener("durationchange",upd);'
+			. 'r.addEventListener("input",function(e){e.stopPropagation();drag=true;var d=au.duration;if(isFinite(d)&&d>0){au.currentTime=r.value/1000*d;t.textContent=fmt(au.currentTime)+" / "+fmt(d)}});r.addEventListener("change",function(e){e.stopPropagation();drag=false});r.addEventListener("click",function(e){e.stopPropagation()});upd()}'
+			. 'window.speAP=mk;document.querySelectorAll(".spe-player").forEach(mk)})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+	}
+
 	private static function script() {
 		$cfg = wp_json_encode( array( 'url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_upload' ) ) );
 		$js  = <<<'JS'
@@ -560,11 +574,11 @@ root.addEventListener("click",function(e){
 var a=e.target.closest(".spe-add");
 if(a){var g=a.closest(".spe-group"),t=g.querySelector("template"),n=parseInt(g.getAttribute("data-next")||"0",10);var d=document.createElement("div");d.innerHTML=t.innerHTML.replace(/__I__/g,n);g.querySelector(".spe-rows").appendChild(d.firstElementChild);g.setAttribute("data-next",n+1);var f=g.querySelector(".spe-rows").lastElementChild.querySelector("input");if(f)f.focus();return;}
 var x=e.target.closest(".spe-x");if(x){var r=x.parentNode;r.parentNode.removeChild(r);total();return;}
-var rm=e.target.closest(".spe-rm");if(rm){var b=rm.closest(".spe-media");b.querySelector("input[type=hidden]").value="0";b.querySelector(".spe-clr").value="1";var u=b.querySelector("input[name$='_url']");if(u)u.value="";b.querySelector(".spe-prev").innerHTML=b.getAttribute("data-field")==="audio"?"<audio controls class=\"spe-empty\"><\/audio>":"";rm.hidden=true;var ch=b.querySelector(".spe-change");if(ch)ch.hidden=true;return;}
+var rm=e.target.closest(".spe-rm");if(rm){var b=rm.closest(".spe-media");b.querySelector("input[type=hidden]").value="0";b.querySelector(".spe-clr").value="1";var u=b.querySelector("input[name$='_url']");if(u)u.value="";b.querySelector(".spe-prev").innerHTML="";rm.hidden=true;var ch=b.querySelector(".spe-change");if(ch)ch.hidden=true;return;}
 var c=e.target.closest("#spe-copy");if(c){var i=document.getElementById("spe-share");i.select();try{navigator.clipboard.writeText(i.value);c.textContent="Copied";}catch(err){document.execCommand("copy");}}
 });
 function msg(t){var m=document.getElementById("spe-msg");if(m)m.textContent=t;}
-function show(d){var b=root.querySelector(".spe-media[data-field="+d.field+"]");if(!b)return;b.querySelector("input[type=hidden]").value=d.id;b.querySelector(".spe-clr").value="0";var u=b.querySelector("input[name$='_url']");if(u)u.value="";var p=b.querySelector(".spe-prev");p.innerHTML="";if(d.field==="art"&&d.thumb){var im=document.createElement("img");im.src=d.thumb;im.alt="";p.appendChild(im);}else if(d.field==="audio"&&d.url){var au=document.createElement("audio");au.controls=true;au.preload="metadata";au.src=d.url;p.appendChild(au);var ch=b.querySelector(".spe-change");if(ch)ch.hidden=false;}else{p.textContent=d.name||"Uploaded";}b.querySelector(".spe-rm").hidden=false;msg("Added "+(d.name||"file")+".");}
+function show(d){var b=root.querySelector(".spe-media[data-field="+d.field+"]");if(!b)return;b.querySelector("input[type=hidden]").value=d.id;b.querySelector(".spe-clr").value="0";var u=b.querySelector("input[name$='_url']");if(u)u.value="";var p=b.querySelector(".spe-prev");p.innerHTML="";if(d.field==="art"&&d.thumb){var im=document.createElement("img");im.src=d.thumb;im.alt="";p.appendChild(im);}else if(d.field==="audio"&&d.url){var au=document.createElement("audio");au.preload="metadata";au.src=d.url;p.appendChild(au);if(window.speAP)window.speAP(p);var ch=b.querySelector(".spe-change");if(ch)ch.hidden=false;}else{p.textContent=d.name||"Uploaded";}b.querySelector(".spe-rm").hidden=false;msg("Added "+(d.name||"file")+".");}
 function lib(b){if(!window.wp||!wp.media){b.querySelector(".spe-pick").click();return;}var fr=wp.media({title:"Choose audio",library:{type:"audio"},multiple:false});fr.on("select",function(){var a=fr.state().get("selection").first().toJSON();show({field:"audio",id:a.id,url:a.url,name:a.filename||a.title});});fr.open();}
 root.addEventListener("click",function(e){var pv=e.target.closest(".spe-prev");if(pv){var b=pv.closest(".spe-media");if(!b)return;if(b.getAttribute("data-field")==="art"){b.querySelector(".spe-pick").click();}else{var au=pv.querySelector("audio");if(!au||au.classList.contains("spe-empty")){e.preventDefault();lib(b);}}return;}var c=e.target.closest(".spe-change");if(c){lib(c.closest(".spe-media"));}});
 function send(file){var fd=new FormData();fd.append("action","songpress_upload");fd.append("nonce",CFG.nonce);fd.append("file",file);msg("Uploading "+file.name+"...");return fetch(CFG.url,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json();}).then(function(j){if(j&&j.success){show(j.data);}else{msg((j&&j.data&&j.data.message)||"That file could not be added.");}}).catch(function(){msg("Upload failed.");});}
