@@ -22,6 +22,15 @@ class Songpress_Serial {
 		return $version > 0 ? sprintf( '%04d-%02d', (int) $family, (int) $version ) : sprintf( '%04d', (int) $family );
 	}
 
+	/** Pure: the lowest version number from 1 up that is not in use (a gap left by a deleted version is filled first). */
+	public static function lowest_free( array $used ) {
+		$v = 1;
+		while ( in_array( $v, $used, true ) ) {
+			$v++;
+		}
+		return $v;
+	}
+
 	/** Normalizes "12", "0012-00", "12-3" and "0012 - 03" to "0012" or "0012-03". Returns null if it is not a serial. */
 	public static function normalize( $serial ) {
 		$p = self::parse( $serial );
@@ -53,7 +62,7 @@ class Songpress_Serial {
 				if ( ! $family_no ) {
 					return new WP_Error( 'songpress_family', __( 'That song family does not exist.', 'songpress' ) );
 				}
-				$version = 1 + (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(version_no) FROM {$songs} WHERE family_id = %d", $family_id ) );
+				$version = self::lowest_free( array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT version_no FROM {$songs} WHERE family_id = %d", $family_id ) ) ) );
 			}
 			return $insert( $family_id, $family_no, $version, self::format( $family_no, $version ) );
 		} finally {

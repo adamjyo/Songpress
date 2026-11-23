@@ -16,6 +16,9 @@ check( 'parse short', Songpress_Serial::parse( '12-3' ), array( 'family' => 12, 
 check( 'parse spaces', Songpress_Serial::parse( ' 0012 - 03 ' ), array( 'family' => 12, 'version' => 3 ) );
 check( 'parse junk', Songpress_Serial::parse( 'ABC-01' ), null );
 check( 'parse empty', Songpress_Serial::parse( '' ), null );
+check( 'lowest free: none used', Songpress_Serial::lowest_free( array( 0 ) ), 1 );
+check( 'lowest free: gap filled', Songpress_Serial::lowest_free( array( 0, 1, 3, 4 ) ), 2 );
+check( 'lowest free: end', Songpress_Serial::lowest_free( array( 0, 1, 2 ) ), 3 );
 check( 'parse 3 parts', Songpress_Serial::parse( '1-2-3' ), null );
 check( 'format original', Songpress_Serial::format( 7, 0 ), '0007' );
 check( 'format version', Songpress_Serial::format( 7, 1 ), '0007-01' );
