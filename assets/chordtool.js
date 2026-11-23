@@ -42,6 +42,7 @@
       return '<span class="cb"><i>' + (s[0] ? esc(s[0]) : '&nbsp;') + '</i><b>' + (s[1] === '' ? '&nbsp;' : esc(s[1])) + '</b></span>';
     }).join('') + '</div>';
   }
+  var EXTRA = /^start_of_(intro|instrumental|outro|tag|prechorus|pre_chorus|ending|interlude|refrain|part)$/;
   var SEC = { start_of_chorus: 'Chorus', soc: 'Chorus', start_of_verse: 'Verse', sov: 'Verse', start_of_bridge: 'Bridge', sob: 'Bridge' };
   function render(text) {
     var out = [], tab = false, open = false;
@@ -55,7 +56,7 @@
         else if (k === 'subtitle' || k === 'st' || k === 'artist') out.push('<p class="sub">' + esc(a) + '</p>');
         else if (k === 'key' || k === 'capo' || k === 'tempo' || k === 'time') out.push('<span class="meta">' + esc(k[0].toUpperCase() + k.slice(1)) + ': ' + esc(a) + '</span> ');
         else if (k === 'comment' || k === 'c' || k === 'comment_italic' || k === 'ci') out.push('<p class="comment">' + esc(a) + '</p>');
-        else if (SEC[k]) { if (open) out.push('</section>'); open = true; out.push('<section class="sec ' + SEC[k].toLowerCase() + '"><h4>' + esc(a || SEC[k]) + '</h4>'); }
+        else if (SEC[k] || EXTRA.test(k)) { if (!SEC[k]) SEC[k] = k.replace(/^start_of_/, '').replace(/_/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }); if (open) out.push('</section>'); open = true; out.push('<section class="sec ' + SEC[k].toLowerCase() + '"><h4>' + esc(a || SEC[k]) + '</h4>'); }
         else if (/^(end_of_|eo)/.test(k) && k !== 'end_of_tab' && k !== 'eot') { if (open) { out.push('</section>'); open = false; } }
         else if (k === 'start_of_tab' || k === 'sot') { tab = true; out.push('<pre class="tab">'); }
         return;
@@ -66,6 +67,59 @@
     if (tab) out.push('</pre>');
     if (open) out.push('</section>');
     return out.join('');
+  }
+
+
+  /* SongSelect-style printable sheet: title block, key | tempo | time, two columns, numbered sections, chords bold over the words, CCLI line at the foot */
+  function buildSheet(text) {
+    var meta = { title: '', by: [], key: '', tempo: '', time: '', ccli: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
+    function open(label) { cur = { label: label, lines: [] }; secs.push(cur); }
+    function add(html) { (cur || (open(''), cur)).lines.push(html); }
+    text.split(/\r\n|\r|\n/).forEach(function (line) {
+      if (/^\s*#/.test(line)) return;
+      var d = /^\s*\{\s*([a-z_]+)\s*(?::\s*(.*?))?\s*\}\s*$/i.exec(line);
+      if (d) {
+        var k = d[1].toLowerCase(), a = (d[2] || '').trim();
+        if (k === 'title' || k === 't') meta.title = a;
+        else if (/^(subtitle|st|artist|composer|lyricist|author|writer|writers|words|music)$/.test(k)) { if (a) meta.by.push(a); }
+        else if (k === 'key') meta.key = a;
+        else if (k === 'tempo') meta.tempo = a;
+        else if (k === 'time') meta.time = a;
+        else if (k === 'ccli' || k === 'ccli_song') meta.ccli = a.replace(/^#\s*/, '');
+        else if (k === 'copyright') meta.copy = a;
+        else if (/^(comment|c|comment_italic|ci)$/.test(k)) add('<p class="sh-note">' + esc(a) + '</p>');
+        else if (/^start_of_/.test(k) && k !== 'start_of_tab') {
+          var kind = k.replace(/^start_of_/, '').replace(/_/g, ' ');
+          if (kind === 'chorus' || kind === 'soc') kind = 'chorus';
+          var label = a;
+          if (!label) { counts[kind] = (counts[kind] || 0) + 1; label = kind.replace(/^./, function (c) { return c.toUpperCase(); }) + (/^(verse|chorus|bridge|prechorus|pre chorus|tag|refrain|part)$/.test(kind) ? ' ' + counts[kind] : ''); }
+          open(label);
+        } else if (/^(sov|soc|sob)$/.test(k)) { var kk = { sov: 'verse', soc: 'chorus', sob: 'bridge' }[k]; counts[kk] = (counts[kk] || 0) + 1; open(a || kk.replace(/^./, function (c) { return c.toUpperCase(); }) + ' ' + counts[kk]); }
+        else if (/^(end_of_|eo)/.test(k)) cur = null;
+        return;
+      }
+      if (line.trim() === '') { if (cur && !cur.lines.length) return; if (!cur) return; add('<div class="gap"></div>'); return; }
+      add(renderLine(line));
+    });
+    var by = meta.by.join(' | '), mt = [];
+    if (meta.key) mt.push('Key - ' + meta.key);
+    if (meta.tempo) mt.push('Tempo - ' + meta.tempo);
+    if (meta.time) mt.push('Time - ' + meta.time);
+    var h = '<header class="sh-head"><h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
+    secs.forEach(function (sc) {
+      h += '<section class="sh-sec">' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
+    });
+    h += '</div><footer class="sh-foot">' + (meta.ccli ? 'CCLI Song # ' + esc(meta.ccli) : '') + (meta.copy ? (meta.ccli ? '<br>' : '') + esc(meta.copy) : '') + '</footer>';
+    return h;
+  }
+  function printSheet() {
+    var box = document.getElementById('ct-sheet');
+    if (!box) { box = document.createElement('div'); box.id = 'ct-sheet'; document.body.appendChild(box); }
+    box.innerHTML = buildSheet(ed.value);
+    document.body.classList.add('ct-printing');
+    var done = function () { document.body.classList.remove('ct-printing'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
   }
 
   /* chords over lyrics to ChordPro */
@@ -175,7 +229,7 @@
     else if (a === 'save') download(titleOf() + '.pro', ed.value);
     else if (a === 'savetxt') download(titleOf() + '.txt', toPlain(ed.value));
     else if (a === 'savehtml') download(titleOf() + '.html', '<!doctype html><meta charset="utf-8"><title>' + esc(titleOf()) + '</title><style>' + document.getElementById('ct-printcss').textContent + '</style><div class="chart">' + pv.innerHTML + '</div>', 'text/html');
-    else if (a === 'print') window.print();
+    else if (a === 'print') printSheet();
     else if (a === 'clear') { if (!ed.value || window.confirm('Clear the chart?')) setText(''); }
     else if (a === 'sample') setText(SAMPLE);
     else if (a === 'chorus') insert('\n{start_of_chorus}\n\n{end_of_chorus}\n');
