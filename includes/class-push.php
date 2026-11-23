@@ -573,9 +573,10 @@ JS;
 		$cfg = wp_json_encode( array(
 			'ios'     => array(
 				__( 'Add SongPress to your Home Screen', 'songpress' ),
-				__( '1. Tap the Share button in Safari (the square with an arrow, at the bottom or top).', 'songpress' ),
-				__( '2. Scroll down and tap Add to Home Screen, then Add.', 'songpress' ),
-				__( '3. Open SongPress from the new icon on your Home Screen.', 'songpress' ),
+				__( '1. In Safari, tap the three dots at the right end of the address bar. (On older iPhones, tap the Share button instead.)', 'songpress' ),
+				__( '2. Tap Share, then scroll down and tap Add to Home Screen. If you do not see it, tap View More.', 'songpress' ),
+				__( '3. Keep Open as Web App switched on, then tap Add.', 'songpress' ),
+				__( '4. Open SongPress from the new icon on your Home Screen.', 'songpress' ),
 			),
 			'android' => array(
 				__( 'Add SongPress to your Home Screen', 'songpress' ),
@@ -618,10 +619,11 @@ JS;
 			'ios'    => array(
 				__( 'Add SongPress to your Home Screen first', 'songpress' ),
 				__( 'iPhone only allows notifications for apps on the Home Screen.', 'songpress' ),
-				__( '1. In Safari, tap the Share button (the square with an arrow).', 'songpress' ),
-				__( '2. Tap Add to Home Screen, then Add.', 'songpress' ),
-				__( '3. Close Safari and open SongPress from its new Home Screen icon.', 'songpress' ),
-				__( '4. Tap the bell and choose Allow. SongPress then appears in Settings > Notifications.', 'songpress' ),
+				__( '1. In Safari, tap the three dots at the right end of the address bar. (On older iPhones, tap the Share button instead.)', 'songpress' ),
+				__( '2. Tap Share, then scroll down and tap Add to Home Screen. If you do not see it, tap View More.', 'songpress' ),
+				__( '3. Keep Open as Web App switched on, then tap Add.', 'songpress' ),
+				__( '4. Close Safari and open SongPress from its new Home Screen icon.', 'songpress' ),
+				__( '5. Tap the bell and choose Allow. SongPress then appears in Settings > Notifications.', 'songpress' ),
 			),
 			'denied' => wp_is_mobile() ? array(
 				__( 'Notifications are blocked', 'songpress' ),

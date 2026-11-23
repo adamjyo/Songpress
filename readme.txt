@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.77
+Stable tag: 0.63.78
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.78 =
+* Add to Home Screen directions now match current iOS Safari: three dots, Share, Add to Home Screen, keep Open as Web App on.
 
 = 0.63.77 =
 * On phones, an amber bar at the top of the app offers Add to Home Screen (with steps for iPhone and Android). It disappears once SongPress runs as a Home Screen app, and can be dismissed for a week.
