@@ -834,7 +834,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-chart{--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#9085e9;--surf:var(--sp-card,#141518);position:relative;margin-bottom:10px}
 .spm-legend{list-style:none;display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;padding:0;font-size:13px;color:var(--sp-soft)}
 .spm-legend li{display:flex;align-items:center;gap:6px}.spm-sw{width:10px;height:10px;border-radius:3px;display:inline-block}
-.s1{background:var(--c1)}.s2{background:var(--c2)}.s3{background:var(--c3)}.s4{background:var(--c4)}.s5{background:var(--c5)}.s6{background:var(--c6)}
+.s1{background:var(--c1)}.s2{background:var(--c2)}.s3{background:var(--c3)}.s4{background:var(--c4)}.s0{background:rgba(150,155,165,.35)}.s5{background:var(--c5)}.s6{background:var(--c6)}
 .spm-plot{display:flex;gap:8px;height:260px;padding-top:22px}
 .spm-yaxis{position:relative;width:44px;flex:none;margin-bottom:24px}
 .spm-yaxis span{position:absolute;right:0;transform:translateY(50%);font-size:11px;color:var(--sp-mute);font-variant-numeric:tabular-nums}
@@ -849,3 +849,12 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-cap{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:4px;font-size:11px;font-weight:500;color:var(--sp-soft);white-space:nowrap}
 .spm-tip{position:absolute;pointer-events:none;background:#000d;color:#fff;border:1px solid var(--sp-line);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;z-index:5}
 .spm-tv{margin-top:8px}.spm-tv summary{cursor:pointer;color:var(--sp-soft);font-size:13px}
+
+.spm-col .spm-stack.spm-up,.spm-col .spm-stack.spm-dn{position:absolute;left:50%;margin-left:-12px}
+.spm-stack.spm-dn{flex-direction:column;gap:2px}
+.spm-stack.spm-dn .spm-seg:last-of-type{border-radius:0 0 4px 4px}.spm-stack.spm-dn .spm-seg:first-of-type{border-radius:0}
+.spm-stack.spm-up .spm-seg:last-of-type{border-radius:4px 4px 0 0}
+.spm-grid.spm-zero{border-top:1px solid var(--sp-soft);opacity:.7}
+.spm-capn{bottom:auto;top:100%;margin:4px 0 0}.spm-loss{color:var(--sp-soft)}
+.spm-col em{bottom:-22px}
+.spm-yaxis span{white-space:nowrap}

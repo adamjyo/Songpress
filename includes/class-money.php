@@ -640,29 +640,38 @@ class Songpress_Money {
 			}
 		}
 		$max = 0;
-		foreach ( $cols as $q ) {
-			$max = max( $max, array_sum( $grid[ $q ] ?? array() ) );
-		}
+		$mout = 0;
 		$hasout = false;
 		foreach ( $cols as $q ) {
-			$max = max( $max, ( $outq[ $q ]['pay'] ?? 0 ) + ( $outq[ $q ]['exp'] ?? 0 ) );
-			if ( ! empty( $outq[ $q ] ) ) {
+			$max  = max( $max, array_sum( $grid[ $q ] ?? array() ) );
+			$out  = ( $outq[ $q ]['pay'] ?? 0 ) + ( $outq[ $q ]['exp'] ?? 0 );
+			$mout = max( $mout, $out );
+			if ( $out > 0 ) {
 				$hasout = true;
 			}
 		}
-		if ( $max <= 0 ) {
+		if ( $max <= 0 && $mout <= 0 ) {
 			return '';
 		}
 		$outs = array(
 			'pay' => array( 's5', __( 'Payouts', 'songpress' ) ),
 			'exp' => array( 's6', __( 'Expenses', 'songpress' ) ),
 		);
-		$pw   = pow( 10, floor( log10( $max ) ) );
-		$f    = $max / $pw;
+		$big  = max( $max, $mout );
+		$pw   = pow( 10, floor( log10( $big ) ) );
+		$f    = $big / $pw;
 		$step = ( $f <= 1 ? 0.25 : ( $f <= 2 ? 0.5 : ( $f <= 5 ? 1 : 2 ) ) ) * $pw;
 		$top  = ceil( $max / $step ) * $step;
+		$bot  = $mout > 0 ? ceil( ( $mout * 1.15 ) / $step ) * $step : 0; // depth of the part under the zero line, with room for its label
+		$rng  = max( $top + $bot, $step );
+		$zero = 100 * $bot / $rng; // zero line, % up from the bottom
+		$pc   = function ( $v ) use ( $rng ) {
+			return round( 100 * $v / $rng, 2 );
+		};
 		$fmt  = function ( $v ) {
-			return $v >= 10000 ? '$' . round( $v / 1000 ) . 'K' : ( $v >= 1000 && 0 === (int) $v % 1000 ? '$' . ( (int) $v / 1000 ) . 'K' : '$' . number_format( $v, $v < 100 && $v != floor( $v ) ? 2 : 0 ) );
+			$n = abs( $v );
+			$t = $n >= 10000 ? '$' . round( $n / 1000 ) . 'K' : ( $n >= 1000 && 0 === (int) $n % 1000 ? '$' . ( (int) $n / 1000 ) . 'K' : '$' . number_format( $n, $n < 100 && $n != floor( $n ) ? 2 : 0 ) );
+			return $v < 0 ? '−' . $t : $t;
 		};
 		$o  = '<section class="spm-block spm-chart" role="group" aria-label="' . esc_attr__( 'Money in and out by quarter', 'songpress' ) . '"><ul class="spm-legend">';
 		$i  = 0;
@@ -670,42 +679,55 @@ class Songpress_Money {
 			$o .= '<li><i class="spm-sw s' . ( ++$i ) . '"></i>' . esc_html( $label ) . '</li>';
 		}
 		if ( $hasout ) {
+			$o .= '<li><i class="spm-sw s0"></i>' . esc_html__( 'Income that went out', 'songpress' ) . '</li>';
 			foreach ( $outs as $ok => $od ) {
-				$o .= '<li class="spm-out"><i class="spm-sw ' . $od[0] . '"></i>' . esc_html( $od[1] ) . '</li>';
+				$o .= '<li><i class="spm-sw ' . $od[0] . '"></i>' . esc_html( $od[1] ) . ' (' . esc_html__( 'below zero', 'songpress' ) . ')</li>';
 			}
 		}
 		$o .= '</ul><div class="spm-plot"><div class="spm-yaxis">';
-		for ( $t = $top; $t >= 0; $t -= $step ) {
-			$o .= '<span style="bottom:' . round( 100 * $t / $top, 2 ) . '%">' . esc_html( $fmt( $t ) ) . '</span>';
+		for ( $t = -$bot; $t <= $top + 0.001; $t += $step ) {
+			$o .= '<span style="bottom:' . $pc( $t + $bot ) . '%">' . esc_html( $fmt( $t ) ) . '</span>';
 		}
 		$o .= '</div><div class="spm-cols">';
-		for ( $t = $step; $t <= $top + 0.001; $t += $step ) {
-			$o .= '<i class="spm-grid" style="bottom:' . round( 100 * $t / $top, 2 ) . '%"></i>';
+		for ( $t = -$bot; $t <= $top + 0.001; $t += $step ) {
+			$o .= '<i class="spm-grid' . ( abs( $t ) < 0.001 ? ' spm-zero' : '' ) . '" style="bottom:' . $pc( $t + $bot ) . '%"></i>';
 		}
 		foreach ( $cols as $q ) {
-			$tot = array_sum( $grid[ $q ] ?? array() );
-			$o  .= '<div class="spm-col"><div class="spm-pair"><div class="spm-stack" style="height:' . round( 100 * $tot / $top, 2 ) . '%"><b class="spm-cap">' . ( $tot ? esc_html( $fmt( $tot ) ) : '' ) . '</b>';
-			$i   = 0;
-			foreach ( $streams as $sk => $label ) {
-				++$i;
-				$v = $grid[ $q ][ $sk ] ?? 0;
-				if ( $v > 0 ) {
-					$o .= '<span class="spm-seg s' . $i . '" style="flex:' . round( $v, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . $label . ': ' . self::money( $v ) ) . '"></span>';
+			$tot  = array_sum( $grid[ $q ] ?? array() );
+			$pay  = $outq[ $q ]['pay'] ?? 0;
+			$exp  = $outq[ $q ]['exp'] ?? 0;
+			$out  = $pay + $exp;
+			$net  = $tot - $out;
+			$keep = max( 0, $net ); // the coloured part: income that was kept
+			$gone = $tot - $keep;  // the grey part: income that went out
+			$o   .= '<div class="spm-col" data-q="' . esc_attr( $q ) . '">';
+			if ( $tot > 0 ) {
+				$o .= '<div class="spm-stack spm-up" style="bottom:' . $zero . '%;height:' . $pc( $tot ) . '%"><b class="spm-cap">' . esc_html( $fmt( $tot ) ) . '</b>';
+				$i = 0;
+				foreach ( $streams as $sk => $label ) {
+					++$i;
+					$v = $grid[ $q ][ $sk ] ?? 0;
+					if ( $v > 0 && $keep > 0 ) {
+						$share = $v * $keep / $tot;
+						$o    .= '<span class="spm-seg s' . $i . '" style="flex:' . round( $share, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . $label . ': ' . self::money( $v ) . ' ' . sprintf( __( '(%s kept)', 'songpress' ), self::money( $share ) ) ) . '"></span>';
+					}
 				}
+				if ( $gone > 0.004 ) {
+					$o .= '<span class="spm-seg s0" style="flex:' . round( $gone, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . sprintf( __( 'Income %1$s, %2$s of it went out', 'songpress' ), self::money( $tot ), self::money( min( $gone, $out ) ) ) ) . '"></span>';
+				}
+				$o .= '</div>';
 			}
-			$o .= '</div>';
-			if ( $hasout ) {
-				$ot = ( $outq[ $q ]['pay'] ?? 0 ) + ( $outq[ $q ]['exp'] ?? 0 );
-				$o .= '<div class="spm-stack spm-outs" style="height:' . round( 100 * $ot / $top, 2 ) . '%">';
+			if ( $out > 0 ) {
+				$o .= '<div class="spm-stack spm-dn" style="top:' . round( 100 - $zero, 2 ) . '%;height:' . $pc( $out ) . '%">';
 				foreach ( $outs as $ok => $od ) {
 					$v = $outq[ $q ][ $ok ] ?? 0;
 					if ( $v > 0 ) {
 						$o .= '<span class="spm-seg ' . $od[0] . '" style="flex:' . round( $v, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . $od[1] . ': ' . self::money( $v ) ) . '"></span>';
 					}
 				}
-				$o .= '</div>';
+				$o .= '<b class="spm-cap spm-capn ' . ( $net < 0 ? 'spm-loss' : '' ) . '">' . esc_html( ( $net < 0 ? __( 'Net ', 'songpress' ) : '' ) . ( $net < 0 ? $fmt( $net ) : '' ) ) . '</b></div>';
 			}
-			$o .= '</div><em>' . esc_html( $q ) . '</em></div>';
+			$o .= '<em>' . esc_html( $q ) . '</em></div>';
 		}
 		$o .= '</div></div><details class="spm-tv"><summary>' . esc_html__( 'Table view', 'songpress' ) . '</summary><div class="spm-scroll"><table class="spm-table spm-income"><thead><tr><th></th>';
 		foreach ( $cols as $q ) {
@@ -741,7 +763,15 @@ class Songpress_Money {
 			}
 			$o .= '<td class="n">' . esc_html( self::money( $at ) ) . '</td></tr>';
 		}
-		$o .= '</tbody></table></div></details><div class="spm-tip" hidden></div></section>';
+		$o .= '<tr class="spm-tot"><td>' . esc_html__( 'Net (income − out)', 'songpress' ) . '</td>';
+		$allnet = self::earned_total();
+		foreach ( $outq as $v ) {
+			$allnet -= ( $v['pay'] ?? 0 ) + ( $v['exp'] ?? 0 );
+		}
+		foreach ( $cols as $q ) {
+			$o .= '<td class="n">' . esc_html( self::money( array_sum( $grid[ $q ] ?? array() ) - ( $outq[ $q ]['pay'] ?? 0 ) - ( $outq[ $q ]['exp'] ?? 0 ) ) ) . '</td>';
+		}
+		$o .= '<td class="n"><b>' . esc_html( self::money( $allnet ) ) . '</b></td></tr></tbody></table></div></details><div class="spm-tip" hidden></div></section>';
 		$o .= '<script>(function(){var c=document.querySelector(".spm-chart");if(!c)return;var t=c.querySelector(".spm-tip");c.addEventListener("mousemove",function(e){var s=e.target.closest("[data-tip]");if(!s){t.hidden=true;return}t.textContent=s.getAttribute("data-tip");t.hidden=false;var r=c.getBoundingClientRect();t.style.left=Math.min(e.clientX-r.left+12,r.width-t.offsetWidth-8)+"px";t.style.top=(e.clientY-r.top-34)+"px"});c.addEventListener("mouseleave",function(){t.hidden=true})}());</script>';
 		return $o;
 	}
