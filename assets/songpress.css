@@ -964,3 +964,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-bell[data-on="1"] .b-on{display:flex}
 .sp-bell-msg{flex:1 1 100%;margin:2px 8px 8px;font-size:12px;line-height:1.4;color:#a4a8b0}
 .sp-bell-msg[hidden]{display:none}
+.songpress-top h2.songpress-notitle{color:var(--sp-mute);font-style:italic}
