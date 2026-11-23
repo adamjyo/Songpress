@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.79
+Stable tag: 0.63.80
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.80 =
+* The notification test now names the devices it reached (for example iPhone, Home Screen app, or Mac, Safari), so you can see where it went. Turn the bell off and on again on a device to give it a name.
 
 = 0.63.79 =
 * iPhone directions now start from the menu icon at the left end of Safari's address bar, as on current iOS.

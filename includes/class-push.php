@@ -10,6 +10,8 @@ class Songpress_Push {
 
 	const KEYS    = 'songpress_vapid';
 	const SUBS    = 'songpress_push_subs';
+	const LABELS  = 'songpress_push_labels';
+	public static $names = array();
 	const NOTICES = 'songpress_notices';
 	const ALERTS  = 'songpress_alert_users';
 
@@ -111,6 +113,32 @@ class Songpress_Push {
 
 	/* ---------- sending ---------- */
 
+	/** A short name for a device from its browser string, e.g. "iPhone, Home Screen app". */
+	public static function label_for( $ua, $app ) {
+		$ua = (string) $ua;
+		if ( preg_match( '/iPhone/i', $ua ) ) {
+			$d = 'iPhone';
+		} elseif ( preg_match( '/iPad/i', $ua ) ) {
+			$d = 'iPad';
+		} elseif ( preg_match( '/Android/i', $ua ) ) {
+			$d = 'Android';
+		} elseif ( preg_match( '/Macintosh/i', $ua ) ) {
+			$d = 'Mac';
+		} elseif ( preg_match( '/Windows/i', $ua ) ) {
+			$d = 'Windows';
+		} else {
+			$d = 'Computer';
+		}
+		$b = preg_match( '/Edg\//', $ua ) ? 'Edge' : ( preg_match( '/Firefox/', $ua ) ? 'Firefox' : ( preg_match( '/Chrome|CriOS/', $ua ) ? 'Chrome' : ( preg_match( '/Safari/', $ua ) ? 'Safari' : '' ) ) );
+		return $d . ( $app ? ', Home Screen app' : ( '' !== $b ? ', ' . $b : '' ) );
+	}
+
+	public static function label_of( $uid, $ep ) {
+		$l = get_user_meta( (int) $uid, self::LABELS, true );
+		$k = md5( $ep );
+		return is_array( $l ) && ! empty( $l[ $k ] ) ? (string) $l[ $k ] : __( 'a device', 'songpress' );
+	}
+
 	public static function devices( $uid ) {
 		$s = get_user_meta( (int) $uid, self::SUBS, true );
 		return is_array( $s ) ? array_values( $s ) : array();
@@ -124,6 +152,7 @@ class Songpress_Push {
 		update_user_meta( $uid, self::NOTICES, $list );
 		$reached    = 0;
 		self::$last = array();
+		self::$names = array();
 		$keep       = array();
 		foreach ( self::devices( $uid ) as $ep ) {
 			$jwt = self::jwt( $ep );
@@ -141,6 +170,7 @@ class Songpress_Push {
 			$keep[] = $ep;
 			if ( $code >= 200 && $code < 300 ) {
 				$reached++;
+				self::$names[] = self::label_of( $uid, $ep );
 			}
 		}
 		if ( count( $keep ) !== count( self::devices( $uid ) ) ) {
@@ -262,6 +292,10 @@ JS;
 		if ( 'add' === $mode && 0 === strpos( $ep, 'https://' ) ) {
 			$subs[] = $ep;
 			update_user_meta( $uid, self::SUBS, array_values( array_unique( $subs ) ) );
+			$lab        = get_user_meta( $uid, self::LABELS, true );
+			$lab        = is_array( $lab ) ? $lab : array();
+			$lab[ md5( $ep ) ] = self::label_for( isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '', ! empty( $_POST['app'] ) );
+			update_user_meta( $uid, self::LABELS, $lab );
 			wp_send_json_success();
 		}
 		if ( 'remove' === $mode ) {
@@ -415,7 +449,8 @@ JS;
 	public static function run_test( $me ) {
 		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
 		if ( $n ) {
-			$msg = sprintf( /* translators: %d: phones */ _n( 'Test sent. It reached %d phone. If nothing shows, check the phone’s notification settings for SongPress.', 'Test sent. It reached %d phones. If nothing shows, check the phones’ notification settings for SongPress.', $n, 'songpress' ), $n );
+			/* translators: %s: device names */
+			$msg = sprintf( __( 'Test sent. It reached: %s. If nothing shows on that device, check its notification settings for SongPress, and that Focus or Do Not Disturb is off.', 'songpress' ), implode( '; ', array_unique( self::$names ) ) );
 		} elseif ( ! self::keys() ) {
 			$msg = __( 'This server cannot make the signing key (PHP OpenSSL is missing), so notifications cannot be sent.', 'songpress' );
 		} elseif ( ! self::$last ) {
@@ -654,13 +689,13 @@ if(!ok){if(ios&&!app){bells.forEach(function(b){b.hidden=false;b.addEventListene
 bells.forEach(function(b){b.hidden=false});
 var reg=null;
 function show(sub){var t=sub?C.on:C.off;bells.forEach(function(b){b.title=t;b.setAttribute('aria-label',t);b.dataset.on=sub?'1':'0'})}
-navigator.serviceWorker.register(C.sw,{scope:C.scope}).then(function(){return navigator.serviceWorker.ready}).then(function(r){reg=r;return r.pushManager.getSubscription()}).then(function(s){show(!!s);if(s&&Notification.permission==='granted'){post({mode:'add',endpoint:s.endpoint})}}).catch(function(){bells.forEach(function(b){b.hidden=true})});
+navigator.serviceWorker.register(C.sw,{scope:C.scope}).then(function(){return navigator.serviceWorker.ready}).then(function(r){reg=r;return r.pushManager.getSubscription()}).then(function(s){show(!!s);if(s&&Notification.permission==='granted'){post({mode:'add',endpoint:s.endpoint,app:app?1:0})}}).catch(function(){bells.forEach(function(b){b.hidden=true})});
 bells.forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();if(!reg)return;
  if(b.dataset.on==='1'){reg.pushManager.getSubscription().then(function(s){if(!s)return;var ep=s.endpoint;return s.unsubscribe().then(function(){return post({mode:'remove',endpoint:ep})})}).then(function(){show(false);say('')});return}
  if(Notification.permission==='denied'){say(C.denied);return}
  Notification.requestPermission().then(function(p){
   if(p!=='granted'){say(C.denied);return}
-  return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(C.key)}).then(function(s){return post({mode:'add',endpoint:s.endpoint})}).then(function(){show(true);return post({mode:'test'})}).then(function(){say(C.test)});
+  return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(C.key)}).then(function(s){return post({mode:'add',endpoint:s.endpoint,app:app?1:0})}).then(function(){show(true);return post({mode:'test'})}).then(function(){say(C.test)});
  }).catch(function(e){say([C.fail,(e&&e.message?e.message:'')])});
 })});
 JS;
