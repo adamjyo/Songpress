@@ -120,8 +120,17 @@
     if (C.publisher) C.publisher.split(/\r?\n/).forEach(function (l) { if (l.trim()) foot.push(esc(l.trim())); });
     if (meta.copy) foot.push(esc(meta.copy));
     var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
-    secs.forEach(function (sc) {
-      h += '<section class="sh-sec">' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
+    /* with room to spare, the second column starts after the first chorus */
+    var brk = -1;
+    secs.some(function (sc, i) { if (/^chorus/i.test(sc.label)) { brk = i; return true; } return false; });
+    var units = function (sc) { var j = sc.lines.join(''); return (j.match(/class="cl"/g) || []).length + (j.match(/class="gap"/g) || []).length * 0.25 + (j.match(/sh-note/g) || []).length * 0.6 + (sc.label ? 1.5 : 0) + 1; };
+    if (brk > -1 && brk < secs.length - 1) {
+      var u1 = 0, u2 = 0;
+      secs.forEach(function (sc, i) { if (i <= brk) u1 += units(sc); else u2 += units(sc); });
+      if (u1 > 27 || u2 > 27) brk = -1;
+    } else brk = -1;
+    secs.forEach(function (sc, i) {
+      h += '<section class="sh-sec' + (i === brk ? ' sh-break' : '') + '">' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
     h += '</div><footer class="sh-foot">' + foot.join('<br>') + '</footer>';
     return h;
