@@ -812,3 +812,21 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-paybox input,.spm-paybox select{width:auto!important;height:32px;padding:0 8px;font-size:13px;box-sizing:border-box}
 .spm-paybox input.spm-amt{width:96px!important}.spm-paybox label.grow input{width:100%!important}
 .spm-paybox .spe-save{height:32px;padding:0 16px;margin:0}
+
+.spm-blocks{display:flex;flex-direction:column;gap:14px}
+.spm-block{border:1px solid var(--sp-line);border-radius:12px;background:rgba(255,255,255,.03);padding:12px 14px;min-width:0}
+.spm-block[hidden]{display:none}
+.spm-block.settled{opacity:.85}
+.spm-bh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.spm-bh .sp-face{margin-right:0!important;flex:none}
+.spm-bh .spm-pn{flex:0 1 auto}
+.spm-bar2{flex:1 1 140px;height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;min-width:100px}.spm-bar2 i{display:block;height:100%;background:#2fb344;border-radius:3px}
+.spm-income tr.spm-paidrow td{color:var(--sp-soft);font-size:13px}
+.spm-income tr.spm-left td{color:#f5a524;font-size:13px;border-bottom:0}
+.spm-block .spm-table{margin-bottom:0}
+.spm-block .spm-table th:first-child,.spm-block .spm-table td:first-child{width:96px}
+.spm-income tr.spm-tot td{border-top:1px solid var(--sp-line)}
+.spm-foot{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-top:10px}
+.spm-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.spm-find{height:30px;padding:0 10px;font-size:13px;width:180px!important}
+.spm-block .spm-table{table-layout:fixed}.spm-block .spm-table th:first-child,.spm-block .spm-table td:first-child{width:90px}
