@@ -1027,3 +1027,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-ap-b{flex:none;display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;border:0;background:var(--sp-accent,#f5a524);color:#111;cursor:pointer;padding:0}
 .sp-app .spe-ap-r{flex:1;min-width:60px;height:24px;accent-color:var(--sp-accent,#f5a524);cursor:pointer;margin:0;padding:0;background:none;border:0}
 .sp-app .spe-ap-t{flex:none;font-size:12px;font-variant-numeric:tabular-nums;color:var(--sp-mute,#9aa0a6);white-space:nowrap}
+
+.sp-app .spe-artsel{display:flex;align-items:center;gap:8px}
+.sp-app .spe-artsel select{flex:1;min-width:0}
+.sp-app .spe-artchip{flex:none;display:inline-flex;min-width:28px}
+.sp-app .spe-artchip .sp-face{margin-right:0!important}

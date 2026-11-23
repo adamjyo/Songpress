@@ -330,7 +330,12 @@ class Songpress_Editor {
 		foreach ( $names as $n ) {
 			$o .= '<option value="' . esc_attr( $n ) . '"' . selected( strtolower( $cur ), strtolower( $n ), false ) . '>' . esc_html( $n ) . '</option>';
 		}
-		return '<label class="spe-field"><span>' . esc_html__( 'Performing artist or band', 'songpress' ) . '</span><select name="artist">' . $o . '</select></label>';
+		$chips = array();
+		foreach ( $names as $n ) {
+			$chips[ $n ] = Songpress_Profiles::chip( $n, 28, 'band' );
+		}
+		return '<label class="spe-field"><span>' . esc_html__( 'Performing artist or band', 'songpress' ) . '</span><span class="spe-artsel"><span class="spe-artchip" aria-hidden="true">' . ( '' !== $cur ? $chips[ $cur ] ?? Songpress_Profiles::chip( $cur, 28, 'band' ) : '' ) . '</span><select name="artist" id="spe-artist">' . $o . '</select></span></label>'
+			. '<script>(function(){var s=document.getElementById("spe-artist"),c=s&&s.parentNode.querySelector(".spe-artchip"),M=' . wp_json_encode( $chips ) . ';if(!s||!c)return;s.addEventListener("change",function(){c.innerHTML=M[s.value]||""})})()</script>';
 	}
 
 	/** The ISRC belongs to one recording, so it sits with the Release details. A second value gets its own field labelled "Alt". */
