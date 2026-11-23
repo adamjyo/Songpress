@@ -1041,6 +1041,8 @@ class Songpress_Money {
 		} else {
 			$wpdb->insert( $p, array( 'pay_year' => $year, 'pay_quarter' => $qn, 'kind' => 'writer', 'party' => $party, 'party_key' => $key, 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $line, 'updated_at' => current_time( 'mysql' ) ) );
 		}
+		$after = (float) $wpdb->get_var( $wpdb->prepare( "SELECT amount FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $year, $qn, $key ) ); // phpcs:ignore WordPress.DB
+		Songpress_Audit::log( 'money', 'Recorded a payment', $party, array_filter( array( 'quarter' => $q, 'amount' => self::money( $amount ), 'paid on' => $on, 'note' => $note, 'paid that quarter now' => self::money( $after ) ), 'strlen' ) );
 		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: amount, 2: person, 3: quarter */ __( 'Recorded %1$s paid to %2$s for %3$s.', 'songpress' ), self::money( $amount ), $party, $q ) ) );
 	}
 
@@ -1075,9 +1077,24 @@ class Songpress_Money {
 		} else {
 			$wpdb->update( $p, array( 'pay_year' => $year, 'pay_quarter' => $qn, 'amount' => $amt, 'paid' => 1, 'paid_on' => $on, 'notes' => $note, 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $id ) );
 		}
-		if ( class_exists( 'Songpress_Audit' ) ) {
-			Songpress_Audit::log( 'Money', 'edited a payment', $row->party, array( 'was' => $row->pay_year . '-Q' . $row->pay_quarter . ' ' . self::money( $row->amount ), 'now' => $q . ' ' . self::money( $amt ) ) );
+		$was = $row->pay_year . '-Q' . $row->pay_quarter;
+		$d   = array( 'payment' => $id );
+		if ( $was !== $q ) {
+			$d['quarter'] = array( $was, $q );
 		}
+		if ( abs( (float) $row->amount - $amt ) > 0.004 ) {
+			$d['amount'] = array( self::money( $row->amount ), self::money( $amt ) );
+		}
+		if ( (string) $row->paid_on !== (string) $on ) {
+			$d['paid on'] = array( (string) $row->paid_on ?: '-', $on );
+		}
+		if ( trim( (string) $row->notes ) !== trim( $note ) ) {
+			$d['note'] = array( mb_substr( trim( (string) $row->notes ), 0, 60 ) ?: '-', mb_substr( trim( $note ), 0, 60 ) ?: '-' );
+		}
+		if ( $other ) {
+			$d['folded into'] = 'the payment already in ' . $q;
+		}
+		Songpress_Audit::log( 'money', 'Edited a payment', $row->party, $d );
 		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: person, 2: amount, 3: quarter */ __( 'Updated the payment to %1$s: %2$s for %3$s.', 'songpress' ), $row->party, self::money( $amt ), $q ) ) );
 	}
 
@@ -1086,7 +1103,11 @@ class Songpress_Money {
 		global $wpdb;
 		$id = absint( $_POST['id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
 		if ( $id ) {
+			$row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'payments' ) . ' WHERE id = %d', $id ) ); // phpcs:ignore WordPress.DB
 			$wpdb->delete( self::t( 'payments' ), array( 'id' => $id ) );
+			if ( $row ) {
+				Songpress_Audit::log( 'money', 'Removed a payment', $row->party, array_filter( array( 'quarter' => $row->pay_year . '-Q' . $row->pay_quarter, 'amount' => self::money( $row->amount ), 'paid on' => (string) $row->paid_on, 'note' => mb_substr( trim( (string) $row->notes ), 0, 80 ) ), 'strlen' ) );
+			}
 		}
 		self::go( 'money', array( 'm_ok' => __( 'Payment removed.', 'songpress' ) ) );
 	}
@@ -1110,13 +1131,19 @@ class Songpress_Money {
 			'notes'      => sanitize_textarea_field( $in['notes'] ?? '' ),
 			'created_at' => current_time( 'mysql' ),
 		) );
+		Songpress_Audit::log( 'money', 'Added an expense', sanitize_text_field( $in['payee'] ?? '' ), array_filter( array( 'amount' => self::money( $amt ), 'category' => sanitize_text_field( $in['category'] ?? '' ), 'spent on' => $on ), 'strlen' ) );
 		self::go( 'money', array( 'm_ok' => __( 'Expense added.', 'songpress' ) ) );
 	}
 
 	public static function handle_expense_delete() {
 		self::guard( 'songpress_money_expense_delete' );
 		global $wpdb;
-		$wpdb->delete( self::t( 'expenses' ), array( 'id' => absint( $_POST['expense_id'] ?? 0 ) ) ); // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
+		$eid = absint( $_POST['expense_id'] ?? 0 ); // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
+		$row = $eid ? $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM ' . self::t( 'expenses' ) . ' WHERE id = %d', $eid ) ) : null; // phpcs:ignore WordPress.DB
+		$wpdb->delete( self::t( 'expenses' ), array( 'id' => $eid ) );
+		if ( $row ) {
+			Songpress_Audit::log( 'money', 'Removed an expense', (string) $row->payee, array_filter( array( 'amount' => self::money( $row->amount ), 'category' => (string) $row->category, 'spent on' => (string) $row->spent_on ), 'strlen' ) );
+		}
 		self::go( 'money', array( 'm_ok' => __( 'Expense removed.', 'songpress' ) ) );
 	}
 

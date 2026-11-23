@@ -628,6 +628,7 @@ check( 'notes screen: delete', array( Songpress_Journal::ajax_op( array( 'op' =>
 // Activity log
 check( 'audit: known action', Songpress_Audit::classify( 'songpress_session_save' ), array( 'sessions', 'Saved a session' ) );
 check( 'audit: money action by prefix', Songpress_Audit::classify( 'songpress_money_import' ), array( 'money', 'Import' ) );
+check( 'audit: payment actions log themselves, not as plain entries', array( Songpress_Audit::classify( 'songpress_money_payment' ), Songpress_Audit::classify( 'songpress_money_payment_update' ), Songpress_Audit::classify( 'songpress_money_expense_add' ) ), array( null, null, null ) );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
 check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
 check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );

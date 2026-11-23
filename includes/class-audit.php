@@ -33,6 +33,9 @@ class Songpress_Audit {
 		'songpress_statement'         => array( 'uploads', 'Uploaded a statement' ),
 	);
 
+	/** Actions that log themselves in full (so the plain request entry is skipped). */
+	const DETAILED = array( 'songpress_money_payment', 'songpress_money_payment_update', 'songpress_money_payment_delete', 'songpress_money_expense_add', 'songpress_money_expense_delete' );
+
 	/** Posted fields worth keeping beside an entry (never passwords or tokens). */
 	const KEEP = array( 'entry_id', 'song_id', 'session_id', 'id', 'title', 'name', 'person', 'login', 'type', 'table', 'src', 'quarter', 'kind', 'flag', 'op' );
 
@@ -114,6 +117,9 @@ class Songpress_Audit {
 		$action = (string) $action;
 		if ( 0 !== strpos( $action, 'songpress_' ) || 'songpress_journal_ajax' === $action ) {
 			return null;
+		}
+		if ( in_array( $action, self::DETAILED, true ) ) {
+			return null; // these write their own entry, with the amounts and what changed
 		}
 		if ( isset( self::ACTIONS[ $action ] ) ) {
 			return self::ACTIONS[ $action ];

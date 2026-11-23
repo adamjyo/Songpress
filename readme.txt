@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.59
+Stable tag: 0.63.60
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.60 =
+* Activity log: every payment recorded, edited (what changed, old to new) or removed, and every expense added or removed, is now written to the log with the person, quarter, amount and date.
 
 = 0.63.59 =
 * Money: each person card now lists every quarter down the page (newest first) in a box that scrolls up and down, with a sticky heading and an All time row. Click a Paid amount to edit or remove that payment; click Left or an empty Paid to record one for that quarter. The quarters picker now sets the chart.
