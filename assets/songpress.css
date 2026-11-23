@@ -879,3 +879,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-top .sp-total{font-size:12px;color:var(--sp-mute);white-space:nowrap}
 @media(max-width:900px){.spe-back span,.spe-topsave span{display:none}.spe-steppos em{display:none}}
 .spm-tools .spm-qpick{display:inline-block;margin:0 10px 0 0}.spm-tools select{height:32px}
+
+.spm-hist li{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.spm-edit summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;border:1px solid var(--sp-line);color:var(--sp-soft);cursor:pointer}
+.spm-edit summary::-webkit-details-marker{display:none}.spm-edit summary:hover{border-color:var(--sp-accent);color:var(--sp-accent)}
+.spm-edit[open]{flex-basis:100%;order:5}
+.spm-editform{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:8px 0 4px;padding:10px;border:1px solid var(--sp-line);border-radius:10px}
+.spm-editform label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sp-soft)}.spm-editform label.grow{flex:1;min-width:180px}
+.spm-editform input,.spm-editform select,.spm-editform textarea{font:inherit;font-size:13px}

@@ -29,7 +29,7 @@ class Songpress_Money {
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
-		foreach ( array( 'import', 'pay', 'payment', 'payment_delete', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
+		foreach ( array( 'import', 'pay', 'payment', 'payment_update', 'payment_delete', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
 			add_action( 'admin_post_songpress_money_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
 	}
@@ -945,7 +945,23 @@ class Songpress_Money {
 				$o .= '<details class="spm-hist"><summary>' . esc_html( sprintf( /* translators: %d: number of payments */ _n( '%d payment', '%d payments', count( $hist ), 'songpress' ), count( $hist ) ) ) . '</summary><ul>';
 				foreach ( $hist as $h ) {
 					$q  = $h->pay_year . '-Q' . $h->pay_quarter;
+					$qs_edit = $qopts;
+					if ( ! in_array( $q, $qs_edit, true ) ) {
+						$qs_edit[] = $q;
+						rsort( $qs_edit );
+					}
+					$qo = '';
+					foreach ( $qs_edit as $qq ) {
+						$qo .= '<option value="' . esc_attr( $qq ) . '"' . selected( $qq, $q, false ) . '>' . esc_html( $qq ) . '</option>';
+					}
 					$o .= '<li><span>' . esc_html( $q . ' · ' . ( $h->paid_on ?: '' ) ) . '</span> <b>' . esc_html( self::money( $h->amount ) ) . '</b>' . ( $h->notes ? ' <small>' . esc_html( preg_replace( '/\s+/', ' ', trim( (string) $h->notes ) ) ) . '</small>' : '' ) . ' '
+						. '<details class="spm-edit"><summary title="' . esc_attr__( 'Edit this payment', 'songpress' ) . '" aria-label="' . esc_attr__( 'Edit this payment', 'songpress' ) . '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg></summary>'
+						. self::form_open( 'songpress_money_payment_update', 'spm-editform' ) . '<input type="hidden" name="id" value="' . (int) $h->id . '">'
+						. '<label><span>' . esc_html__( 'Quarter', 'songpress' ) . '</span><select name="quarter">' . $qo . '</select></label>'
+						. '<label><span>' . esc_html__( 'Amount', 'songpress' ) . '</span><input name="amount" inputmode="decimal" value="' . esc_attr( number_format( (float) $h->amount, 2, '.', '' ) ) . '"></label>'
+						. '<label><span>' . esc_html__( 'Date paid', 'songpress' ) . '</span><input type="date" name="paid_on" value="' . esc_attr( (string) $h->paid_on ) . '"></label>'
+						. '<label class="grow"><span>' . esc_html__( 'Note', 'songpress' ) . '</span><textarea name="notes" rows="2">' . esc_textarea( (string) $h->notes ) . '</textarea></label>'
+						. '<button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form></details> '
 						. self::form_open( 'songpress_money_payment_delete', 'spm-del' ) . '<input type="hidden" name="id" value="' . (int) $h->id . '"><button type="submit" class="spe-btn" title="' . esc_attr__( 'Remove this payment', 'songpress' ) . '">&times;</button></form></li>';
 				}
 				$o .= '</ul></details>';
@@ -987,6 +1003,43 @@ class Songpress_Money {
 			$wpdb->insert( $p, array( 'pay_year' => $year, 'pay_quarter' => $qn, 'kind' => 'writer', 'party' => $party, 'party_key' => $key, 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $line, 'updated_at' => current_time( 'mysql' ) ) );
 		}
 		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: amount, 2: person, 3: quarter */ __( 'Recorded %1$s paid to %2$s for %3$s.', 'songpress' ), self::money( $amount ), $party, $q ) ) );
+	}
+
+	public static function handle_payment_update() {
+		self::guard( 'songpress_money_payment_update' );
+		global $wpdb;
+		$in  = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned below.
+		$id  = absint( $in['id'] ?? 0 );
+		$p   = self::t( 'payments' );
+		$row = $id ? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p} WHERE id = %d", $id ) ) : null; // phpcs:ignore WordPress.DB
+		$q   = self::quarter( $in['quarter'] ?? '' );
+		$amt = round( (float) str_replace( array( '$', ',' ), '', (string) ( $in['amount'] ?? 0 ) ), 2 );
+		if ( ! $row || '' === $q || 0.0 === $amt ) {
+			self::go( 'money', array( 'm_err' => __( 'Choose a quarter and an amount (it can be negative for a correction, but not zero; use remove for that).', 'songpress' ) ) );
+		}
+		$year = (int) substr( $q, 0, 4 );
+		$qn   = (int) substr( $q, -1 );
+		$on   = preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) ( $in['paid_on'] ?? '' ) ) ? $in['paid_on'] : ( $row->paid_on ?: gmdate( 'Y-m-d' ) );
+		$note = sanitize_textarea_field( $in['notes'] ?? '' );
+		$other = ( $year !== (int) $row->pay_year || $qn !== (int) $row->pay_quarter )
+			? $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s AND id <> %d", $year, $qn, $row->kind, $row->party_key, $id ) ) // phpcs:ignore WordPress.DB
+			: null;
+		if ( $other ) { // that quarter already has its running row for this person: fold this payment into it
+			$wpdb->update( $p, array(
+				'amount'     => round( (float) $other->amount + $amt, 2 ),
+				'paid'       => 1,
+				'paid_on'    => $on,
+				'notes'      => trim( ( '' !== trim( (string) $other->notes ) ? trim( (string) $other->notes ) . "\n" : '' ) . $note ),
+				'updated_at' => current_time( 'mysql' ),
+			), array( 'id' => (int) $other->id ) );
+			$wpdb->delete( $p, array( 'id' => $id ) );
+		} else {
+			$wpdb->update( $p, array( 'pay_year' => $year, 'pay_quarter' => $qn, 'amount' => $amt, 'paid' => 1, 'paid_on' => $on, 'notes' => $note, 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $id ) );
+		}
+		if ( class_exists( 'Songpress_Audit' ) ) {
+			Songpress_Audit::log( 'Money', 'edited a payment', $row->party, array( 'was' => $row->pay_year . '-Q' . $row->pay_quarter . ' ' . self::money( $row->amount ), 'now' => $q . ' ' . self::money( $amt ) ) );
+		}
+		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: person, 2: amount, 3: quarter */ __( 'Updated the payment to %1$s: %2$s for %3$s.', 'songpress' ), $row->party, self::money( $amt ), $q ) ) );
 	}
 
 	public static function handle_payment_delete() {
