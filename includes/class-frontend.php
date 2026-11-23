@@ -135,14 +135,17 @@ class Songpress_Frontend {
 		$o .= '<label for="sp-p">' . esc_html__( 'Password', 'songpress' ) . '</label><input id="sp-p" name="pwd" type="password" autocomplete="current-password" required>';
 		$o .= '<input type="hidden" name="rememberme" value="forever"><input type="hidden" name="sp_app" value="1"><input type="hidden" name="redirect_to" value="' . esc_url( remove_query_arg( 'sp_login', $dest ) ) . '">';
 		$o .= '<button type="submit">' . esc_html__( 'Log in', 'songpress' ) . '</button></form>';
-		$o .= '<p class="sp-forgot">' . esc_html__( 'Forgot your password? Ask the person who invited you to send you a new link.', 'songpress' ) . '</p></section>';
+		if ( isset( $_GET['sp_login'] ) && 'asked' === $_GET['sp_login'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$o .= '<p class="sp-sub" role="status">' . esc_html__( 'Thanks. The people who run this have been told, and will send you a link to choose a new password.', 'songpress' ) . '</p>';
+		}
+		$o .= '<details class="sp-forgot"><summary>' . esc_html__( 'Forgot my password', 'songpress' ) . '</summary><form method="post" action="' . esc_url( remove_query_arg( array( 'sp_login', 'sp_forgot' ) ) ) . '"><input type="hidden" name="sp_forgot" value="1"><label for="sp-who">' . esc_html__( 'Your username or email', 'songpress' ) . '</label><input id="sp-who" name="sp_who" type="text" autocomplete="username" autocapitalize="none" value="' . esc_attr( isset( $_GET['sp_user'] ) ? sanitize_user( wp_unslash( $_GET['sp_user'] ) ) : '' ) . '" required><button type="submit">' . esc_html__( 'Tell the admin', 'songpress' ) . '</button></form></details></section>'; // phpcs:ignore WordPress.Security.NonceVerification
 		$o .= '<p class="sp-forgot">' . sprintf( /* translators: %s: link to the ChordPro tool */ esc_html__( 'Looking for a chord-sheet program like Songpress (Skeed / Lallulli)? Use the %s, free, no login.', 'songpress' ), '<a href="' . esc_url( Songpress_ChordTool::url() ) . '">' . esc_html__( 'web ChordPro tool', 'songpress' ) . '</a>' ) . '</p>';
 		$o .= wp_kses_post( songpress_public_donate_link() ) . '</main></div>';
 		return $o;
 	}
 
-	private static function nav_item( $href, $label, $icon, $on, $badge = 0 ) {
-		return '<a href="' . esc_url( $href ) . '"' . ( $on ? ' aria-current="page" class="on"' : '' ) . '>' . $icon . esc_html( $label ) . ( $badge > 0 ? ' <span class="sp-badge" title="' . esc_attr__( 'Follow-ups due', 'songpress' ) . '">' . (int) $badge . '</span>' : '' ) . '</a>';
+	private static function nav_item( $href, $label, $icon, $on, $badge = 0, $badge_title = '' ) {
+		return '<a href="' . esc_url( $href ) . '"' . ( $on ? ' aria-current="page" class="on"' : '' ) . '>' . $icon . esc_html( $label ) . ( $badge > 0 ? ' <span class="sp-badge" title="' . esc_attr( '' !== $badge_title ? $badge_title : __( 'Follow-ups due', 'songpress' ) ) . '">' . (int) $badge . '</span>' : '' ) . '</a>';
 	}
 
 	/**
@@ -192,7 +195,7 @@ class Songpress_Frontend {
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
-			$nav .= self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page );
+			$nav .= self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page, count( Songpress_Access::asks() ), __( 'Asked for a new password', 'songpress' ) );
 		}
 		$nav .= self::nav_memory();
 		$bot  = $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );

@@ -9,11 +9,13 @@ class Songpress_Access {
 
 	const META = 'songpress_link';
 	const LIFE = 604800; // seven days
+	const ASKS = 'songpress_pw_asks';
 	const ROLE = array( 'editor' => 'writer', 'contributor' => 'writer', 'member' => 'viewer' );
 
 	public static function init() {
+		add_action( 'init', array( __CLASS__, 'forgot' ), 1 );
 		add_action( 'init', array( __CLASS__, 'consume' ), 1 );
-		foreach ( array( 'link', 'mail', 'oldusers' ) as $a ) {
+		foreach ( array( 'link', 'mail', 'oldusers', 'dismiss' ) as $a ) {
 			add_action( 'admin_post_songpress_access_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
 	}
@@ -100,7 +102,7 @@ class Songpress_Access {
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		header( 'Content-Type: text/html; charset=utf-8' );
 		echo '<!doctype html><html lang="' . esc_attr( get_bloginfo( 'language' ) ) . '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>SongPress</title><link rel="icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" type="image/svg+xml"><link rel="stylesheet" href="' . esc_url( SONGPRESS_URL . 'assets/songpress.css?ver=' . SONGPRESS_VERSION ) . '"></head><body class="sp-body">'; // phpcs:ignore WordPress.Security.EscapeOutput
-		echo '<div class="sp-login"><main><img class="sp-login-logo" src="' . esc_url( SONGPRESS_URL . 'assets/stacked-amber.svg' ) . '" alt="SongPress"><section class="sp-card"><h1>' . esc_html__( 'Choose your password', 'songpress' ) . '</h1><p class="sp-sub">' . esc_html( sprintf( /* translators: %s: username */ __( 'Your username is %s. Pick a password you will remember.', 'songpress' ), $user->user_login ) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
+		echo '<div class="sp-login"><main><img class="sp-login-logo" src="' . esc_url( SONGPRESS_URL . 'assets/stacked-amber.svg' ) . '" alt="SongPress"><section class="sp-card"><h1>' . esc_html__( 'Choose your password', 'songpress' ) . '</h1><p class="sp-sub">' . esc_html( sprintf( /* translators: 1: name, 2: username */ __( 'Hi %1\$s. Your username is %2\$s. Pick a password you will remember.', 'songpress' ), $user->display_name, $user->user_login ) ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( '' !== $err ) {
 			echo '<p class="sp-err" role="alert">' . esc_html( $err ) . '</p>';
 		}
@@ -141,6 +143,7 @@ class Songpress_Access {
 			self::back( $uid, array( 'sp_err' => rawurlencode( __( 'That person cannot be given a link. They need a login with a class first.', 'songpress' ) ) ) );
 		}
 		set_transient( 'songpress_links_' . get_current_user_id(), array( 'uid' => $u->ID, 'url' => self::make_link( $u->ID ) ), 15 * MINUTE_IN_SECONDS );
+		self::clear_ask( $u->ID );
 		Songpress_Audit::log( 'people', 'Made a password link', $u->display_name, array( 'login' => $u->user_login ) );
 		self::back( $uid, array( 'sp_saved' => rawurlencode( __( 'Link made. It opens a page where they choose their own password. It works once and lapses in a week.', 'songpress' ) ) ) );
 	}
@@ -156,6 +159,7 @@ class Songpress_Access {
 		$name = get_bloginfo( 'name' );
 		/* translators: 1: site name, 2: link, 3: days */
 		$body = sprintf( __( "Open this link to choose your password for %1\$s:\n\n%2\$s\n\nIt works once and lapses in %3\$d days. If you did not expect this, ignore it.", 'songpress' ), $name, $url, 7 );
+		self::clear_ask( $u->ID );
 		$ok   = wp_mail( $u->user_email, sprintf( /* translators: %s: site name */ __( 'Choose your password for %s', 'songpress' ), $name ), $body );
 		Songpress_Audit::log( 'people', $ok ? 'Emailed a password link' : 'Could not email a password link', $u->display_name, array( 'login' => $u->user_login ) );
 		self::back( $uid, $ok ? array( 'sp_saved' => rawurlencode( sprintf( /* translators: %s: email */ __( 'Link emailed to %s.', 'songpress' ), $u->user_email ) ) ) : array( 'sp_err' => rawurlencode( __( 'WordPress could not send the email. Copy the link and send it yourself.', 'songpress' ) ) ) );
@@ -177,7 +181,9 @@ class Songpress_Access {
 		$got = get_transient( $key );
 		if ( is_array( $got ) && (int) $got['uid'] === (int) $u->ID ) {
 			delete_transient( $key );
-			$o .= '<div class="spe-invite"><textarea readonly rows="2" onfocus="this.select()">' . esc_textarea( $got['url'] ) . '</textarea><button type="button" class="spe-btn spe-copytext">' . esc_html__( 'Copy', 'songpress' ) . '</button></div>';
+			$first = (string) get_user_meta( $u->ID, 'first_name', true );
+			$text  = sprintf( /* translators: 1: first name, 2: link */ __( "Hi %1\$s, here is your personal SongPress link. Open it to choose your password:\n%2\$s", 'songpress' ), '' !== $first ? $first : $u->display_name, $got['url'] );
+			$o .= '<p class="spe-help">' . esc_html( sprintf( /* translators: %s: name */ __( 'This link is only for %s. It will not sign in anyone else.', 'songpress' ), $u->display_name ) ) . '</p><div class="spe-invite"><textarea readonly rows="3" onfocus="this.select()">' . esc_textarea( $text ) . '</textarea><button type="button" class="spe-btn spe-copytext">' . esc_html__( 'Copy', 'songpress' ) . '</button></div>';
 		}
 		$f = function ( $action, $label, $class ) use ( $u ) {
 			return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( $action, '_wpnonce', true, false ) . '<input type="hidden" name="action" value="' . esc_attr( $action ) . '"><input type="hidden" name="uid" value="' . (int) $u->ID . '"><button class="' . esc_attr( $class ) . '" type="submit">' . esc_html( $label ) . '</button></form> ';
@@ -187,6 +193,76 @@ class Songpress_Access {
 			$o .= $f( 'songpress_access_mail', sprintf( /* translators: %s: email */ __( 'Email it to %s', 'songpress' ), $u->user_email ), 'spe-btn' );
 		}
 		return $o . '</p><p class="spe-help">' . esc_html__( 'Use this for a new person and for anyone who forgets their password. The link opens a page where they choose their own password, then signs them in. It works once and lapses after a week; a new link cancels the old one.', 'songpress' ) . '</p>';
+	}
+
+	/* ---------- "I forgot my password" ---------- */
+
+	/** Pure: requests still worth showing (the last two weeks), newest first. Returns uid => time. */
+	public static function asks_pending( $asks, $now ) {
+		$out = array();
+		foreach ( (array) $asks as $uid => $t ) {
+			if ( (int) $t >= (int) $now - 14 * DAY_IN_SECONDS ) {
+				$out[ (int) $uid ] = (int) $t;
+			}
+		}
+		arsort( $out );
+		return $out;
+	}
+
+	public static function asks() {
+		return self::asks_pending( get_option( self::ASKS, array() ), time() );
+	}
+
+	public static function clear_ask( $uid ) {
+		$all = (array) get_option( self::ASKS, array() );
+		unset( $all[ (int) $uid ] );
+		update_option( self::ASKS, $all, false );
+	}
+
+	/** The login page form: someone who is not signed in says who they are; the Managers are told. The answer is the same whether or not the account exists. */
+	public static function forgot() {
+		if ( is_user_logged_in() || 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || empty( $_POST['sp_forgot'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- a public form; it only tells the Managers.
+			return;
+		}
+		$who  = sanitize_text_field( wp_unslash( $_POST['sp_who'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$user = '' === $who ? false : ( get_user_by( 'login', $who ) ?: ( is_email( $who ) ? get_user_by( 'email', $who ) : false ) );
+		if ( $user && '' !== Songpress_Caps::class_of( $user->ID ) && ! get_transient( 'songpress_ask_' . $user->ID ) ) {
+			set_transient( 'songpress_ask_' . $user->ID, 1, 10 * MINUTE_IN_SECONDS );
+			$all                 = (array) get_option( self::ASKS, array() );
+			$all[ $user->ID ]    = time();
+			update_option( self::ASKS, $all, false );
+			foreach ( get_users( array( 'fields' => 'ID' ) ) as $id ) {
+				if ( 'manager' === Songpress_Caps::class_of( (int) $id ) ) {
+					Songpress_Push::notify( (int) $id, __( 'Password help', 'songpress' ), sprintf( /* translators: %s: name */ __( '%s forgot their password. Open People to send a link.', 'songpress' ), $user->display_name ), Songpress_Persons::url() );
+				}
+			}
+			Songpress_Audit::log( 'people', 'Asked for a password link', $user->display_name, array( 'login' => $user->user_login ), 0 );
+		}
+		wp_safe_redirect( add_query_arg( 'sp_login', 'asked', remove_query_arg( array( 'sp_login', 'sp_forgot' ) ) ) );
+		exit;
+	}
+
+	public static function handle_dismiss() {
+		self::guard( 'songpress_access_dismiss' );
+		self::clear_ask( absint( $_POST['uid'] ?? 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification -- checked by guard().
+		wp_safe_redirect( Songpress_Persons::url() );
+		exit;
+	}
+
+	/** The box at the top of People: who asked, with the buttons to answer them. */
+	public static function asks_box() {
+		$rows = '';
+		foreach ( self::asks() as $uid => $t ) {
+			$u = get_userdata( $uid );
+			if ( ! $u ) {
+				continue;
+			}
+			$f = function ( $action, $label, $class ) use ( $uid ) {
+				return '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( $action, '_wpnonce', true, false ) . '<input type="hidden" name="action" value="' . esc_attr( $action ) . '"><input type="hidden" name="uid" value="' . (int) $uid . '"><button class="' . esc_attr( $class ) . '" type="submit">' . esc_html( $label ) . '</button></form> ';
+			};
+			$rows .= '<li><b>' . esc_html( $u->display_name ) . '</b> <small>' . esc_html( sprintf( /* translators: 1: username, 2: how long ago */ __( '%1$s, asked %2$s ago', 'songpress' ), $u->user_login, human_time_diff( $t ) ) ) . '</small> ' . $f( 'songpress_access_link', __( 'Send a password link', 'songpress' ), 'spe-save' ) . ( self::real_email( $u->user_email ) ? $f( 'songpress_access_mail', __( 'Email it', 'songpress' ), 'spe-btn' ) : '' ) . $f( 'songpress_access_dismiss', __( 'Dismiss', 'songpress' ), 'spe-btn' ) . '</li>';
+		}
+		return '' === $rows ? '' : '<div class="spe-tidy spm-asks"><h3>' . esc_html__( 'Forgot their password', 'songpress' ) . '</h3><ul>' . $rows . '</ul></div>';
 	}
 
 	/* ---------- the old plugin's accounts ---------- */

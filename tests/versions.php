@@ -695,6 +695,8 @@ check( 'push token: three parts, right audience, 64 byte signature that verifies
 $nl = array();
 for ( $i = 1; $i <= 25; $i++ ) { $nl = Songpress_Push::notice_add( $nl, array( 'id' => "n$i", 'seen' => $i < 24 ? 1 : 0 ) ); }
 check( 'notice list keeps the last 20 and hands out the oldest unseen', array( count( $nl ), Songpress_Push::notice_next( $nl )[1]['id'], Songpress_Push::notice_next( array( array( 'seen' => 1 ) ) ) ), array( 20, 'n24', null ) );
+if ( ! defined( 'DAY_IN_SECONDS' ) ) { define( 'DAY_IN_SECONDS', 86400 ); }
+check( 'password requests: recent ones only, newest first', Songpress_Access::asks_pending( array( 1 => 1000, 2 => 5000000, 3 => 5000100 ), 5000200 ), array( 3 => 5000100, 2 => 5000000 ) );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
 check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
 check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );

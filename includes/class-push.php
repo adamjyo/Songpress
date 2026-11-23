@@ -275,13 +275,14 @@ JS;
 		$to    = sanitize_text_field( $in['to'] ?? 'all' );
 		$title = sanitize_text_field( $in['title'] ?? '' );
 		$body  = sanitize_text_field( $in['body'] ?? '' );
+		$back  = isset( $in['person'] ) && '' !== $in['person'] ? Songpress_Persons::url( array( 'person' => Songpress_Profiles::key( sanitize_text_field( $in['person'] ) ) ) ) : Songpress_Persons::url();
 		if ( '' === $body ) {
-			wp_safe_redirect( add_query_arg( 'sp_err', rawurlencode( __( 'Write the message first.', 'songpress' ) ), Songpress_Persons::url() ) );
+			wp_safe_redirect( add_query_arg( 'sp_err', rawurlencode( __( 'Write the message first.', 'songpress' ) ), $back ) );
 			exit;
 		}
 		$ids = array();
 		if ( 'all' === $to ) {
-			foreach ( get_users( array( 'fields' => 'ID', 'meta_key' => self::SUBS, 'meta_compare' => 'EXISTS' ) ) as $id ) { // phpcs:ignore WordPress.DB.SlowDBQuery
+			foreach ( get_users( array( 'fields' => 'ID' ) ) as $id ) {
 				if ( self::devices( (int) $id ) ) {
 					$ids[] = (int) $id;
 				}
@@ -289,28 +290,51 @@ JS;
 		} else {
 			$ids[] = absint( $to );
 		}
+		$one = 'all' === $to ? null : get_userdata( absint( $to ) );
+		if ( 'all' !== $to && ( ! $one || ! self::devices( $one->ID ) ) ) {
+			wp_safe_redirect( add_query_arg( 'sp_err', rawurlencode( sprintf( /* translators: %s: name */ __( '%s has not turned on notifications on a phone yet. Ask them to tap the bell in the app menu.', 'songpress' ), $one ? $one->display_name : __( 'That person', 'songpress' ) ) ), $back ) );
+			exit;
+		}
 		$phones = 0;
 		foreach ( $ids as $id ) {
 			$phones += self::notify( $id, '' !== $title ? $title : 'SongPress', $body );
 		}
-		Songpress_Audit::log( 'people', 'Sent a notification', 'all' === $to ? 'everyone' : (string) ( get_userdata( absint( $to ) )->display_name ?? '' ), array( 'message' => $body, 'phones reached' => $phones ) );
-		wp_safe_redirect( add_query_arg( 'sp_saved', rawurlencode( sprintf( /* translators: %d: phones */ _n( 'Sent. It reached %d phone.', 'Sent. It reached %d phones.', $phones, 'songpress' ), $phones ) ), Songpress_Persons::url() ) );
+		Songpress_Audit::log( 'people', 'Sent a notification', $one ? $one->display_name : 'everyone', array( 'message' => $body, 'phones reached' => $phones ) );
+		wp_safe_redirect( add_query_arg( 'sp_saved', rawurlencode( sprintf( /* translators: %d: phones */ _n( 'Sent. It reached %d phone.', 'Sent. It reached %d phones.', $phones, 'songpress' ), $phones ) ), $back ) );
 		exit;
 	}
 
-	/** The form for People: choose who, write the message. */
-	public static function send_box() {
-		$opts = '<option value="all">' . esc_html__( 'Everyone with notifications on', 'songpress' ) . '</option>';
-		foreach ( get_users( array( 'fields' => array( 'ID', 'display_name' ) ) ) as $u ) {
-			if ( self::devices( (int) $u->ID ) ) {
-				$opts .= '<option value="' . (int) $u->ID . '">' . esc_html( $u->display_name ) . '</option>';
+	/** The form for People: choose who (or it is for one person already), write the message. */
+	public static function send_box( $only = 0 ) {
+		$opts = '';
+		$on   = 0;
+		if ( $only ) {
+			$u    = get_userdata( (int) $only );
+			$on   = $u && self::devices( $u->ID ) ? 1 : 0;
+			$opts = '<input type="hidden" name="to" value="' . (int) $only . '"><input type="hidden" name="person" value="' . esc_attr( $u ? $u->display_name : '' ) . '">';
+			if ( ! $on ) {
+				return '<h3>' . esc_html__( 'Send a notification', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'They have not turned on notifications yet. They do it from the bell in the app menu, after adding SongPress to their phone’s Home Screen.', 'songpress' ) . '</p>';
 			}
+		} else {
+			$all = '';
+			$off = array();
+			foreach ( get_users( array( 'fields' => array( 'ID', 'display_name' ) ) ) as $u ) {
+				if ( '' === Songpress_Caps::class_of( (int) $u->ID ) ) {
+					continue;
+				}
+				if ( self::devices( (int) $u->ID ) ) {
+					$all .= '<option value="' . (int) $u->ID . '">' . esc_html( $u->display_name ) . '</option>';
+				} else {
+					$off[] = $u->display_name;
+				}
+			}
+			$opts = '<label class="spe-field"><span>' . esc_html__( 'To', 'songpress' ) . '</span><select name="to"><option value="all">' . esc_html__( 'Everyone with notifications on', 'songpress' ) . '</option>' . $all . '</select></label>';
 		}
-		return '<h3>' . esc_html__( 'Send a notification', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_push_send', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_send">'
-			. '<label class="spe-field"><span>' . esc_html__( 'To', 'songpress' ) . '</span><select name="to">' . $opts . '</select></label>'
+		return '<h3>' . esc_html__( 'Send a notification', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_push_send', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_send">' . $opts
 			. '<label class="spe-field"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" placeholder="SongPress"></label>'
 			. '<label class="spe-field grow"><span>' . esc_html__( 'Message', 'songpress' ) . '</span><input name="body" required></label>'
-			. '<button class="spe-save" type="submit">' . esc_html__( 'Send', 'songpress' ) . '</button></form><p class="spe-help">' . esc_html__( 'People turn notifications on themselves, from the bell in the app menu on their phone, after adding SongPress to their Home Screen. They are also told when a payment is recorded for them.', 'songpress' ) . '</p>';
+			. '<button class="spe-save" type="submit">' . esc_html__( 'Send', 'songpress' ) . '</button></form>'
+			. ( $only ? '' : '<p class="spe-help">' . esc_html( sprintf( /* translators: %s: names */ __( 'Only people who turned notifications on can be picked. Not on yet: %s.', 'songpress' ), $off ? implode( ', ', $off ) : __( 'nobody', 'songpress' ) ) ) . ' ' . esc_html__( 'They turn them on from the bell in the app menu, after adding SongPress to their Home Screen. People are also told when a payment is recorded for them.', 'songpress' ) . '</p>' );
 	}
 
 	/* ---------- in the page ---------- */

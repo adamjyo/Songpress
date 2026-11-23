@@ -923,3 +923,8 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-trace{max-height:480px;overflow-y:auto}
 .spm-trace .spm-sharef{display:inline-flex;gap:4px;align-items:center;margin:0}
 .spm-trace .spm-sharef input{width:4.5em;text-align:right}
+
+.sp-forgot summary{cursor:pointer;color:#f5a524;margin-top:14px}
+.sp-forgot form{margin-top:8px}
+.spm-asks ul{list-style:none;margin:0;padding:0}
+.spm-asks li{padding:6px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}

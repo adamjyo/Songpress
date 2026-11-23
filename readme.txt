@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.64
+Stable tag: 0.63.65
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.65 =
+* Login page: "Forgot my password". The person enters their username or email; every Manager is notified on their phone and sees a "Forgot their password" box at the top of People (plus a count on the People menu item) with Send a password link, Email it and Dismiss.
+* Password links are made for one person only and the page greets them by name. The link comes ready to paste into a text message ("Hi Abby, here is your personal SongPress link...").
+* People: Send a notification now lists everyone who has notifications on, says who has not, and each person's page has its own Send box.
 
 = 0.63.64 =
 * The app can be saved to a phone's Home Screen and send notifications (Android, and iPhone with iOS 16.4 or later). Each person turns them on from the bell in the app menu; a test is sent when they do. People are told when a payment is recorded for them.
