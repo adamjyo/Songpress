@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.89
+Stable tag: 0.63.90
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.90 =
+* Works editor saves as you type. There is no Save button; a green "Updated" shows in its place for three seconds after each save. A new work is created as soon as it has a title (or is a Starter).
 
 = 0.63.89 =
 * A work whose Writing stage is Starter no longer needs a title. Writing stage now shows on every work, including a new one.

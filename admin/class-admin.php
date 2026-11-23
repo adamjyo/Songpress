@@ -6,6 +6,7 @@ class Songpress_Admin {
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'menu' ) );
 		add_action( 'admin_post_songpress_save', array( __CLASS__, 'handle_save' ) );
+		add_action( 'wp_ajax_songpress_autosave', array( __CLASS__, 'handle_autosave' ) );
 		add_action( 'admin_post_songpress_new_version', array( __CLASS__, 'handle_new_version' ) );
 		add_action( 'admin_post_songpress_import_check', array( __CLASS__, 'handle_import_check' ) );
 		add_action( 'admin_post_songpress_import_run', array( __CLASS__, 'handle_import_run' ) );
@@ -67,7 +68,23 @@ class Songpress_Admin {
 		return add_query_arg( array_merge( array( 'page' => $page ), $args ), admin_url( 'admin.php' ) );
 	}
 
+	/** True while a work is being saved from the editor in the background: answers go back as JSON, not as a redirect. */
+	private static $ajax = false;
+
+	public static function handle_autosave() {
+		self::$ajax = true;
+		self::handle_save();
+	}
+
 	private static function back( $page, $args = array() ) {
+		if ( self::$ajax ) {
+			if ( isset( $args['err'] ) ) {
+				wp_send_json_error( array( 'msg' => rawurldecode( (string) $args['err'] ) ) );
+			}
+			$sid = (int) ( $args['song'] ?? 0 );
+			$row = $sid ? Songpress_Songs::get( $sid ) : null;
+			wp_send_json_success( array( 'id' => $sid, 'revision' => $row ? (int) $row->revision : 0, 'serial' => $row ? (string) $row->serial : '', 'warn' => isset( $args['noacct'] ) ? rawurldecode( (string) $args['noacct'] ) : '' ) );
+		}
 		// A form posted from the front-end app carries sp_return: go back there, not to the WordPress admin.
 		$ret = isset( $_POST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification -- every caller has already checked its nonce.
 		if ( '' !== $ret ) {

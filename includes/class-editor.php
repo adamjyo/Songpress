@@ -69,7 +69,7 @@ class Songpress_Editor {
 				. '<button type="submit" class="spe-ib danger" title="' . esc_attr( $lab ) . '" aria-label="' . esc_attr( $lab ) . '">' . self::ico( 'trash' ) . '</button></form>';
 		}
 		$o       .= '<div class="spe-top"><a class="spe-back spe-ib" href="' . esc_url( self::list_url() ) . '" title="' . esc_attr__( 'Back to Works', 'songpress' ) . '">' . self::ico( 'back' ) . '<span>' . esc_html__( 'Works', 'songpress' ) . '</span></a>' . Songpress_Steps::nav( $id, self::list_url() ) . '<h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2><span class="sp-total" aria-live="polite"></span>' . ( $song ? self::share_popup( $song ) : '' ) . $del
-			. '<button type="submit" form="spe-form" class="spe-save spe-topsave" title="' . esc_attr( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '">' . self::ico( 'save' ) . '<span>' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</span></button></div>';
+			. '<button type="submit" form="spe-form" class="spe-save spe-topsave" title="' . esc_attr( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '">' . self::ico( 'save' ) . '<span>' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</span></button><span id="spe-updated" class="spe-updated" role="status" aria-live="polite" hidden></span></div>';
 		$o       .= self::notices();
 		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
@@ -230,7 +230,7 @@ class Songpress_Editor {
 		if ( $song ) {
 			$o .= self::versions_panel( $song );
 		}
-		$o .= '</div></div>' . self::script() . '</div>';
+		$o .= '</div></div>' . self::autosave_script() . self::script() . '</div>';
 		return $o;
 	}
 
@@ -500,6 +500,29 @@ class Songpress_Editor {
 	}
 
 	/* ---------- behaviour ---------- */
+
+	/** Saves the work as you type: no Save button. A quiet "Updated" shows where the button was for three seconds after each save. */
+	private static function autosave_script() {
+		$cfg = wp_json_encode( array(
+			'ajax'    => admin_url( 'admin-ajax.php' ),
+			'updated' => __( 'Updated', 'songpress' ),
+			'saving'  => __( 'Saving…', 'songpress' ),
+			'failed'  => __( 'Not saved:', 'songpress' ),
+		) );
+		return '<script>(function(){var C=' . $cfg . ',f=document.getElementById("spe-form"),u=document.getElementById("spe-updated");if(!f||!u||!window.fetch||!window.FormData)return;var btn=document.querySelector(".spe-topsave");if(btn)btn.hidden=true;'
+			. 'function snap(){var p=[];new FormData(f).forEach(function(v,k){if(typeof v==="string"&&k!=="revision"&&k!=="song_id"&&k!=="_wpnonce"&&k!=="action"&&k!=="sp_return")p.push(k+"="+v)});return p.join("&")}'
+			. 'var last=snap(),bad=null,busy=false,again=false,t=null,hide=null;'
+			. 'function show(txt,bad){u.hidden=false;u.className="spe-updated"+(bad?" bad":"");u.textContent=txt;clearTimeout(hide);if(!bad&&txt===C.updated){hide=setTimeout(function(){u.hidden=true},3000)}}'
+			. 'function put(n,v){var e=f.elements[n];if(e)e.value=v}'
+			. 'function save(){if(busy){again=true;return}var now=snap();if(now===last)return;busy=true;show(C.saving,false);var d=new FormData(f);d.set("action","songpress_autosave");'
+			. 'fetch(C.ajax,{method:"POST",body:d,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){busy=false;if(j&&j.success){last=now;bad=null;put("revision",j.data.revision);if(j.data.id&&!+f.elements.song_id.value){put("song_id",j.data.id);try{var l=new URL(location.href);l.searchParams.set("sp_edit",j.data.id);history.replaceState(null,"",l.toString())}catch(e){}}show(C.updated,false)}else{bad=now;show(C.failed+" "+((j&&j.data&&j.data.msg)||""),true)}if(again){again=false;save()}}).catch(function(){busy=false;bad=now;show(C.failed,true)})}'
+			. 'function soon(){clearTimeout(t);t=setTimeout(save,1200)}'
+			. 'f.addEventListener("input",soon);f.addEventListener("change",soon);f.addEventListener("click",function(e){if(e.target.closest("button"))soon()});'
+			. 'f.addEventListener("submit",function(e){e.preventDefault();save()});'
+			. 'setInterval(function(){var n=snap();if(!busy&&n!==last&&n!==bad)soon()},2000);'
+			. 'window.addEventListener("pagehide",function(){if(snap()!==last&&navigator.sendBeacon){var d=new FormData(f);d.set("action","songpress_autosave");navigator.sendBeacon(C.ajax,d)}});'
+			. '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+	}
 
 	private static function script() {
 		$cfg = wp_json_encode( array( 'url' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_upload' ) ) );
