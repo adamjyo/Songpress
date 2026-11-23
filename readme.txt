@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.135
+Stable tag: 0.63.136
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.136 =
+* Chord sheet follows the ChordPro standard for breaks: {column_break} (or {colb}) starts the next column, a second one starts a new page, and {new_page} (or {np}) starts a page. When a chart has any of them, those breaks are used instead of the automatic layout.
 
 = 0.63.135 =
 * Chord sheet: if everything fits in the first column, it stays in the first column.

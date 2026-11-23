@@ -75,7 +75,8 @@
   /* SongSelect-style printable sheet: title block, key | tempo | time, two columns, numbered sections, chords bold over the words, CCLI line at the foot */
   function buildSheet(text) {
     var meta = { title: '', by: [], key: '', tempo: '', time: '', ccli: '', iswc: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
-    function open(label) { cur = { label: label, lines: [] }; secs.push(cur); }
+    var pending = '';
+    function open(label) { cur = { label: label, lines: [], brk: pending }; pending = ''; secs.push(cur); }
     function add(html) { (cur || (open(''), cur)).lines.push(html); }
     text.split(/\r\n|\r|\n/).forEach(function (line) {
       if (/^\s*#/.test(line)) return;
@@ -90,6 +91,8 @@
         else if (k === 'ccli' || k === 'ccli_song') meta.ccli = a.replace(/^#\s*/, '');
         else if (k === 'iswc') meta.iswc = a;
         else if (k === 'copyright') meta.copy = a;
+        else if (/^(column_break|colb)$/.test(k)) { pending = 'col'; if (cur && cur.lines.length) open(''); }
+        else if (/^(new_page|np)$/.test(k)) { pending = 'page'; if (cur && cur.lines.length) open(''); }
         else if (/^(comment|c|comment_italic|ci)$/.test(k)) add('<p class="sh-note">' + esc(a) + '</p>');
         else if (/^start_of_/.test(k) && k !== 'start_of_tab') {
           var kind = k.replace(/^start_of_/, '').replace(/_/g, ' ');
@@ -121,7 +124,7 @@
     if (meta.copy) foot.push(esc(meta.copy));
     var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
     secs.forEach(function (sc, i) {
-      h += '<section class="sh-sec"' + (!firstC && /^chorus/i.test(sc.label) && (firstC = i + 1) ? ' data-chorus="1"' : '') + '>' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
+      h += '<section class="sh-sec"' + (sc.brk ? ' data-brk="' + sc.brk + '"' : '') + (!firstC && /^chorus/i.test(sc.label) && (firstC = i + 1) ? ' data-chorus="1"' : '') + '>' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
     h += '</div><footer class="sh-foot">' + foot.join('<br>') + '</footer>';
     return h;
@@ -147,13 +150,25 @@
     var total = hs.reduce(function (a, b) { return a + b; }, 0);
     function range(i, j) { var t = 0; for (var k = i; k < j; k++) t += hs[k]; return t; }
     var plan = []; /* pages: [[colA indexes], [colB indexes]] */
+    var explicit = secs.some(function (x) { return x.getAttribute('data-brk'); });
     var fitsOne = false, pick = -1;
-    if (total <= avail1) pick = secs.length; /* everything fits in the first column: leave it there */
+    if (explicit) pick = -2;
+    else if (total <= avail1) pick = secs.length; /* everything fits in the first column: leave it there */
     else if (secs.length > 1) {
       if (ch > -1 && ch < secs.length - 1 && range(0, ch + 1) <= avail1 && range(ch + 1, secs.length) <= avail1) pick = ch + 1;
       else { var bm = 1e9; for (var k = 1; k < secs.length; k++) { var m = Math.max(range(0, k), range(k, secs.length)); if (m <= avail1 && m < bm) { bm = m; pick = k; } } }
     }
-    if (pick > -1) { plan.push([range0(0, pick), range0(pick, secs.length)]); }
+    if (pick === -2) {
+      /* the chart says where the columns break: {column_break} starts the next column (or page), {new_page} starts a page */
+      var pg = [[], []], c = 0;
+      plan.push(pg);
+      secs.forEach(function (x, i) {
+        var b = x.getAttribute('data-brk');
+        if (b === 'page' || (b === 'col' && c === 1)) { pg = [[], []]; plan.push(pg); c = 0; }
+        else if (b === 'col') c = 1;
+        pg[c].push(i);
+      });
+    } else if (pick > -1) { plan.push([range0(0, pick), range0(pick, secs.length)]); }
     else {
       var i = 0, first = true;
       while (i < secs.length) {
