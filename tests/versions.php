@@ -111,6 +111,7 @@ require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
 require __DIR__ . '/../includes/class-earnings.php';
 require __DIR__ . '/../includes/class-access.php';
+require __DIR__ . '/../includes/class-push.php';
 require __DIR__ . '/../includes/class-legacy.php';
 require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
@@ -679,6 +680,21 @@ $old = array(
 );
 $pl = Songpress_Access::plan_accounts( $old, array( 'abby.russ' => array( 7, false ), 'has.class' => array( 9, true ) ) );
 check( 'old accounts: give a class, create the missing, skip classed, drop inactive', array_map( function ( $p ) { return $p['login'] . ':' . $p['action'] . ':' . $p['class']; }, $pl ), array( 'abby.russ:class:writer', 'sam.new:create:viewer', 'has.class:skip:writer' ) );
+// notifications: signing key, token and the notice list
+if ( ! function_exists( 'wp_parse_url' ) ) { function wp_parse_url( $u, $c = -1 ) { return parse_url( $u, $c ); } }
+$vk = Songpress_Push::keys();
+$pubraw = base64_decode( strtr( $vk['pub'], '-_', '+/' ) );
+check( 'push key is a 65 byte uncompressed point', array( strlen( $pubraw ), ord( $pubraw[0] ) ), array( 65, 4 ) );
+check( 'push key is made once', Songpress_Push::keys()['pub'], $vk['pub'] );
+$jw = explode( '.', Songpress_Push::jwt( 'https://web.push.apple.com/abc123' ) );
+$claims = json_decode( base64_decode( strtr( $jw[1], '-_', '+/' ) ), true );
+$sig = base64_decode( strtr( $jw[2], '-_', '+/' ) );
+$toint = function ( $x ) { $x = ltrim( $x, "\x00" ); if ( ord( $x[0] ) & 0x80 ) { $x = "\x00" . $x; } return "\x02" . chr( strlen( $x ) ) . $x; };
+$der = "\x30" . chr( strlen( $toint( substr( $sig, 0, 32 ) ) . $toint( substr( $sig, 32 ) ) ) ) . $toint( substr( $sig, 0, 32 ) ) . $toint( substr( $sig, 32 ) );
+check( 'push token: three parts, right audience, 64 byte signature that verifies', array( count( $jw ), $claims['aud'], strlen( $sig ), openssl_verify( $jw[0] . '.' . $jw[1], $der, openssl_pkey_get_details( openssl_pkey_get_private( $vk['pem'] ) )['key'], OPENSSL_ALGO_SHA256 ) ), array( 3, 'https://web.push.apple.com', 64, 1 ) );
+$nl = array();
+for ( $i = 1; $i <= 25; $i++ ) { $nl = Songpress_Push::notice_add( $nl, array( 'id' => "n$i", 'seen' => $i < 24 ? 1 : 0 ) ); }
+check( 'notice list keeps the last 20 and hands out the oldest unseen', array( count( $nl ), Songpress_Push::notice_next( $nl )[1]['id'], Songpress_Push::notice_next( array( array( 'seen' => 1 ) ) ) ), array( 20, 'n24', null ) );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
 check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
 check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );

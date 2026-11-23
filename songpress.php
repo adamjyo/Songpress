@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/adamjyo/Songpress
  * GitHub Plugin URI: adamjyo/Songpress
  * Description:       A song catalog manager. Keep every song and every version under one serial number, share your catalog, and see your own works.
- * Version:           0.63.63
+ * Version:           0.63.64
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Adam Yoo
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SONGPRESS_VERSION', '0.63.63' );
+define( 'SONGPRESS_VERSION', '0.63.64' );
 define( 'SONGPRESS_DB_VERSION', '23' );
 define( 'SONGPRESS_FILE', __FILE__ );
 define( 'SONGPRESS_DIR', plugin_dir_path( __FILE__ ) );
@@ -48,6 +48,7 @@ require_once SONGPRESS_DIR . 'includes/class-members.php';
 require_once SONGPRESS_DIR . 'includes/class-money.php';
 require_once SONGPRESS_DIR . 'includes/class-earnings.php';
 require_once SONGPRESS_DIR . 'includes/class-access.php';
+require_once SONGPRESS_DIR . 'includes/class-push.php';
 require_once SONGPRESS_DIR . 'includes/class-legacy.php';
 require_once SONGPRESS_DIR . 'includes/class-pitch.php';
 require_once SONGPRESS_DIR . 'includes/class-journal.php';
@@ -77,6 +78,7 @@ add_action( 'plugins_loaded', function () {
 		Songpress_Money::init();
 		Songpress_Earnings::init();
 		Songpress_Access::init();
+		Songpress_Push::init();
 		Songpress_Legacy::init();
 		Songpress_Pitch::init();
 		Songpress_Journal::init();

@@ -1107,6 +1107,10 @@ class Songpress_Money {
 		}
 		$after = (float) $wpdb->get_var( $wpdb->prepare( "SELECT amount FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $year, $qn, $key ) ); // phpcs:ignore WordPress.DB
 		Songpress_Audit::log( 'money', 'Recorded a payment', $party, array_filter( array( 'quarter' => $q, 'amount' => self::money( $amount ), 'paid on' => $on, 'note' => $note, 'paid that quarter now' => self::money( $after ) ), 'strlen' ) );
+		$who = class_exists( 'Songpress_Push' ) ? Songpress_Push::user_for_name( $party ) : 0;
+		if ( $who ) {
+			Songpress_Push::notify( $who, __( 'Payment recorded', 'songpress' ), sprintf( /* translators: 1: amount, 2: quarter */ __( '%1$s was recorded as paid to you for %2$s.', 'songpress' ), self::money( $amount ), $q ) );
+		}
 		self::go( 'money', array( 'm_ok' => sprintf( /* translators: 1: amount, 2: person, 3: quarter */ __( 'Recorded %1$s paid to %2$s for %3$s.', 'songpress' ), self::money( $amount ), $party, $q ) ) );
 	}
 
