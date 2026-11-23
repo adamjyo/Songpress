@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/adamjyo/Songpress
  * GitHub Plugin URI: adamjyo/Songpress
  * Description:       A song catalog manager. Keep every song and every version under one serial number, share your catalog, and see your own works.
- * Version:           0.63.85
+ * Version:           0.63.86
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Adam Yoo
@@ -18,7 +18,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SONGPRESS_VERSION', '0.63.85' );
+define( 'SONGPRESS_VERSION', '0.63.86' );
 define( 'SONGPRESS_DB_VERSION', '23' );
 define( 'SONGPRESS_FILE', __FILE__ );
 define( 'SONGPRESS_DIR', plugin_dir_path( __FILE__ ) );
@@ -95,7 +95,7 @@ add_action( 'plugins_loaded', function () {
 		Songpress_Health::init();
 		Songpress_People::init();
 	Songpress_Updater::init();
-	if ( is_admin() ) {
+	if ( is_admin() || isset( $_REQUEST['songpress_post'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification -- only decides whether the admin handlers are registered; each handler checks its own nonce.
 		Songpress_Admin::init();
 	}
 } );
