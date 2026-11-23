@@ -37,6 +37,9 @@ class Songpress_Songs {
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
 	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'genre', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
+	/** The writing stages offered in the editor. Any other stage a work already carries is kept in the list. */
+	const STAGES = array( 'Starter', 'Idea', 'Draft', 'Demo', 'Recorded', 'Mixed', 'Finished' );
+
 	/** Statuses and genres found on works, read once per request. */
 	private static $in_use = null;
 
@@ -65,7 +68,7 @@ class Songpress_Songs {
 		}
 		if ( ! isset( self::$in_use[ $column ] ) ) {
 			$t   = Songpress_Install::table( 'songs' );
-			$col = 'genre' === $column ? 'genre' : 'status';
+			$col = in_array( $column, array( 'genre', 'stage' ), true ) ? $column : 'status';
 			$out = array();
 			foreach ( (array) $wpdb->get_results( "SELECT DISTINCT {$col} AS v FROM {$t} WHERE {$col} <> '' ORDER BY {$col}" ) as $r ) { // phpcs:ignore WordPress.DB
 				$out[] = (string) $r->v;
@@ -92,6 +95,15 @@ class Songpress_Songs {
 	 */
 	public static function genres() {
 		return self::merge_options( self::GENRES, self::used( 'genre' ) );
+	}
+
+	public static function stages() {
+		return self::merge_options( self::STAGES, self::used( 'stage' ) );
+	}
+
+	/** The name a work goes by in the Works list: a work whose writing stage is Starter is just called Starter. */
+	public static function list_title( $s ) {
+		return 'starter' === strtolower( trim( (string) ( $s->stage ?? '' ) ) ) ? __( 'Starter', 'songpress' ) : self::display_title( $s );
 	}
 
 	/** The statuses a song may have. The original work can never be released. */

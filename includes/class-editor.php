@@ -123,7 +123,12 @@ class Songpress_Editor {
 		}
 		$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . ( $root ? $artist_hidden : '' );
 		if ( ! $root ) {
-			$o .= self::input( 'stage', __( 'Writing stage', 'songpress' ), $song, '', 'adv spe-own' );
+			$cur_stage = trim( (string) self::f( $song, 'stage' ) );
+			$so        = '<option value=""></option>';
+			foreach ( Songpress_Songs::merge_options( Songpress_Songs::stages(), array( $cur_stage ) ) as $st ) {
+				$so .= '<option value="' . esc_attr( $st ) . '"' . selected( strtolower( $cur_stage ), strtolower( $st ), false ) . '>' . esc_html( $st ) . '</option>';
+			}
+			$o .= '<label class="spe-field adv spe-own"><span>' . esc_html__( 'Writing stage', 'songpress' ) . '</span><select name="stage">' . $so . '</select></label>';
 		}
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );

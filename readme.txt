@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.86
+Stable tag: 0.63.87
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.87 =
+* Works editor: Writing stage is now a drop-down (Starter, Idea, Draft, Demo, Recorded, Mixed, Finished, plus any stage a work already has). A work whose stage is Starter is named Starter in the Works list.
 
 = 0.63.86 =
 * Fix: the Settings buttons in the app (Check GitHub now, save settings, create pages and others) did nothing and dropped you on the homepage, because their handlers were only loaded inside wp-admin. They now load for the app's own form address too.
