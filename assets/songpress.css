@@ -775,3 +775,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-income .spm-sub td{font-size:12px;color:var(--sp-soft)}.spm-income .spm-sub td:first-child{padding-left:22px}
 .spm-acct select,.spm-acct input[name=notes]{max-width:150px}.spm-hist{margin-top:6px;font-size:12px;color:var(--sp-soft)}.spm-hist ul{list-style:none;margin:4px 0 0;padding:0}.spm-hist li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0}.spm-hist form{margin:0}
 .spm-ok,.spm-part{font-weight:700;font-size:13px}.spm-ok{color:#2fb344}.spm-part{color:#e0a100}
+
+.spm-income,.spm-acct{color:var(--sp-text)}
+.spm-ok .screen-reader-text,.spm-part .screen-reader-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.spm-acct form.spm-pay{flex-wrap:wrap;gap:6px;align-items:center}
+.spm-acct .spm-pay input,.spm-acct .spm-pay select{width:auto;min-width:0;height:32px;padding:0 8px;font-size:13px;box-sizing:border-box}
+.spm-acct .spm-pay input.spm-amt{width:92px}.spm-acct .spm-pay input[type=date]{width:134px}.spm-acct .spm-pay select{width:96px}.spm-acct .spm-pay input[name=notes]{width:120px}
+.spm-acct .spm-pay .spe-save{height:32px;padding:0 14px;margin:0}
+.spm-acct td{vertical-align:top}.spm-acct td:first-child{white-space:nowrap}

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.41
+Stable tag: 0.63.42
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.42 =
+* Money: tidier layout for the Pay forms, and the paid check no longer shows its hidden label as visible text.
 
 = 0.63.41 =
 * Money: in the income table a green check marks each person and quarter that has been paid in full; an amber check means partly paid (hover for the amounts).
