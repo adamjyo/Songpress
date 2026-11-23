@@ -322,7 +322,7 @@ $mp->exec( "INSERT INTO royalty_work_quarter VALUES (11,'2026 Q2','D',10.5),(11,
 $mp->exec( 'CREATE TABLE royalty_person_quarter (person TEXT, work_title TEXT, quarter TEXT, src TEXT, amount REAL)' );
 $mp->exec( "INSERT INTO royalty_person_quarter VALUES ('Adam Page','Harbor Lights','2026 Q2','D',6),('Adam Page','Harbor Lights','2026 Q2','D',2),('Mack Butts','Harbor Lights','2026 Q2','M',1),('Adam Page','Second Song','2026 Q1','A',4)" );
 $mp->exec( 'CREATE TABLE paid_entry (id INT, y INT, q INT, party TEXT, kind TEXT, amount REAL, notes TEXT, updated_at TEXT)' );
-$mp->exec( "INSERT INTO paid_entry VALUES (1,2026,2,'Adam Page','writer',8,'x',''),(2,2026,2,'Mack Butts','writer',1,'','')" );
+$mp->exec( "INSERT INTO paid_entry VALUES (1,2026,2,'Adam Page','writer',8,'x',''),(2,2026,2,'Mack Butts','writer',1,'',''),(3,2026,5,'Late Person','writer',-2,'','2026-10-01T10:00:00')" );
 $mp->exec( 'CREATE TABLE pay_board (id INT, y INT, q INT, kind TEXT, party TEXT, paid INT, paid_on TEXT)' );
 $mp->exec( "INSERT INTO pay_board VALUES (1,2026,2,'writer','Adam Page',1,'2026-09-05'),(2,2026,1,'writer','Late Person',0,NULL)" );
 $mp->exec( 'CREATE TABLE dk_daily_estimates (day TEXT, service TEXT, streams INT)' );
@@ -353,7 +353,7 @@ check( 'money import earnings lines', $r['earnings'], 3 );
 check( 'money import person lines', $r['person'], 3 );
 check( 'money import streams', $r['streams'], 3 );
 check( 'money import store lines', $r['stats'], 3 );
-check( 'money import payouts (Adam, Mack, Late Person)', $r['payments'], 3 );
+check( 'money import payouts (Adam, Mack, Late Person, correction line)', $r['payments'], 4 );
 check( 'earned total skips unknown work and bad quarter', round( Songpress_Money::earned_total(), 2 ), 18.0 );
 check( 'quarters newest first', Songpress_Money::quarters(), array( '2026-Q2', '2026-Q1' ) );
 check( 'top song is Harbor Lights', Songpress_Money::top_songs( 5 )[0]->title, 'Harbor Lights' );
@@ -362,7 +362,7 @@ check( 'owed Adam', array( $ow[0]->person, round( (float) $ow[0]->total, 2 ) ), 
 check( 'Mack old payment line imported as paid', (int) Songpress_Money::payments_for( 2026, 2 )['writer|mackbutts']->paid, 1 );
 $pp = Songpress_Money::payments_for( 2026, 2 );
 check( 'Adam marked paid from the board', array( (int) $pp['writer|adampage']->paid, $pp['writer|adampage']->paid_on, round( (float) $pp['writer|adampage']->amount, 2 ) ), array( 1, '2026-09-05', 8.0 ) );
-check( 'paid total (old payment lines count as paid)', round( Songpress_Money::paid_total(), 2 ), 9.0 );
+check( 'paid total (old payment lines count as paid, the Q4 correction subtracts)', round( Songpress_Money::paid_total(), 2 ), 7.0 );
 $mn = Songpress_Money::months();
 check( 'stats by month', array( $mn[0]->month, (int) $mn[0]->units ), array( '2026-07', 165 ) );
 $ts = Songpress_Money::top_streamed( 5 );
@@ -469,6 +469,12 @@ check( 'apply saves matched songs and reports the rest', array( $ap['songs'], $a
 check( 'matched lines for one song and quarter are summed', (float) $GLOBALS['wpdb']->get_var( "SELECT amount FROM wp_songpress_earnings WHERE quarter='2026-Q2' AND src='mlc'" ), 15.0 );
 Songpress_Uploads::apply( 'mlc', $ln );
 check( 'applying again replaces, never doubles', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_earnings WHERE quarter='2026-Q2' AND src='mlc'" ), 1 );
+$hl = (int) $GLOBALS['wpdb']->get_var( "SELECT id FROM wp_songpress_songs WHERE title = 'Harbor Lights' ORDER BY id LIMIT 1" );
+Songpress_Songs::replace_credits( $hl, array( array( 'role' => 'writer', 'name' => 'Wri Ter', 'share' => '100' ), array( 'role' => 'performer', 'name' => 'Per One' ), array( 'role' => 'performer', 'name' => 'Per Two', 'share' => '10' ), array( 'role' => 'performer', 'name' => 'Per Zero', 'share' => '0' ) ) );
+$pr = Songpress_Uploads::people_rows( $hl, '2026-Q2', 'distrokid', 100.0 );
+check( 'DistroKid: performer without a share gets 25%, a stored share is used, 0 gets nothing', array_map( function ( $r ) { return $r[0] . ':' . $r[6]; }, $pr ), array( 'Per One:25', 'Per Two:10' ) );
+$pr = Songpress_Uploads::people_rows( $hl, '2026-Q2', 'mlc', 100.0 );
+check( 'writer split unchanged', array_map( function ( $r ) { return $r[0] . ':' . $r[6]; }, $pr ), array( 'Wri Ter:100' ) );
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {

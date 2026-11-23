@@ -246,23 +246,8 @@ class Songpress_Uploads {
 		foreach ( $sum as $k => $amt ) {
 			list( $id, $q ) = explode( '|', $k );
 			$rows[]         = array( (int) $id, $q, $src, round( $amt, 6 ) );
-			$writers        = array();
-			foreach ( Songpress_Songs::credits( (int) $id ) as $c ) {
-				if ( ( 'distrokid' === $src ? 'performer' : 'writer' ) === $c->role && '' !== trim( $c->name ) ) {
-					$writers[] = $c;
-				}
-			}
-			if ( ! $writers ) {
-				continue;
-			}
-			$total = 0.0;
-			foreach ( $writers as $w ) {
-				$total += null === $w->share ? 0 : (float) $w->share;
-			}
-			$title = (string) ( Songpress_Songs::get( (int) $id )->title ?? '' );
-			foreach ( $writers as $w ) {
-				$part  = $total > 0 ? ( null === $w->share ? 0 : (float) $w->share ) / $total : 1 / count( $writers );
-				$ppl[] = array( trim( $w->name ), Songpress_Money::person_key( $w->name ), $title, (int) $id, $q, $src, round( $amt * $part, 6 ) );
+			foreach ( self::people_rows( (int) $id, $q, $src, $amt ) as $row ) {
+				$ppl[] = $row;
 			}
 		}
 		$res['songs']    = Songpress_Money::batch( $e, array( 'song_id', 'quarter', 'src', 'amount' ), $rows );
@@ -273,6 +258,83 @@ class Songpress_Uploads {
 			Songpress_Money::batch( Songpress_Install::table( 'stats' ), array( 'row_key', 'month', 'store', 'title', 'isrc', 'song_id', 'units', 'earnings' ), array_values( $stat ) );
 		}
 		return $res;
+	}
+
+	/**
+	 * What each credited person earned from one song's amount in a quarter. Writers split ASCAP, MLC and CCLI by their writer shares.
+	 * DistroKid pays performers: each gets their performer share of the song's amount (25% when none is stored, as the old catalog did;
+	 * a share of 0 means no cut). Only when the shares add past 100% are they scaled down.
+	 */
+	public static function people_rows( $id, $q, $src, $amt ) {
+		$role   = 'distrokid' === $src ? 'performer' : 'writer';
+		$people = array();
+		foreach ( Songpress_Songs::credits( (int) $id ) as $c ) {
+			if ( $role === $c->role && '' !== trim( $c->name ) ) {
+				$people[] = $c;
+			}
+		}
+		if ( ! $people ) {
+			return array();
+		}
+		$title = (string) ( Songpress_Songs::get( (int) $id )->title ?? '' );
+		$parts = array();
+		if ( 'performer' === $role ) {
+			$sum = 0.0;
+			foreach ( $people as $i => $w ) {
+				$parts[ $i ] = null === $w->share || '' === $w->share ? 0.25 : max( 0.0, (float) $w->share / 100 );
+				$sum        += $parts[ $i ];
+			}
+			if ( $sum > 1.001 ) {
+				foreach ( $parts as $i => $v ) {
+					$parts[ $i ] = $v / $sum;
+				}
+			}
+		} else {
+			$total = 0.0;
+			foreach ( $people as $w ) {
+				$total += null === $w->share ? 0 : (float) $w->share;
+			}
+			foreach ( $people as $i => $w ) {
+				$parts[ $i ] = $total > 0 ? ( null === $w->share ? 0 : (float) $w->share ) / $total : 1 / count( $people );
+			}
+		}
+		$rows = array();
+		foreach ( $people as $i => $w ) {
+			if ( $parts[ $i ] <= 0 ) {
+				continue;
+			}
+			$rows[] = array( trim( $w->name ), Songpress_Money::person_key( $w->name ), $title, (int) $id, $q, $src, round( $amt * $parts[ $i ], 6 ) );
+		}
+		return $rows;
+	}
+
+	/**
+	 * Earlier loads of a DistroKid statement credited the whole amount among the performers. Work those quarters out again with performer shares.
+	 * A quarter is redone only when its people lines add to over 60% of the statement, which is how the old way looked; quarters from the old catalog are left as they came.
+	 */
+	public static function rebuild_dk_people() {
+		global $wpdb;
+		$e = Songpress_Install::table( 'earnings' );
+		$p = Songpress_Install::table( 'person_earnings' );
+		$done = array();
+		$qs   = $wpdb->get_col( "SELECT DISTINCT quarter FROM {$e} WHERE src = 'distrokid'" ); // phpcs:ignore WordPress.DB
+		foreach ( (array) $qs as $q ) {
+			$tot = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(amount) FROM {$e} WHERE src = 'distrokid' AND quarter = %s", $q ) ); // phpcs:ignore WordPress.DB
+			$ppl = (float) $wpdb->get_var( $wpdb->prepare( "SELECT SUM(amount) FROM {$p} WHERE src = 'distrokid' AND quarter = %s", $q ) ); // phpcs:ignore WordPress.DB
+			if ( $tot <= 0 || $ppl < 0.6 * $tot ) {
+				continue;
+			}
+			$rows = array();
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT song_id, SUM(amount) AS amt FROM {$e} WHERE src = 'distrokid' AND quarter = %s AND song_id > 0 GROUP BY song_id", $q ) ) as $r ) { // phpcs:ignore WordPress.DB
+				foreach ( self::people_rows( (int) $r->song_id, $q, 'distrokid', (float) $r->amt ) as $row ) {
+					$rows[] = $row;
+				}
+			}
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = 'distrokid' AND quarter = %s", $q ) ); // phpcs:ignore WordPress.DB
+			Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+			$done[] = $q;
+		}
+		return $done;
 	}
 
 	/* ---------- handlers ---------- */

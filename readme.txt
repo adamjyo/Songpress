@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.51
+Stable tag: 0.63.52
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.52 =
+* Money: DistroKid statements now credit each performer their performer share (25% when none is stored, as the old catalog did) instead of dividing the whole statement among them; quarters credited the old way are worked out again once on update.
+* Money: the old catalog "Q4 correction" payment lines now come across (as corrections on that year Q4).
 
 = 0.63.51 =
 * Money: payment lines from the old catalog (paid_entry) now come across as paid, so what each person is owed is no longer overstated. Loading the catalog again also fixes lines imported earlier as unpaid.

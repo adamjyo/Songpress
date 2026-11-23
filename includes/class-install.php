@@ -55,6 +55,11 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
+		// DistroKid was crediting the whole statement among performers; redo those quarters with performer shares, once.
+		if ( '1' !== get_option( 'songpress_dk_shares' ) ) {
+			Songpress_Uploads::rebuild_dk_people();
+			update_option( 'songpress_dk_shares', '1' );
+		}
 		// The Lists screen is gone: statuses and genres now come from the built-in options and from what works carry.
 		delete_option( 'songpress_statuses' );
 		delete_option( 'songpress_genres' );

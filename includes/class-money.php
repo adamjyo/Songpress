@@ -207,11 +207,15 @@ class Songpress_Money {
 			if ( $has( 'paid_entry' ) ) {
 				// Every paid_entry line is money that was actually paid out, so it comes across as paid (a zero line has nothing to count and waits for the pay board).
 				foreach ( $pdo->query( 'SELECT y, q, party, kind, amount, notes, updated_at FROM paid_entry' ) as $r ) {
+					if ( 5 === (int) $r['q'] ) { // the old "Q4 correction" line (a plain amount, often negative) belongs to that year's Q4
+						$r['q']     = 4;
+						$r['notes'] = trim( 'Correction ' . $r['notes'] );
+					}
 					$amt  = (float) $r['amount'];
-					$on   = $amt > 0 ? substr( (string) $r['updated_at'], 0, 10 ) : '';
+					$on   = 0.0 !== $amt ? substr( (string) $r['updated_at'], 0, 10 ) : '';
 					$kind = $r['kind'] ?: 'writer';
-					$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $kind, $r['party'], $amt, $amt > 0, $on, $r['notes'] );
-					if ( $amt > 0 ) {
+					$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $kind, $r['party'], $amt, 0.0 !== $amt, $on, $r['notes'] );
+					if ( 0.0 !== $amt ) {
 						// an earlier load left these as unpaid, untouched: mark them paid now (an amount changed here is left alone)
 						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s AND paid = 0 AND ABS(amount - %d / 100) < 0.005", $on ?: null, (int) $r['y'], (int) $r['q'], $kind, self::person_key( $r['party'] ), (int) round( $amt * 100 ) ) ); // phpcs:ignore WordPress.DB
 					}
