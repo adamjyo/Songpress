@@ -268,6 +268,13 @@ JS;
 			update_user_meta( $uid, self::SUBS, array_values( array_diff( $subs, array( $ep ) ) ) );
 			wp_send_json_success();
 		}
+		if ( 'testme' === $mode || 'testalerts' === $mode ) {
+			if ( ! Songpress_Caps::can( 'members' ) ) {
+				wp_send_json_error( 'no access', 403 );
+			}
+			$r = self::run_test( 'testme' === $mode );
+			wp_send_json_success( array( 'ok' => $r[0], 'msg' => $r[1] ) );
+		}
 		if ( 'done' === $mode ) {
 			self::mark_done( $uid, sanitize_text_field( wp_unslash( $_POST['id'] ?? '' ) ) );
 			wp_send_json_success( array( 'count' => self::unread( $uid ) ) );
@@ -404,11 +411,8 @@ JS;
 		exit;
 	}
 
-	public static function handle_test() {
-		check_admin_referer( 'songpress_push_test' );
-		self::guard_people();
-		$me   = isset( $_POST['who'] ) && 'me' === $_POST['who']; // phpcs:ignore WordPress.Security.NonceVerification -- checked above.
-		$back = isset( $_POST['back'] ) && 'settings' === $_POST['back'] ? Songpress_Screens::url( 'settings' ) : Songpress_Persons::url(); // phpcs:ignore WordPress.Security.NonceVerification
+	/** Sends the test and says what happened. Returns array( ok, message ). */
+	public static function run_test( $me ) {
 		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
 		if ( $n ) {
 			$msg = sprintf( /* translators: %d: phones */ _n( 'Test sent. It reached %d phone. If nothing shows, check the phone’s notification settings for SongPress.', 'Test sent. It reached %d phones. If nothing shows, check the phones’ notification settings for SongPress.', $n, 'songpress' ), $n );
@@ -421,8 +425,28 @@ JS;
 				return $c ? (string) $c : __( 'no answer', 'songpress' );
 			}, self::$last ) ) );
 		}
-		wp_safe_redirect( add_query_arg( $n ? 'sp_saved' : 'sp_err', rawurlencode( $msg ), $back ) );
+		return array( (bool) $n, $msg );
+	}
+
+	public static function handle_test() {
+		check_admin_referer( 'songpress_push_test' );
+		self::guard_people();
+		$me   = isset( $_POST['who'] ) && 'me' === $_POST['who']; // phpcs:ignore WordPress.Security.NonceVerification -- checked above.
+		$back = isset( $_POST['back'] ) && 'settings' === $_POST['back'] ? Songpress_Screens::url( 'settings' ) : Songpress_Persons::url(); // phpcs:ignore WordPress.Security.NonceVerification
+		$r    = self::run_test( $me );
+		wp_safe_redirect( add_query_arg( $r[0] ? 'sp_saved' : 'sp_err', rawurlencode( $r[1] ), $back ) );
 		exit;
+	}
+
+	/** Makes the test buttons work in place: no page load, the answer shows beside the button. Printed once per page. */
+	public static function test_script() {
+		static $done = false;
+		if ( $done ) {
+			return '';
+		}
+		$done = true;
+		$cfg  = wp_json_encode( array( 'ajax' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_push' ), 'busy' => __( 'Sending…', 'songpress' ) ) );
+		return '<script>(function(){var C=' . $cfg . ';document.addEventListener("submit",function(e){var f=e.target,a=f.querySelector&&f.querySelector("[name=action][value=songpress_push_test]");if(!a)return;e.preventDefault();var w=f.querySelector("[name=who]"),m=document.getElementById("sp-testmsg");if(!m){m=document.createElement("p");m.id="sp-testmsg";m.className="spe-note";m.setAttribute("role","status");f.parentNode.parentNode.insertBefore(m,f.parentNode.nextSibling)}var b=f.querySelector("button");m.className="spe-note";m.textContent=C.busy;if(b)b.disabled=true;var d=new FormData();d.append("action","songpress_push");d.append("nonce",C.nonce);d.append("mode",w&&w.value==="me"?"testme":"testalerts");fetch(C.ajax,{method:"POST",body:d,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){m.className="spe-note "+(j&&j.success&&j.data.ok?"ok":"bad");m.textContent=j&&j.data&&j.data.msg?j.data.msg:"Could not send the test."}).catch(function(){m.className="spe-note bad";m.textContent="Could not reach the site."}).then(function(){if(b)b.disabled=false})})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
 	/** Settings: two buttons to check notifications, and what this site knows about them. */
@@ -443,7 +467,7 @@ JS;
 		}
 		return '<div class="sp-app spm-testbox"><h3>' . esc_html__( 'Notifications', 'songpress' ) . '</h3>' . $note . '<p class="spe-help">'
 			. esc_html( sprintf( /* translators: 1: phones on for this account, 2: phones that get alerts */ __( 'Signing key: %1$s. Phones on for your account: %2$d. Phones that get alerts: %3$d.', 'songpress' ), self::keys() ? __( 'ready', 'songpress' ) : __( 'missing (PHP OpenSSL)', 'songpress' ), $mine, $on ) ) . '</p><p>'
-			. $f( 'me', __( 'Send a test to my phone', 'songpress' ), 'spe-save' ) . $f( 'alerts', __( 'Send a test alert', 'songpress' ), 'spe-btn' ) . '</p><p class="spe-help">' . esc_html__( 'Choose who gets alerts, and message people, under People. To turn notifications on for a phone, open SongPress from its Home Screen and tap the bell in the menu.', 'songpress' ) . '</p></div>';
+			. $f( 'me', __( 'Send a test to my phone', 'songpress' ), 'spe-save' ) . $f( 'alerts', __( 'Send a test alert', 'songpress' ), 'spe-btn' ) . '</p><p class="spe-help">' . esc_html__( 'Choose who gets alerts, and message people, under People. To turn notifications on for a phone, open SongPress from its Home Screen and tap the bell in the menu.', 'songpress' ) . '</p></div>' . self::test_script();
 	}
 
 	/** People: choose who gets the alerts, and test them. */
@@ -459,7 +483,7 @@ JS;
 		$o .= '</div><button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>'
 			. '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'songpress_push_test', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_test"><button class="spe-btn" type="submit">' . esc_html__( 'Send a test alert', 'songpress' ) . '</button></form>'
 			. '<p class="spe-help">' . esc_html__( 'These people get a notification on their phone when something happens that you would otherwise only see on the desktop: someone forgot their password, or chose one from a link. Each person must open the app from their Home Screen and tap the bell once.', 'songpress' ) . '</p>';
-		return $o;
+		return $o . self::test_script();
 	}
 
 	/** A Manager sends a message to one person or to everyone who turned notifications on. */
