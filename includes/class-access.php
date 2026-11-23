@@ -174,10 +174,13 @@ class Songpress_Access {
 	/** The link just made for someone, once, as a box to copy; plus the buttons for a person who has a login. */
 	public static function link_box( $uid ) {
 		$u = get_userdata( (int) $uid );
-		if ( ! $u || '' === Songpress_Caps::class_of( $u->ID ) ) {
+		if ( ! $u ) {
 			return '';
 		}
-		$o   = '<h3>' . esc_html__( 'Password link', 'songpress' ) . '</h3>';
+		if ( '' === Songpress_Caps::class_of( $u->ID ) ) {
+			return '<h3 id="sp-link">' . esc_html__( 'Login link', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Choose a class for this person in the list first, then come back here to send their login link.', 'songpress' ) . '</p>';
+		}
+		$o   = '<h3 id="sp-link">' . esc_html__( 'Send a login link', 'songpress' ) . '</h3>';
 		$key = 'songpress_links_' . get_current_user_id();
 		$got = get_transient( $key );
 		if ( is_array( $got ) && (int) $got['uid'] === (int) $u->ID ) {

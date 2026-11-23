@@ -351,7 +351,7 @@ class Songpress_Persons {
 			} else {
 				$o .= '<span><small>' . esc_html__( 'Open the person to give them a login', 'songpress' ) . '</small></span><span></span>';
 			}
-			$o .= '<span class="n">' . esc_html( $earn ) . ' ' . self::del_button( $r['name'] ) . '</span></div>';
+			$o .= '<span class="n">' . esc_html( $earn ) . ' <a class="spe-btn" href="' . esc_url( self::url( array( 'person' => $k ) ) . '#sp-link' ) . '">' . esc_html__( 'Login link', 'songpress' ) . '</a> ' . self::del_button( $r['name'] ) . '</span></div>';
 		}
 		return $o . '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form></div>';
 	}
@@ -386,6 +386,9 @@ class Songpress_Persons {
 			$o .= '</select></label><label class="spe-field"><span>' . esc_html__( 'Password (blank makes one)', 'songpress' ) . '</span><input name="pass" autocomplete="off"></label><button class="spe-save" type="submit">' . esc_html__( 'Create login', 'songpress' ) . '</button></form>';
 		}
 
+		if ( ! $u ) {
+			$o .= '<h3 id="sp-link">' . esc_html__( 'Login link', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Give them a login above, then the button to send their login link appears here.', 'songpress' ) . '</p>';
+		}
 		if ( $u ) {
 			$o .= Songpress_Access::link_box( $u->ID );
 			$o .= Songpress_Push::send_box( $u->ID );
