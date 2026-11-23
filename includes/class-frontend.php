@@ -170,7 +170,6 @@ class Songpress_Frontend {
 		$people  = $svg( '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M21 20c0-2-1.5-3.6-4-4.4"/>' );
 		$manage  = $svg( '<path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/>' );
 		$out     = ' <a href="' . esc_url( wp_logout_url( $here ) ) . '">' . $svg( '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>' ) . esc_html__( 'Log out', 'songpress' ) . '</a>';
-		$out     = Songpress_Push::item( $svg( '<path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0"/>' ) ) . $out;
 		$cat_url = self::main_id( 'catalog' ) ? get_permalink( self::main_id( 'catalog' ) ) : $here;
 		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
@@ -179,7 +178,7 @@ class Songpress_Frontend {
 		$cu      = wp_get_current_user();
 		$who     = '' !== trim( (string) $cu->display_name ) ? $cu->display_name : __( 'Profile', 'songpress' );
 		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
-		$nav     = self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
+		$nav     = '<div class="sp-who">' . self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . Songpress_Push::item() . '</div>' . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
 		$mk = function ( $slug, $label, $icon, $cap, $badge = 0 ) use ( $cat_url, $page ) {
 			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'backups', 'health', 'earnings', 'activity', 'uploads', 'import' ), true ) ) || ( 'registrations' === $slug && 'agreements' === $page ) || ( 'agreements' === $slug && 'registrations' === $page );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on, $badge ) : '';
@@ -200,7 +199,7 @@ class Songpress_Frontend {
 		$nav .= self::nav_memory();
 		$bot  = $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
-		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt=""><span class="sp-side-name"><b>SongPress</b><small>' . esc_html__( 'A songwriting and publishing', 'songpress' ) . '</small></span></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main></div>' . '<script>(function(){var s=document.querySelector(".sp-shell > .sp-side");if(!s){return;}var sh=s.parentNode,moved=false;function check(){if(moved||window.innerWidth<760||window.pageYOffset<40){return;}var b=document.getElementById("wpadminbar"),t=b&&getComputedStyle(b).position==="fixed"?b.offsetHeight:0;if(Math.abs(s.getBoundingClientRect().top-t)>2){moved=true;document.body.appendChild(sh);window.removeEventListener("scroll",check);}}window.addEventListener("scroll",check,{passive:true});})();</script>';
+		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt=""><span class="sp-side-name"><b>SongPress</b><small>' . esc_html__( 'A songwriting and publishing', 'songpress' ) . '</small></span></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main><button type="button" class="sp-menu-btn" aria-label="' . esc_attr__( 'Menu', 'songpress' ) . '" aria-expanded="false">' . $svg( '<path d="M4 7h16M4 12h16M4 17h16"/>' ) . '</button><div class="sp-scrim"></div></div><script>(function(){var s=document.querySelector(".sp-shell");if(!s)return;var b=s.querySelector(".sp-menu-btn"),k=s.querySelector(".sp-scrim");function set(o){s.classList.toggle("sp-menu-open",o);b.setAttribute("aria-expanded",o?"true":"false")}b.addEventListener("click",function(){set(!s.classList.contains("sp-menu-open"))});k.addEventListener("click",function(){set(false)});s.querySelector(".sp-side").addEventListener("click",function(e){var a=e.target.closest("a");if(a&&a.id!=="sp-push"&&a.getAttribute("href")!=="#"){set(false)}})})()</script>' . '<script>(function(){var s=document.querySelector(".sp-shell > .sp-side");if(!s){return;}var sh=s.parentNode,moved=false;function check(){if(moved||window.innerWidth<760||window.pageYOffset<40){return;}var b=document.getElementById("wpadminbar"),t=b&&getComputedStyle(b).position==="fixed"?b.offsetHeight:0;if(Math.abs(s.getBoundingClientRect().top-t)>2){moved=true;document.body.appendChild(sh);window.removeEventListener("scroll",check);}}window.addEventListener("scroll",check,{passive:true});})();</script>';
 	}
 
 	private static function gate() {

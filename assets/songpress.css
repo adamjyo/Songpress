@@ -939,3 +939,28 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 
 .spm-alerts{display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
 .spm-alerts label{display:flex;gap:8px;align-items:center}
+
+/* On a phone the menu opens from a button, as a drawer, so Settings, People and the notification bell can be reached. */
+.sp-menu-btn,.sp-scrim{display:none}
+@media (max-width:759px){
+ .sp-menu-btn{display:flex;position:fixed;right:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:46px;height:46px;border-radius:50%;background:#f5a524;color:#111;border:0;padding:0;align-items:center;justify-content:center;z-index:40;box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer}
+ .sp-menu-btn svg{width:22px;height:22px}
+ .sp-shell.sp-menu-open .sp-side{display:flex;position:fixed;left:0;top:0;bottom:0;width:80%;max-width:320px;height:100vh;height:100dvh;z-index:60;padding-top:calc(24px + env(safe-area-inset-top,0px));box-shadow:6px 0 24px rgba(0,0,0,.5)}
+ .sp-shell.sp-menu-open .sp-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55}
+ .sp-shell.sp-menu-open .sp-menu-btn{z-index:70}
+}
+
+.sp-who{display:flex;align-items:center;flex-wrap:wrap;gap:2px}
+.sp-who>a{flex:1 1 0;min-width:0}
+.sp-bell{flex:none;display:flex;align-items:center;justify-content:center;background:none;border:0;color:#8a8f98;padding:9px;margin:0;height:auto;border-radius:8px;cursor:pointer}
+.sp-bell[hidden]{display:none}
+.sp-bell:hover{color:#fff;background:#22252b}
+.sp-bell .b-on{display:none}
+.sp-bell[data-on="1"]{color:#f5a524}
+.sp-bell[data-on="1"] .b-on{display:flex}
+.sp-bell[data-on="1"] .b-off{display:none}
+.sp-bell .b-off,.sp-bell .b-on{display:flex}
+.sp-bell .b-on{display:none}
+.sp-bell[data-on="1"] .b-on{display:flex}
+.sp-bell-msg{flex:1 1 100%;margin:2px 8px 8px;font-size:12px;line-height:1.4;color:#a4a8b0}
+.sp-bell-msg[hidden]{display:none}

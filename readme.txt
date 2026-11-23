@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.68
+Stable tag: 0.63.69
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.69 =
+* Phones: a menu button (bottom right) opens the full menu as a drawer, so Settings, People and Log out can be reached in the app on a phone.
+* The notifications bell now sits to the right of your name in the menu: a bell with a slash when off, solid amber when on. Tap it to turn notifications on or off.
 
 = 0.63.68 =
 * Settings: a Notifications box with "Send a test to my phone" and "Send a test alert". It shows whether the signing key is ready and how many phones are on, and when a test does not arrive it says why (no phone turned on, key missing, or what the phone's push service answered).

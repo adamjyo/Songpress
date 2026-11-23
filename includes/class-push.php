@@ -464,31 +464,35 @@ JS;
 		return '<link rel="manifest" href="' . esc_url( add_query_arg( 'sp_manifest', '1', home_url( '/' ) ) ) . '"><link rel="apple-touch-icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon-180.png' ) . '"><meta name="theme-color" content="#0f1012"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SongPress"><meta name="apple-mobile-web-app-status-bar-style" content="black">';
 	}
 
-	/** The bell in the menu, and the script that drives it. Hidden where the phone cannot do it and no help would change that. */
-	public static function item( $icon ) {
+	/** The bell beside the person's name, and the script that drives it. Bell with a slash when off, solid amber when on. */
+	public static function item() {
 		$k = self::keys();
 		if ( ! is_user_logged_in() || ! $k ) {
 			return '';
 		}
-		$cfg = wp_json_encode( array(
+		$cfg  = wp_json_encode( array(
 			'key'    => $k['pub'],
 			'sw'     => add_query_arg( 'sp_sw', '1', home_url( '/' ) ),
 			'scope'  => (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/',
 			'ajax'   => admin_url( 'admin-ajax.php' ),
 			'nonce'  => wp_create_nonce( 'songpress_push' ),
-			'on'     => __( 'Notifications on (tap to turn off)', 'songpress' ),
-			'off'    => __( 'Turn on notifications', 'songpress' ),
+			'on'     => __( 'Notifications are on. Tap to turn them off.', 'songpress' ),
+			'off'    => __( 'Notifications are off. Tap to turn them on.', 'songpress' ),
 			'ios'    => __( 'To get notifications, tap Share, then Add to Home Screen, and open SongPress from your Home Screen.', 'songpress' ),
 			'denied' => __( 'Notifications are blocked. Allow them for SongPress in your phone settings.', 'songpress' ),
-			'test'   => __( 'Sent a test. If nothing shows, check your phone settings.', 'songpress' ),
+			'test'   => __( 'Notifications are on. A test was sent.', 'songpress' ),
 		) );
-		return '<a href="#" id="sp-push" hidden>' . $icon . '<span>' . esc_html__( 'Notifications', 'songpress' ) . '</span></a><p id="sp-push-msg" class="spe-help" hidden></p><script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+		$svg  = function ( $d ) {
+			return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
+		};
+		$bell = 'M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0';
+		return '<button type="button" id="sp-push" class="sp-bell" hidden title="' . esc_attr__( 'Notifications', 'songpress' ) . '" aria-label="' . esc_attr__( 'Notifications', 'songpress' ) . '"><span class="b-off">' . $svg( '<path d="' . $bell . '"/><path d="M3 3l18 18"/>' ) . '</span><span class="b-on">' . $svg( '<path d="' . $bell . '" fill="currentColor"/>' ) . '</span></button><p id="sp-push-msg" class="sp-bell-msg" hidden></p><script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and fixed markup.
 	}
 
 	private static function script() {
 		return <<<'JS'
 var b=document.getElementById('sp-push'),m=document.getElementById('sp-push-msg');if(!b)return;
-var lab=b.querySelector('span'),ios=/iphone|ipad|ipod/i.test(navigator.userAgent),app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+var ios=/iphone|ipad|ipod/i.test(navigator.userAgent),app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
 var ok='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
 function say(t){m.textContent=t;m.hidden=!t}
 function key(s){var p=(s+'==='.slice((s.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/'),r=atob(p),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
@@ -496,10 +500,10 @@ function post(o){var f=new FormData();f.append('action','songpress_push');f.appe
 if(!ok){if(ios&&!app){b.hidden=false;b.addEventListener('click',function(e){e.preventDefault();say(C.ios)})}return}
 b.hidden=false;
 var reg=null;
-function show(sub){lab.textContent=sub?C.on:C.off;b.dataset.on=sub?'1':''}
+function show(sub){var t=sub?C.on:C.off;b.title=t;b.setAttribute('aria-label',t);b.dataset.on=sub?'1':'0'}
 navigator.serviceWorker.register(C.sw,{scope:C.scope}).then(function(){return navigator.serviceWorker.ready}).then(function(r){reg=r;return r.pushManager.getSubscription()}).then(function(s){show(!!s);if(s&&Notification.permission==='granted'){post({mode:'add',endpoint:s.endpoint})}}).catch(function(){b.hidden=true});
 b.addEventListener('click',function(e){e.preventDefault();if(!reg)return;
- if(b.dataset.on){reg.pushManager.getSubscription().then(function(s){if(!s)return;var ep=s.endpoint;return s.unsubscribe().then(function(){return post({mode:'remove',endpoint:ep})})}).then(function(){show(false);say('')});return}
+ if(b.dataset.on==='1'){reg.pushManager.getSubscription().then(function(s){if(!s)return;var ep=s.endpoint;return s.unsubscribe().then(function(){return post({mode:'remove',endpoint:ep})})}).then(function(){show(false);say('')});return}
  if(Notification.permission==='denied'){say(C.denied);return}
  Notification.requestPermission().then(function(p){
   if(p!=='granted'){say(C.denied);return}
