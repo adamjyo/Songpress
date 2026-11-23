@@ -774,3 +774,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-income tfoot th,.spm-acct tfoot th{border-top:2px solid var(--sp-line);color:var(--sp-text)}
 .spm-income .spm-sub td{font-size:12px;color:var(--sp-soft)}.spm-income .spm-sub td:first-child{padding-left:22px}
 .spm-acct select,.spm-acct input[name=notes]{max-width:150px}.spm-hist{margin-top:6px;font-size:12px;color:var(--sp-soft)}.spm-hist ul{list-style:none;margin:4px 0 0;padding:0}.spm-hist li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:2px 0}.spm-hist form{margin:0}
+.spm-ok,.spm-part{font-weight:700;font-size:13px}.spm-ok{color:#2fb344}.spm-part{color:#e0a100}
