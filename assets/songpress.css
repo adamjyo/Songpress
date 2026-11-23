@@ -1034,3 +1034,6 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-artchip .sp-face{margin-right:0!important}
 
 .spe-who select.spe-pick{flex:1;min-width:0}.spe-who input.spe-pickname[hidden]{display:none}
+.spe-audcol{min-width:0;display:flex;flex-direction:column;gap:10px}
+.spe-streams{display:flex;flex-wrap:wrap;gap:8px}.spe-streams[hidden]{display:none}
+.spe-st{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-weight:700;font-size:17px;box-shadow:0 1px 3px rgba(0,0,0,.25)}.spe-st b{font-weight:700}.spe-st:active{transform:scale(.94)}

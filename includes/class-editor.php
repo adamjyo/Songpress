@@ -110,7 +110,7 @@ class Songpress_Editor {
 		// Cover art and an audio player sit beside Basics on every work, the original included.
 		$media  = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
 		$media .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ), ( $song && Songpress_Caps::can( 'upload' ) ) ? self::art_url( (int) $song->id ) : '' );
-		$media .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
+		$media .= '<div class="spe-audcol">' . self::stream_widget() . self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) ) . '</div>';
 		$media .= '</div></section>';
 		$o .= '<div class="spe-hero">' . $media;
 		$o .= '<section class="spe-panel simple" data-panel="basics"><h3 class="spe-h3row">' . esc_html__( 'Basics', 'songpress' ) . ( $root ? '' : '<span class="spe-legend"><i></i>' . esc_html__( 'Tinted fields belong to this version only. Everything else is shared with every version of the song.', 'songpress' ) . '</span>' ) . '</h3><div class="spe-grid">';
@@ -468,6 +468,18 @@ class Songpress_Editor {
 	}
 
 	/** Paste the text DistroKid shows after a release (HyperFollow) and the streaming links in it are added to this version. Runs in the browser; nothing is sent until the work saves. */
+	/** Streaming icons above the player, built from this version's Links rows and kept current as they change. Tapping one opens that service (its app, on a phone). */
+	private static function stream_widget() {
+		$names = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'itunes' => 'iTunes', 'amazon' => 'Amazon Music', 'youtube' => 'YouTube', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'tiktok' => 'TikTok', 'bandcamp' => 'Bandcamp', 'soundcloud' => 'SoundCloud' );
+		$cols  = array( 'spotify' => '#1db954', 'apple' => '#fa2d48', 'itunes' => '#b455f0', 'amazon' => '#00a8e1', 'youtube' => '#ff0000', 'tidal' => '#111111', 'deezer' => '#a238ff', 'pandora' => '#3668ff', 'tiktok' => '#111111', 'bandcamp' => '#1da0c3', 'soundcloud' => '#ff5500' );
+		$glyph = array( 'spotify' => 'M12 3a9 9 0 100 18 9 9 0 000-18zm4 13c-2-1.2-5-1.500-8-.8m8.600-3c-2.500-1.500-6.200-1.800-9.200-.9m9.800-3.100c-3-1.800-7-2-10.400-1', 'apple' => 'M9 17V6l9-2v11M9 17a2.500 2.500 0 11-2.500-2.500A2.500 2.500 0 019 17zm9-2a2.500 2.500 0 11-2.500-2.500A2.500 2.500 0 0118 15z', 'youtube' => 'M4 8a3 3 0 013-3h10a3 3 0 013 3v8a3 3 0 01-3 3H7a3 3 0 01-3-3zm6 1v6l5-3z' );
+		$cfg   = wp_json_encode( array( 'names' => $names, 'cols' => $cols, 'glyph' => $glyph, 'open' => __( 'Open on %s', 'songpress' ) ) );
+		return '<div class="spe-streams" id="spe-streams" hidden aria-label="' . esc_attr__( 'Listen on', 'songpress' ) . '"></div><script>(function(){var C=' . $cfg . ',box=document.getElementById("spe-streams"),g=document.querySelector(".spe-pairs[data-group=links]");if(!box||!g)return;'
+			. 'function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]})}'
+			. 'function draw(){var h="",seen={};Array.prototype.forEach.call(g.querySelectorAll(".spe-rows .spe-pair"),function(r){var i=r.querySelectorAll("input"),k=(i[0].value||"").toLowerCase().trim(),u=(i[1].value||"").trim();if(!C.names[k]||!/^https?:\/\//i.test(u)||seen[k])return;seen[k]=1;var n=C.names[k],gl=C.glyph[k];h+="<a class=\"spe-st\" href=\""+esc(u)+"\" target=\"_blank\" rel=\"noopener\" style=\"background:"+C.cols[k]+"\" title=\""+esc(C.open.replace("%s",n))+"\" aria-label=\""+esc(C.open.replace("%s",n))+"\">"+(gl?"<svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\""+gl+"\"/></svg>":"<b>"+esc(n.charAt(0))+"</b>")+"</a>"});box.innerHTML=h;box.hidden=!h}'
+			. 'g.addEventListener("input",draw);g.addEventListener("click",function(){setTimeout(draw,0)});draw();})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
+	}
+
 	private static function dk_paste() {
 		$cfg = wp_json_encode( array(
 			'none'  => __( 'No streaming links found in that text.', 'songpress' ),

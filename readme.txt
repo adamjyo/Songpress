@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.113
+Stable tag: 0.63.114
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.114 =
+* A row of streaming icons (Spotify, Apple Music, Amazon and so on) now sits above the player, built from the version's Links. Tap one to open that service, in its app on a phone. It updates as links are pasted or edited.
 
 = 0.63.113 =
 * Paste links from DistroKid now keeps the web addresses hidden behind the names (Spotify, Apple Music...) when you paste copied page text. If only names come through, it says so.
