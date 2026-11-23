@@ -42,8 +42,49 @@ class Songpress_Artists {
 		return $out;
 	}
 
+	private static $synced = false;
+
+	/**
+	 * Bands and artists are one list. Every artist has a band page and every band has an artist record, matched by name.
+	 * Runs once per request and only writes when something is missing.
+	 */
+	public static function sync() {
+		global $wpdb;
+		if ( self::$synced ) {
+			return;
+		}
+		self::$synced = true;
+		$at   = Songpress_Install::table( 'artists' );
+		$pt   = Songpress_Install::table( 'profiles' );
+		$band = array();
+		foreach ( (array) $wpdb->get_results( "SELECT name, name_key FROM {$pt} WHERE kind = 'band'" ) as $b ) { // phpcs:ignore WordPress.DB
+			$band[ (string) $b->name_key ] = (string) $b->name;
+		}
+		$have = array();
+		foreach ( (array) $wpdb->get_results( "SELECT id, name FROM {$at}" ) as $a ) { // phpcs:ignore WordPress.DB
+			$k            = Songpress_Profiles::key( $a->name );
+			$have[ $k ]   = true;
+			if ( '' !== $k && ! isset( $band[ $k ] ) ) {
+				Songpress_Profiles::upsert( 'band', (string) $a->name, array() );
+			}
+		}
+		foreach ( $band as $k => $n ) {
+			if ( '' !== $k && ! isset( $have[ $k ] ) ) {
+				self::save( 0, $n, array() );
+			}
+		}
+		Songpress_Profiles::reset_cache();
+	}
+
+	/** Runs the band/artist matching again (after something was added behind its back). */
+	public static function resync() {
+		self::$synced = false;
+		self::sync();
+	}
+
 	public static function all() {
 		global $wpdb;
+		self::sync();
 		return $wpdb->get_results( 'SELECT * FROM ' . Songpress_Install::table( 'artists' ) . ' ORDER BY name' );
 	}
 

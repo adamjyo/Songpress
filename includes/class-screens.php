@@ -79,7 +79,6 @@ class Songpress_Screens {
 			'band'      => array( __( 'Bands', 'songpress' ), self::url( 'people', array( 'kind' => 'band' ) ), 'members' ),
 			'label'     => array( __( 'Labels', 'songpress' ), self::url( 'people', array( 'kind' => 'label' ) ), 'members' ),
 			'publisher' => array( __( 'Publishers', 'songpress' ), self::url( 'people', array( 'kind' => 'publisher' ) ), 'members' ),
-			'artists'   => array( __( 'Artists', 'songpress' ), self::url( 'artists' ), 'artists' ),
 			'link'      => array( __( 'Link writers', 'songpress' ), self::url( 'link' ), 'link' ),
 		);
 		$o = '<nav class="sp-tabs" aria-label="' . esc_attr__( 'People', 'songpress' ) . '">';
@@ -94,6 +93,10 @@ class Songpress_Screens {
 	public static function render( $slug ) {
 		if ( 'notifications' === $slug ) {
 			return Songpress_Push::inbox_html();
+		}
+		if ( 'artists' === $slug ) { // bands and artists are one list now
+			$_GET['kind'] = 'band'; // phpcs:ignore WordPress.Security.NonceVerification
+			$slug         = 'people';
 		}
 		if ( in_array( $slug, array( 'link', 'artists', 'people' ), true ) ) {
 			$kind = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person'; // phpcs:ignore WordPress.Security.NonceVerification

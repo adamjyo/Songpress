@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.109
+Stable tag: 0.63.110
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.110 =
+* Bands and Artists are now one list. The Artists tab is gone: every band on the Bands tab is also an artist, and every existing artist gets a band page (matched by name, nothing is deleted). A band's page has a Catalog settings section with what the Artists page had: usual writer and publisher, logo, default art, accent color, footer, PRO and radio link. Songs keep their artist.
 
 = 0.63.109 =
 * Works editor: Performing artist or band is now a drop-down filled from the bands and artists lists. A value a work already has stays in the list.

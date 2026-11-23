@@ -932,17 +932,11 @@ class Songpress_Admin {
 		echo wp_kses_post( songpress_donate_link() ) . '</div>';
 	}
 
-	private static function artist_form( $a ) {
+	/** The catalog settings of an artist: usual writer and publisher, and brand. Shown on the artist form and on a band's page. */
+	private static function artist_rows( $a ) {
 		$s = function ( $k, $d = '' ) use ( $a ) {
 			return $a ? (string) Songpress_Artists::setting( $a, $k, $d ) : $d;
 		};
-		echo '<div class="wrap songpress-wrap"><h1>' . ( $a ? esc_html( $a->name ) : esc_html__( 'Add artist', 'songpress' ) ) . '</h1>';
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
-		wp_nonce_field( 'songpress_artist_save' );
-		echo '<input type="hidden" name="action" value="songpress_artist_save"><input type="hidden" name="artist_id" value="' . (int) ( $a->id ?? 0 ) . '">';
-		echo '<details open><summary>' . esc_html__( 'Name', 'songpress' ) . '</summary><table class="form-table" role="presentation">';
-		self::row( 'name', __( 'Band, artist or label', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $a->name ?? '' ) . '" required' . Songpress_Names::attrs( 'artist', (int) ( $a->id ?? 0 ) ) . '>' . Songpress_Names::script() );
-		echo '</table></details>';
 		echo '<details open><summary>' . esc_html__( 'Usual writer and publisher', 'songpress' ) . '</summary><p class="sp-help">' . esc_html__( 'A new song for this artist starts with these filled in, so you do not retype them. Change them on any song.', 'songpress' ) . '</p><table class="form-table" role="presentation">';
 		self::row( 'writer_name', __( 'Writer', 'songpress' ), '<input name="writer_name" value="' . esc_attr( $s( 'writer_name' ) ) . '"> IPI <input name="writer_ipi" size="12" value="' . esc_attr( $s( 'writer_ipi' ) ) . '"> ' . esc_html__( 'Share %', 'songpress' ) . ' <input name="writer_share" size="5" value="' . esc_attr( $s( 'writer_share' ) ) . '">' );
 		self::row( 'publisher_name', __( 'Publisher', 'songpress' ), '<input name="publisher_name" value="' . esc_attr( $s( 'publisher_name' ) ) . '"> IPI <input name="publisher_ipi" size="12" value="' . esc_attr( $s( 'publisher_ipi' ) ) . '"> ' . esc_html__( 'Share %', 'songpress' ) . ' <input name="publisher_share" size="5" value="' . esc_attr( $s( 'publisher_share' ) ) . '">' );
@@ -955,6 +949,46 @@ class Songpress_Admin {
 		self::row( 'pro_name', __( 'Performing rights organization', 'songpress' ), '<input name="pro_name" value="' . esc_attr( $s( 'pro_name' ) ) . '" placeholder="ASCAP, BMI, SESAC..."> <input class="regular-text" name="pro_url" value="' . esc_attr( $s( 'pro_url' ) ) . '" placeholder="https://">' );
 		self::row( 'radio_url', __( 'Radio or stream link', 'songpress' ), '<input class="regular-text" name="radio_url" value="' . esc_attr( $s( 'radio_url' ) ) . '" placeholder="https://"> <input name="radio_label" value="' . esc_attr( $s( 'radio_label' ) ) . '" placeholder="' . esc_attr__( 'Button label', 'songpress' ) . '">' );
 		echo '</table></details>';
+	}
+
+	/** Pure-ish: the settings array an artist form posts, keeping the old logo and default art unless changed or removed. */
+	private static function artist_settings_from( array $in, $old ) {
+		$s = array();
+		foreach ( array_keys( Songpress_Artists::SETTINGS ) as $k ) {
+			$s[ $k ] = $in[ $k ] ?? '';
+		}
+		foreach ( array( 'logo' => 'logo_id', 'default_art' => 'default_art_id' ) as $f => $k ) {
+			$posted = absint( $in[ $f . '_id' ] ?? 0 );
+			$s[ $k ] = $posted ?: ( ( '1' === ( $in[ $f . '_clear' ] ?? '0' ) || ! $old ) ? 0 : (int) Songpress_Artists::setting( $old, $k, 0 ) );
+		}
+		return $s;
+	}
+
+	/** A band and its artist record are one thing: saving the band's page saves the artist settings too, creating the artist if there is none. */
+	private static function save_band_artist( $old_name, $name, array $in ) {
+		$key = Songpress_Profiles::key( '' !== $old_name ? $old_name : $name );
+		$art = null;
+		foreach ( Songpress_Artists::all() as $x ) {
+			if ( Songpress_Profiles::key( $x->name ) === $key ) {
+				$art = $x;
+				break;
+			}
+		}
+		Songpress_Artists::save( $art ? (int) $art->id : 0, $name, self::artist_settings_from( $in, $art ) );
+	}
+
+	private static function artist_form( $a ) {
+		$s = function ( $k, $d = '' ) use ( $a ) {
+			return $a ? (string) Songpress_Artists::setting( $a, $k, $d ) : $d;
+		};
+		echo '<div class="wrap songpress-wrap"><h1>' . ( $a ? esc_html( $a->name ) : esc_html__( 'Add artist', 'songpress' ) ) . '</h1>';
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		wp_nonce_field( 'songpress_artist_save' );
+		echo '<input type="hidden" name="action" value="songpress_artist_save"><input type="hidden" name="artist_id" value="' . (int) ( $a->id ?? 0 ) . '">';
+		echo '<details open><summary>' . esc_html__( 'Name', 'songpress' ) . '</summary><table class="form-table" role="presentation">';
+		self::row( 'name', __( 'Band, artist or label', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $a->name ?? '' ) . '" required' . Songpress_Names::attrs( 'artist', (int) ( $a->id ?? 0 ) ) . '>' . Songpress_Names::script() );
+		echo '</table></details>';
+		self::artist_rows( $a );
 		Songpress_Media::picker_script();
 		submit_button( $a ? __( 'Save artist', 'songpress' ) : __( 'Create artist', 'songpress' ) );
 		echo '</form>';
@@ -979,16 +1013,7 @@ class Songpress_Admin {
 			self::back( 'songpress-artists', array( ( $ok ? 'saved' : 'err' ) => rawurlencode( $ok ? __( 'Artist deleted.', 'songpress' ) : __( 'An artist with songs, or the only artist, cannot be deleted.', 'songpress' ) ) ) );
 		}
 		$in = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- cleaned by Songpress_Artists::clean_settings().
-		$s  = array();
-		foreach ( array_keys( Songpress_Artists::SETTINGS ) as $k ) {
-			$s[ $k ] = $in[ $k ] ?? '';
-		}
-		// logo and default art come from the pickers as logo_id and default_art_id; they keep their old value unless changed or removed
-		$old = $id ? Songpress_Artists::get( $id ) : null;
-		foreach ( array( 'logo' => 'logo_id', 'default_art' => 'default_art_id' ) as $f => $k ) {
-			$posted = absint( $in[ $f . '_id' ] ?? 0 );
-			$s[ $k ] = $posted ?: ( ( '1' === ( $in[ $f . '_clear' ] ?? '0' ) || ! $old ) ? 0 : (int) Songpress_Artists::setting( $old, $k, 0 ) );
-		}
+		$s  = self::artist_settings_from( $in, $id ? Songpress_Artists::get( $id ) : null );
 		$saved = Songpress_Artists::save( $id, sanitize_text_field( $in['name'] ?? '' ), $s );
 		if ( ! $saved ) {
 			self::back( 'songpress-artists', array( 'err' => rawurlencode( __( 'An artist needs a name.', 'songpress' ) ) ) );
@@ -1069,6 +1094,18 @@ class Songpress_Admin {
 			self::row( 'payee', __( 'Paid to (payee)', 'songpress' ), '<input class="regular-text" name="payee" list="sp-payees" value="' . esc_attr( $p->payee ?? '' ) . '" placeholder="' . esc_attr__( 'The person this band\'s earnings are paid to', 'songpress' ) . '"><datalist id="sp-payees">' . $dl . '</datalist><p class="description">' . esc_html__( 'The band\'s DistroKid earnings (every song released under this band) show up in Money as a "Band" income stream for this person.', 'songpress' ) . '</p>' );
 		}
 		echo '</table>';
+		if ( 'band' === $kind ) { // a band is also an artist (a brand songs are released under): one record, one list
+			$key = $p ? Songpress_Profiles::key( $p->name ) : '';
+			$art = null;
+			foreach ( $p ? Songpress_Artists::all() : array() as $x ) {
+				if ( Songpress_Profiles::key( $x->name ) === $key ) {
+					$art = $x;
+					break;
+				}
+			}
+			echo '<input type="hidden" name="old_name" value="' . esc_attr( $p->name ?? '' ) . '"><h2>' . esc_html__( 'Catalog settings', 'songpress' ) . '</h2><p class="sp-help">' . esc_html__( 'Used when songs are released under this band: the usual writer and publisher for a new song, and the look of its share links.', 'songpress' ) . '</p>';
+			self::artist_rows( $art );
+		}
 		Songpress_Media::picker_script();
 		submit_button( __( 'Save', 'songpress' ) );
 		echo '</form><p><a href="' . esc_url( self::url( 'songpress-people' ) ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></p></div>';
@@ -1127,6 +1164,9 @@ class Songpress_Admin {
 			$wpdb->update( $t, $row, array( 'id' => $id ) );
 		} else {
 			$wpdb->insert( $t, $row );
+		}
+		if ( 'band' === $kind ) {
+			self::save_band_artist( sanitize_text_field( $in['old_name'] ?? '' ), $name, $in );
 		}
 		self::back( 'songpress-people', array( 'saved' => '1', 'kind' => $kind ) );
 	}

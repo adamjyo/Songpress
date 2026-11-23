@@ -637,6 +637,16 @@ $bs = Songpress_Songs::create( array( 'title' => 'Band Song', 'artist' => 'Test 
 Songpress_Songs::replace_credits( $bs, array( array( 'role' => 'performer', 'name' => 'Lead Singer', 'share' => '25' ), array( 'role' => 'performer', 'name' => 'Drummer', 'share' => '' ) ) );
 $wpdb->insert( 'wp_songpress_earnings', array( 'song_id' => $bs, 'quarter' => '2026-Q1', 'src' => 'distrokid', 'amount' => 100 ) );
 Songpress_Profiles::upsert( 'band', 'Test Band', array( 'payee' => 'Pat Payee' ) );
+// bands and artists are one list: each is created from the other, matched by name
+Songpress_Profiles::upsert( 'band', 'Sync Only Band', array() );
+Songpress_Artists::save( 0, 'Sync Only Artist', array() );
+Songpress_Artists::resync();
+$names_a = array_map( function ( $r ) { return $r->name; }, Songpress_Artists::all() );
+check( 'a band gets an artist record', in_array( 'Sync Only Band', $names_a, true ), true );
+check( 'an artist gets a band page', (bool) Songpress_Profiles::find( 'Sync Only Artist', 'band' ), true );
+$before = count( Songpress_Artists::all() );
+Songpress_Artists::resync();
+check( 'matching again adds nothing', count( Songpress_Artists::all() ), $before );
 $br = Songpress_Money::band_rows( Songpress_Money::person_key( 'Pat Payee' ) );
 check( 'band payee gets earnings less performer shares (25% + default 25%)', array( count( $br ), round( $br[0]->total, 2 ) ), array( 1, 50.0 ) );
 $bd = Songpress_Money::band_detail();
