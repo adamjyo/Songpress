@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.55
+Stable tag: 0.63.56
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.56 =
+* Works list: the sort you chose is remembered with your account, so the list, Back to Works and Previous / Next in the editor all use it. Click the active heading a third time to go back to the default order.
 
 = 0.63.55 =
 * Works editor: a sticky top bar with Back to Works, Previous and Next, Share, Delete (asks first) and Save, all as icons. The old Save bar at the bottom is gone.

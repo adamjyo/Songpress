@@ -10,6 +10,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Songpress_Steps {
 
 	/**
+	 * The works list sort in use: the one in the address when the person just chose a heading, otherwise the one they used last
+	 * (kept with their account, so the list, Back to Works and Previous / Next all agree). Returns array( order, dir ).
+	 */
+	public static function sort() {
+		$ok    = array( 'serial', 'title', 'genre', 'writer', 'artist', 'label', 'status' );
+		$order = isset( $_GET['sp_sort'] ) ? sanitize_key( wp_unslash( $_GET['sp_sort'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$dir   = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc'; // phpcs:ignore WordPress.Security.NonceVerification
+		$uid   = get_current_user_id();
+		if ( in_array( $order, $ok, true ) ) {
+			if ( $uid && get_user_meta( $uid, 'songpress_works_sort', true ) !== $order . '|' . $dir ) {
+				update_user_meta( $uid, 'songpress_works_sort', $order . '|' . $dir );
+			}
+			return array( $order, $dir );
+		}
+		if ( isset( $_GET['sp_sort'] ) && '' === $_GET['sp_sort'] ) { // phpcs:ignore WordPress.Security.NonceVerification
+			if ( $uid ) {
+				delete_user_meta( $uid, 'songpress_works_sort' );
+			}
+			return array( '', 'asc' );
+		}
+		$mem = $uid ? explode( '|', (string) get_user_meta( $uid, 'songpress_works_sort', true ) ) : array();
+		if ( 2 === count( $mem ) && in_array( $mem[0], $ok, true ) ) {
+			return array( $mem[0], 'desc' === $mem[1] ? 'desc' : 'asc' );
+		}
+		return array( '', 'asc' );
+	}
+
+	/**
 	 * Previous / Next along the works list the person came from: the same search, status filter and sort the list had
 	 * (they ride along in the address). Opened with no list behind it, it walks every work in the default order.
 	 */
@@ -23,9 +51,7 @@ class Songpress_Steps {
 		$q      = $g( 'sp_q' );
 		$status = sanitize_key( $g( 'sp_status' ) );
 		$status = isset( Songpress_Songs::statuses()[ $status ] ) ? $status : '';
-		$order  = sanitize_key( $g( 'sp_sort' ) );
-		$order  = in_array( $order, array( 'serial', 'title', 'genre', 'writer', 'artist', 'label', 'status' ), true ) ? $order : '';
-		$dir    = 'desc' === $g( 'sp_dir' ) ? 'desc' : 'asc';
+		list( $order, $dir ) = self::sort();
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'order' => $order, 'dir' => $dir, 'ids_only' => 1, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : get_current_user_id() ) );
 		$ids    = $res['ids'];
 		$at     = array_search( (int) $id, $ids, true );

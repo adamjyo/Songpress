@@ -215,9 +215,7 @@ class Songpress_Frontend {
 		$q      = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : '';
 		$status = isset( $_GET['sp_status'] ) ? sanitize_key( wp_unslash( $_GET['sp_status'] ) ) : '';
 		$status = isset( Songpress_Songs::statuses()[ $status ] ) ? $status : '';
-		$order  = isset( $_GET['sp_sort'] ) ? sanitize_key( wp_unslash( $_GET['sp_sort'] ) ) : '';
-		$order  = in_array( $order, array( 'serial', 'title', 'genre', 'writer', 'artist', 'label', 'status' ), true ) ? $order : '';
-		$dir    = ( isset( $_GET['sp_dir'] ) && 'desc' === $_GET['sp_dir'] ) ? 'desc' : 'asc';
+		list( $order, $dir ) = Songpress_Steps::sort(); // the heading last clicked is remembered
 		$len    = isset( $_GET['sp_n'] ) ? absint( $_GET['sp_n'] ) : 100;
 		$len    = ( $len >= 100 && $len <= 1000 && 0 === $len % 100 ) ? $len : 100;
 		$res    = Songpress_Songs::query( array( 'search' => $q, 'status' => $status, 'per_page' => $len, 'order' => $order, 'dir' => $dir, 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : $uid ) );
@@ -259,7 +257,7 @@ class Songpress_Frontend {
 			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'label' => __( 'Label', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
 				$on   = ( $k === $order );
 				$next = ( $on && 'asc' === $dir ) ? 'desc' : 'asc';
-				$out .= '<a class="songpress-ch-' . esc_attr( $k ) . ( $on ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_sort' => $k, 'sp_dir' => $next ) ) ) . '"' . ( $on ? ' aria-sort="' . ( 'asc' === $dir ? 'ascending' : 'descending' ) . '"' : '' ) . '>' . esc_html( $label ) . ( $on ? ( 'asc' === $dir ? ' &#9650;' : ' &#9660;' ) : '' ) . '</a>';
+				$out .= '<a class="songpress-ch-' . esc_attr( $k ) . ( $on ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( ( $on && 'desc' === $dir ) ? array( 'sp_sort' => '', 'sp_dir' => '' ) : array( 'sp_sort' => $k, 'sp_dir' => $next ) ) ) . '"' . ( $on ? ' aria-sort="' . ( 'asc' === $dir ? 'ascending' : 'descending' ) . '"' : '' ) . '>' . esc_html( $label ) . ( $on ? ( 'asc' === $dir ? ' &#9650;' : ' &#9660;' ) : '' ) . '</a>';
 			}
 			$out .= '</span></div>';
 		}

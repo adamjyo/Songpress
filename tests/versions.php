@@ -476,6 +476,12 @@ check( 'DistroKid: performer without a share gets 25%, a stored share is used, 0
 $pr = Songpress_Uploads::people_rows( $hl, '2026-Q2', 'mlc', 100.0 );
 check( 'writer split unchanged', array_map( function ( $r ) { return $r[0] . ':' . $r[6]; }, $pr ), array( 'Wri Ter:100' ) );
 if ( ! function_exists( 'esc_js' ) ) { function esc_js( $s ) { return addslashes( $s ); } }
+$GLOBALS['__um'] = array();
+if ( ! function_exists( 'get_user_meta' ) ) {
+	function get_user_meta( $u, $k, $s = false ) { return $GLOBALS['__um'][ $k ] ?? ''; }
+	function update_user_meta( $u, $k, $v ) { $GLOBALS['__um'][ $k ] = $v; }
+	function delete_user_meta( $u, $k ) { unset( $GLOBALS['__um'][ $k ] ); }
+}
 if ( ! class_exists( 'Songpress_Caps', false ) ) { class Songpress_Caps { public static function can( $c ) { return true; } } }
 if ( ! function_exists( 'get_current_user_id' ) ) { function get_current_user_id() { return 1; } }
 if ( ! function_exists( 'add_query_arg' ) ) { function add_query_arg( $a, $url = '' ) { return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $a ); } }
@@ -493,6 +499,14 @@ $h2 = $sn->invoke( null, $hits[0] );
 check( 'step nav follows the list search', array( strpos( $h2, '1 of ' . count( $hits ) ) !== false, strpos( $h2, 'sp_q=Harbor' ) !== false ), array( true, true ) );
 check( 'a song outside the search has no nav', $sn->invoke( null, array_values( array_diff( $all, $hits ) )[0] ), '' );
 unset( $_GET['sp_q'] );
+$_GET = array( 'sp_sort' => 'title', 'sp_dir' => 'desc' );
+check( 'works sort read from the address', Songpress_Steps::sort(), array( 'title', 'desc' ) );
+$_GET = array();
+check( 'works sort remembered when the address has none', Songpress_Steps::sort(), array( 'title', 'desc' ) );
+$_GET = array( 'sp_sort' => '' );
+check( 'works sort cleared by the third click', Songpress_Steps::sort(), array( '', 'asc' ) );
+$_GET = array();
+check( 'and stays cleared', Songpress_Steps::sort(), array( '', 'asc' ) );
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {
