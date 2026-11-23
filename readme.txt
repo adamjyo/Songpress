@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.94
+Stable tag: 0.63.95
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.95 =
+* Works list: sorting by Serial now sorts as numbers (then by version), so 2450 comes before 2509 and 2515.
 
 = 0.63.94 =
 * Works editor: the delete button turns into a red "Click again to delete" button instead of a pop-up. It resets after four seconds if you do not click.

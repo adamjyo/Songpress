@@ -250,6 +250,9 @@ class Songpress_Songs {
 			'writer' => "(SELECT MIN(w.name) FROM {$c} w WHERE w.song_id = s.id AND w.role = 'writer')",
 		);
 		$order = isset( $args['order'], $cols[ $args['order'] ] ) ? $cols[ $args['order'] ] . " {$dir}, s.serial ASC" : 's.family_id DESC, s.version_no DESC';
+		if ( isset( $args['order'] ) && 'serial' === $args['order'] ) { // serial numbers sort as numbers (2450 before 2509), then by version
+			$order = "CAST(TRIM(s.serial) AS UNSIGNED) {$dir}, s.version_no {$dir}, s.serial {$dir}";
+		}
 		if ( ! empty( $args['ids_only'] ) ) { // every matching id in list order (the editor's Previous / Next)
 			$ids_sql = "SELECT s.id FROM {$s} s WHERE {$sql} ORDER BY {$order}";
 			$ids     = $vals ? $wpdb->get_col( $wpdb->prepare( $ids_sql, $vals ) ) : $wpdb->get_col( $ids_sql );
