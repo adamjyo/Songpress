@@ -211,7 +211,7 @@ class Songpress_Editor {
 		if ( ! $root ) {
 			$o .= '<section class="spe-panel adv spe-own" data-panel="codes"><h3>' . esc_html__( 'Links', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Streaming, store and video links for this version. There is no limit.', 'songpress' ) . '</p>';
 			$o .= self::pair_group( 'links', __( 'Links', 'songpress' ), __( 'Add a link', 'songpress' ), $song ? Songpress_Songs::links( $id ) : array(), 'kind', 'url', Songpress_Songs::LINK_KINDS, 'https://' );
-			$o .= '</section>';
+			$o .= self::dk_paste() . '</section>';
 		}
 
 		/* Story and notes */
@@ -380,6 +380,25 @@ class Songpress_Editor {
 			$h .= '<span class="adv"></span>';
 		}
 		return $h . '<button type="button" class="spe-x" aria-label="' . esc_attr__( 'Remove this row', 'songpress' ) . '">&times;</button></div>';
+	}
+
+	/** Paste the text DistroKid shows after a release (HyperFollow) and the streaming links in it are added to this version. Runs in the browser; nothing is sent until the work saves. */
+	private static function dk_paste() {
+		$cfg = wp_json_encode( array(
+			'none'  => __( 'No streaming links found in that text.', 'songpress' ),
+			'added' => __( 'Added %d link(s). They save with the work.', 'songpress' ),
+			'dupes' => __( '%d already here were skipped.', 'songpress' ),
+		) );
+		return '<details class="spe-dk"><summary>' . esc_html__( 'Paste links from DistroKid', 'songpress' ) . '</summary><p class="spe-help">' . esc_html__( 'Copy the text of the DistroKid HyperFollow page (or any text with links in it), paste it here and the streaming links are added to this version.', 'songpress' ) . '</p><textarea id="spe-dk-text" rows="6" placeholder="[Spotify](https://open.spotify.com/album/...)"></textarea><p><button type="button" class="spe-btn" id="spe-dk-go">' . esc_html__( 'Add the links', 'songpress' ) . '</button> <span id="spe-dk-msg" class="spe-help" role="status"></span></p></details>'
+			. '<script>(function(){var C=' . $cfg . ',go=document.getElementById("spe-dk-go"),ta=document.getElementById("spe-dk-text"),msg=document.getElementById("spe-dk-msg"),g=document.querySelector(".spe-pairs[data-group=links]");if(!go||!g)return;'
+			. 'var HOSTS=[["open.spotify.com","spotify"],["spotify.com","spotify"],["music.apple.com","apple"],["itunes.apple.com","itunes"],["amazon.","amazon"],["music.youtube.com","youtube"],["youtube.com","youtube"],["youtu.be","youtube"],["tidal.com","tidal"],["deezer.com","deezer"],["pandora.com","pandora"],["tiktok.com","tiktok"],["bandcamp.com","bandcamp"],["soundcloud.com","soundcloud"]];'
+			. 'function kindOf(label,url){var l=(label||"").toLowerCase().trim();if(/^apple\s*music$/.test(l))return"apple";if(l==="itunes")return"itunes";if(/^amazon/.test(l))return"amazon";if(/^youtube/.test(l))return"youtube";if(/^spotify$/.test(l))return"spotify";if(/^tidal$/.test(l))return"tidal";if(/^deezer$/.test(l))return"deezer";if(/^pandora$/.test(l))return"pandora";if(/^tik\s*tok$/.test(l))return"tiktok";if(/^bandcamp$/.test(l))return"bandcamp";if(/^soundcloud$/.test(l))return"soundcloud";var h="";try{h=new URL(url).hostname}catch(e){}for(var i=0;i<HOSTS.length;i++){if(h.indexOf(HOSTS[i][0])>-1)return HOSTS[i][1]}return l.replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,16)||"other"}'
+			. 'function skip(label,url){return /distrokid\.com/i.test(url)||/only you can see|merch/i.test(label||"")}'
+			. 'function parse(t){var out=[],seen={},m,re=/\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;while((m=re.exec(t))){if(skip(m[1],m[2])||seen[m[2]])continue;seen[m[2]]=1;out.push([kindOf(m[1],m[2]),m[2]])}var rest=t.replace(re," "),re2=/https?:\/\/[^\s<>)\]]+/g;while((m=re2.exec(rest))){var u=m[0].replace(/[.,;]+$/,"");if(skip("",u)||seen[u])continue;seen[u]=1;out.push([kindOf("",u),u])}return out}'
+			. 'function rows(){return Array.prototype.slice.call(g.querySelectorAll(".spe-rows .spe-pair"))}'
+			. 'function fire(el){el.dispatchEvent(new Event("input",{bubbles:true}))}'
+			. 'go.addEventListener("click",function(){var found=parse(ta.value||"");if(!found.length){msg.textContent=C.none;return}var have={};rows().forEach(function(r){var v=r.querySelector("input[name$=\"[value]\"]");if(v&&v.value)have[v.value.trim()]=1});var added=0,dup=0;found.forEach(function(f){if(have[f[1]]){dup++;return}var r=rows().filter(function(x){var i=x.querySelectorAll("input");return !i[0].value&&!i[1].value})[0];if(!r){g.querySelector(".spe-add").click();var all=rows();r=all[all.length-1]}var i=r.querySelectorAll("input");i[0].value=f[0];i[1].value=f[1];fire(i[0]);fire(i[1]);have[f[1]]=1;added++});msg.textContent=C.added.replace("%d",added)+(dup?" "+C.dupes.replace("%d",dup):"");if(added)ta.value=""});'
+			. '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
 	private static function pair_group( $group, $title, $add_label, array $existing, $k_field, $v_field, array $kinds, $placeholder ) {

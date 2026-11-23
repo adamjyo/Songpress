@@ -725,7 +725,7 @@ class Songpress_Songs {
 	}
 
 	const CODE_KINDS = array( 'iswc', 'isrc', 'ccli', 'mlc', 'bmi', 'ascap', 'work_id', 'copyright', 'distrokid', 'upc' );
-	const LINK_KINDS = array( 'spotify', 'apple', 'youtube', 'bandcamp', 'soundcloud', 'distrokid', 'other' );
+	const LINK_KINDS = array( 'spotify', 'apple', 'itunes', 'amazon', 'youtube', 'tidal', 'deezer', 'pandora', 'tiktok', 'bandcamp', 'soundcloud', 'distrokid', 'other' );
 
 	public static function identifiers( $song_id ) {
 		global $wpdb;

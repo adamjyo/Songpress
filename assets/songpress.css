@@ -995,3 +995,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-lbrow{display:inline-flex;align-items:center;gap:6px}
 .sp-app button.spe-toolico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border-radius:8px;background:none;color:var(--sp-accent,#f5a524);border:1px solid transparent;cursor:pointer}
 .sp-app button.spe-toolico:hover{background:rgba(245,165,36,.14);border-color:var(--sp-accent,#f5a524)}
+
+.sp-app .spe-dk{margin:10px 0;border:1px dashed var(--sp-line,#2a2c31);border-radius:10px;padding:8px 12px}
+.sp-app .spe-dk summary{cursor:pointer;color:var(--sp-accent,#f5a524);font-weight:600}
+.sp-app .spe-dk textarea{width:100%}
