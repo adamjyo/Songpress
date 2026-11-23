@@ -31,6 +31,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 == Changelog ==
 
 = 0.63.71 =
+* The phone menu is gone. The notifications bell now sits to the right of your name on the Works list.
+* New Notifications section in the desktop rail with a count badge for ones not dealt with. Mark each done, or all at once. The badge updates live, and alerts are pushed to adam.page's phone.
+
+= 0.63.70 =
 * A version with no release title yet now shows the work's name (in grey italics) with its style, on the phone cards and at the top of the work, instead of "No release title".
 
 = 0.63.69 =
