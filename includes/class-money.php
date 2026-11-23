@@ -26,6 +26,17 @@ class Songpress_Money {
 		'band'      => 'Band',
 	);
 
+	const RULES_OPT = 'songpress_earn_rules';
+
+	/** The numbers behind earnings, set under Settings > Earnings: performer share when a song sets none (percent), and whether bands pay out less their performers. */
+	public static function rules() {
+		$o = (array) get_option( self::RULES_OPT, array() );
+		return array(
+			'performer_default'    => isset( $o['performer_default'] ) ? max( 0.0, min( 100.0, (float) $o['performer_default'] ) ) : 25.0,
+			'band_less_performers' => ! isset( $o['band_less_performers'] ) || ! empty( $o['band_less_performers'] ),
+		);
+	}
+
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
@@ -422,16 +433,23 @@ class Songpress_Money {
 	}
 
 	/** The part of a song's DistroKid money that goes to its performers (their shares, 25% each when none is set). Bands keep the rest. */
+	private static $cuts = array();
+
 	public static function performer_cut( $song_id ) {
-		static $cache = array();
-		$id = (int) $song_id;
+		$cache = &self::$cuts;
+		$r  = self::rules();
+		$id = (int) $song_id . '|' . $r['performer_default'] . '|' . (int) $r['band_less_performers'];
 		if ( isset( $cache[ $id ] ) ) {
 			return $cache[ $id ];
 		}
 		$sum = 0.0;
-		foreach ( Songpress_Songs::credits( $id ) as $c ) {
+		$def = $r['performer_default'] / 100;
+		if ( ! $r['band_less_performers'] ) {
+			return $cache[ $id ] = 0.0;
+		}
+		foreach ( Songpress_Songs::credits( (int) $song_id ) as $c ) {
 			if ( 'performer' === $c->role && '' !== trim( (string) $c->name ) ) {
-				$sum += null === $c->share || '' === $c->share ? 0.25 : max( 0.0, (float) $c->share / 100 );
+				$sum += null === $c->share || '' === $c->share ? $def : max( 0.0, (float) $c->share / 100 );
 			}
 		}
 		return $cache[ $id ] = min( 1.0, $sum );
@@ -443,6 +461,7 @@ class Songpress_Money {
 	 */
 	public static function band_detail() {
 		global $wpdb;
+		self::$cuts = array();
 		$pt   = self::t( 'profiles' );
 		$map  = array();
 		$info = array();

@@ -281,7 +281,7 @@ class Songpress_Uploads {
 		if ( 'performer' === $role ) {
 			$sum = 0.0;
 			foreach ( $people as $i => $w ) {
-				$parts[ $i ] = null === $w->share || '' === $w->share ? 0.25 : max( 0.0, (float) $w->share / 100 );
+				$parts[ $i ] = null === $w->share || '' === $w->share ? Songpress_Money::rules()['performer_default'] / 100 : max( 0.0, (float) $w->share / 100 );
 				$sum        += $parts[ $i ];
 			}
 			if ( $sum > 1.001 ) {
@@ -335,6 +335,35 @@ class Songpress_Uploads {
 			$done[] = $q;
 		}
 		return $done;
+	}
+
+	/** Work one song's DistroKid money out again for each of its performers, every quarter it earned. Returns how many quarters were redone. */
+	public static function rebuild_song_dk( $song_id ) {
+		global $wpdb;
+		$e = Songpress_Install::table( 'earnings' );
+		$p = Songpress_Install::table( 'person_earnings' );
+		$n = 0;
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT quarter, SUM(amount) AS amt FROM {$e} WHERE src = 'distrokid' AND song_id = %d GROUP BY quarter", (int) $song_id ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$rows = self::people_rows( (int) $song_id, $r->quarter, 'distrokid', (float) $r->amt );
+			if ( ! $rows ) {
+				continue;
+			}
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = 'distrokid' AND song_id = %d AND quarter = %s", (int) $song_id, $r->quarter ) ); // phpcs:ignore WordPress.DB
+			Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+			$n++;
+		}
+		return $n;
+	}
+
+	/** Every song with DistroKid money, worked out again. Returns the number of songs. */
+	public static function rebuild_all_dk() {
+		global $wpdb;
+		$e   = Songpress_Install::table( 'earnings' );
+		$ids = $wpdb->get_col( "SELECT DISTINCT song_id FROM {$e} WHERE src = 'distrokid' AND song_id > 0" ); // phpcs:ignore WordPress.DB
+		foreach ( (array) $ids as $id ) {
+			self::rebuild_song_dk( (int) $id );
+		}
+		return count( (array) $ids );
 	}
 
 	/* ---------- handlers ---------- */

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.61
+Stable tag: 0.63.62
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.62 =
+* Settings > Earnings: shows how earnings are worked out and lets you change the numbers. Set the default performer share and whether bands pay out less their performers, recalculate DistroKid splits, and check any person song by song, with each performer share editable in place. Changes go in the activity log.
 
 = 0.63.61 =
 * Money: a new Bands section under the persons. Each band shows its DistroKid money by quarter, less the performers' shares, with a Pays to box. Whoever you pick sees that money on their card as Band. Payees from the old catalog are brought across.

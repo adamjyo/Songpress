@@ -109,6 +109,7 @@ require __DIR__ . '/../includes/class-chordpro.php';
 require __DIR__ . '/../includes/class-songs.php';
 require __DIR__ . '/../includes/class-people.php';
 require __DIR__ . '/../includes/class-money.php';
+require __DIR__ . '/../includes/class-earnings.php';
 require __DIR__ . '/../includes/class-legacy.php';
 require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
@@ -638,10 +639,30 @@ $br = Songpress_Money::band_rows( Songpress_Money::person_key( 'Pat Payee' ) );
 check( 'band payee gets earnings less performer shares (25% + default 25%)', array( count( $br ), round( $br[0]->total, 2 ) ), array( 1, 50.0 ) );
 $bd = Songpress_Money::band_detail();
 check( 'band detail shows earned, performers and what is left', array( round( $bd['test band']['rows']['2026-Q1']['gross'], 2 ), round( $bd['test band']['rows']['2026-Q1']['performers'], 2 ), round( $bd['test band']['rows']['2026-Q1']['net'], 2 ) ), array( 100.0, 50.0, 50.0 ) );
+if ( ! function_exists( '_n' ) ) { function _n( $a, $b, $n ) { return 1 === (int) $n ? $a : $b; } }
 if ( ! function_exists( 'wp_nonce_field' ) ) { function wp_nonce_field() { return ''; } }
 if ( ! function_exists( 'admin_url' ) ) { function admin_url( $p = '' ) { return '/wp-admin/' . $p; } }
 $bh = new ReflectionMethod( 'Songpress_Money', 'bands_html' ); $bh->setAccessible( true );
 check( 'bands section shows the band, its payee box and the quarter', array( false !== strpos( $bh->invoke( null ), 'Pays to' ), false !== strpos( $bh->invoke( null ), '2026-Q1' ), false !== strpos( $bh->invoke( null ), 'Pat Payee' ) ), array( true, true, true ) );
+// earnings tool: rules change the numbers, and a saved share redoes the song
+$GLOBALS['opts'][ Songpress_Money::RULES_OPT ] = array( 'performer_default' => 10, 'band_less_performers' => 1 );
+check( 'rules read back', Songpress_Money::rules(), array( 'performer_default' => 10.0, 'band_less_performers' => true ) );
+$wpdb->insert( 'wp_songpress_person_earnings', array( 'person' => 'Lead Singer', 'person_key' => 'leadsinger', 'work_title' => 'Band Song', 'song_id' => $bs, 'quarter' => '2026-Q1', 'src' => 'distrokid', 'amount' => 25 ) );
+$tr = Songpress_Earnings::trace( 'leadsinger' );
+check( 'trace shows statement, credit and total for a DistroKid line', array( count( $tr['lines'] ), round( $tr['lines'][0]['statement'], 2 ), $tr['lines'][0]['total'], (float) $tr['lines'][0]['credit']['share'] ), array( 1, 100.0, 25.0, 25.0 ) );
+$wpdb->query( "UPDATE wp_songpress_credits SET share = 40 WHERE song_id = $bs AND name = 'Lead Singer'" );
+$redone = Songpress_Uploads::rebuild_song_dk( $bs );
+$ls = $wpdb->get_var( "SELECT SUM(amount) FROM wp_songpress_person_earnings WHERE person_key = 'leadsinger' AND song_id = $bs AND src = 'distrokid'" );
+$dr = $wpdb->get_var( "SELECT SUM(amount) FROM wp_songpress_person_earnings WHERE person_key = 'drummer' AND song_id = $bs AND src = 'distrokid'" );
+check( 'a saved share works the song out again (40% and the 10% default)', array( $redone, round( (float) $ls, 2 ), round( (float) $dr, 2 ) ), array( 1, 40.0, 10.0 ) );
+check( 'band money follows the default share too (100 less 40 and 10)', round( Songpress_Money::band_rows()[0]->total ?? -1, 2 ), 50.0 );
+$GLOBALS['opts'][ Songpress_Money::RULES_OPT ] = array( 'performer_default' => 25, 'band_less_performers' => 0 );
+check( 'with the band rule off the payee gets it all', round( Songpress_Money::band_detail()['test band']['rows']['2026-Q1']['net'], 2 ), 100.0 );
+unset( $GLOBALS['opts'][ Songpress_Money::RULES_OPT ] );
+$_GET['who'] = 'Lead Singer';
+$er = Songpress_Earnings::render();
+check( 'earnings screen shows rules, recalculate and the person trace with a share box', array( false !== strpos( $er, 'Performer share when a song' ), false !== strpos( $er, 'Recalculate DistroKid splits' ), false !== strpos( $er, 'Band Song' ), false !== strpos( $er, 'name="share"' ) ), array( true, true, true, true ) );
+unset( $_GET['who'] );
 Songpress_Profiles::upsert( 'band', 'Test Band', array( 'payee' => '' ) );
 check( 'clearing the payee stops the band money', Songpress_Money::band_rows(), array() );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );

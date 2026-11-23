@@ -34,7 +34,7 @@ class Songpress_Audit {
 	);
 
 	/** Actions that log themselves in full (so the plain request entry is skipped). */
-	const DETAILED = array( 'songpress_money_payment', 'songpress_money_payment_update', 'songpress_money_payment_delete', 'songpress_money_expense_add', 'songpress_money_expense_delete','songpress_money_band_payee' );
+	const DETAILED = array( 'songpress_money_payment', 'songpress_money_payment_update', 'songpress_money_payment_delete', 'songpress_money_expense_add', 'songpress_money_expense_delete','songpress_money_band_payee','songpress_earnings_rules','songpress_earnings_share','songpress_earnings_rebuild' );
 
 	/** Posted fields worth keeping beside an entry (never passwords or tokens). */
 	const KEEP = array( 'entry_id', 'song_id', 'session_id', 'id', 'title', 'name', 'person', 'login', 'type', 'table', 'src', 'quarter', 'kind', 'flag', 'op' );

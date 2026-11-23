@@ -36,7 +36,7 @@ class Songpress_Screens {
 		return self::url( $slug, $args );
 	}
 
-	const SETTINGS_TABS = array( 'settings', 'backups', 'health', 'activity', 'uploads', 'import' );
+	const SETTINGS_TABS = array( 'settings', 'backups', 'health', 'earnings', 'activity', 'uploads', 'import' );
 
 	/** The tab strip shared by Settings, Backups, Health, Activity log and Upload / Download (plus the CSV export). */
 	public static function settings_tabs( $active ) {
@@ -45,6 +45,7 @@ class Songpress_Screens {
 			'settings' => array( __( 'Settings', 'songpress' ), 'settings' ),
 			'backups'  => array( __( 'Backups', 'songpress' ), 'settings' ),
 			'health'   => array( __( 'Health', 'songpress' ), 'settings' ),
+			'earnings' => array( __( 'Earnings', 'songpress' ), 'settings' ),
 			'activity' => array( __( 'Activity log', 'songpress' ), 'activity' ),
 			'uploads'  => array( __( 'Upload / Download', 'songpress' ), 'import' ),
 		);
@@ -132,6 +133,9 @@ class Songpress_Screens {
 		}
 		if ( 'health' === $slug ) {
 			return Songpress_Health::render();
+		}
+		if ( 'earnings' === $slug ) {
+			return Songpress_Earnings::render();
 		}
 		if ( 'activity' === $slug ) {
 			return Songpress_Audit::render();
