@@ -1441,12 +1441,17 @@ class Songpress_Admin {
 		if ( isset( $_GET['checked'] ) ) {
 			echo '<div class="notice notice-info is-dismissible"><p>' . esc_html__( 'Checked GitHub just now.', 'songpress' ) . '</p></div>';
 		}
-		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
+		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'songpress_settings' );
 		echo '<input type="hidden" name="action" value="songpress_settings"><p><label><input type="checkbox" name="delete_on_uninstall" value="1"' . checked( get_option( 'songpress_delete_on_uninstall' ), '1', false ) . '> ' . esc_html__( 'Delete all SongPress data when the plugin is deleted', 'songpress' ) . '</label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'Off by default. Leave it off to keep your catalog if you remove the plugin by accident.', 'songpress' ) . '</p>';
 		echo '<p><label><input type="checkbox" name="public_donate" value="1"' . checked( get_option( 'songpress_public_donate' ), '1', false ) . '> ' . esc_html__( 'Show a small "Donate: buy me a cup of coffee" link at the bottom of public SongPress pages', 'songpress' ) . '</label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'SongPress is free. This link helps support it. It is off unless you turn it on, and it never appears on your public pages without your say.', 'songpress' ) . '</p>';
+		$sh  = wp_parse_args( (array) get_option( 'songpress_sheet', array() ), array( 'publisher' => '', 'logo_id' => 0 ) );
+		$lg  = $sh['logo_id'] ? wp_get_attachment_url( (int) $sh['logo_id'] ) : '';
+		echo '<h2>' . esc_html__( 'Chord sheet', 'songpress' ) . '</h2><p class="sp-help">' . esc_html__( 'How the ChordPro tool prints a chart (Print / Save PDF). The title, writers, key, tempo and time come from the chart. The bottom line shows the work\'s CCLI number, or its ISWC when it has no CCLI number, then your publisher information.', 'songpress' ) . '</p>';
+		echo '<p><label>' . esc_html__( 'Publisher information (bottom of every sheet)', 'songpress' ) . '<br><textarea name="sheet_publisher" rows="3" style="width:100%;max-width:520px" placeholder="' . esc_attr__( '(c) 2026 Red Beard and Company. Used by permission. All rights reserved.', 'songpress' ) . '">' . esc_textarea( $sh['publisher'] ) . '</textarea></label></p>';
+		echo '<p>' . esc_html__( 'Branding logo (top right of every sheet)', 'songpress' ) . '<br>' . ( $lg ? '<img src="' . esc_url( $lg ) . '" alt="" style="max-height:48px;max-width:200px;background:#fff;padding:4px;border:1px solid #ccc;border-radius:4px;display:block;margin:6px 0">' : '' ) . '<input type="file" name="sheet_logo" accept="image/*">' . ( $lg ? ' <label><input type="checkbox" name="sheet_logo_remove" value="1"> ' . esc_html__( 'Remove the logo', 'songpress' ) . '</label>' : '' ) . '</p>';
 		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
 		self::update_box();
 		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
@@ -1585,6 +1590,21 @@ class Songpress_Admin {
 		if ( Songpress_Updater::valid_repo( $repo ) ) {
 			update_option( 'songpress_github_repo', $repo );
 		}
+		$sh = wp_parse_args( (array) get_option( 'songpress_sheet', array() ), array( 'publisher' => '', 'logo_id' => 0 ) );
+		$sh['publisher'] = sanitize_textarea_field( wp_unslash( $_POST['sheet_publisher'] ?? '' ) );
+		if ( ! empty( $_POST['sheet_logo_remove'] ) ) {
+			$sh['logo_id'] = 0;
+		}
+		if ( ! empty( $_FILES['sheet_logo']['name'] ) && current_user_can( 'upload_files' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			$aid = media_handle_upload( 'sheet_logo', 0 );
+			if ( ! is_wp_error( $aid ) ) {
+				$sh['logo_id'] = (int) $aid;
+			}
+		}
+		update_option( 'songpress_sheet', $sh, false );
 		Songpress_Updater::forget();
 		self::back( 'songpress-settings', array( 'saved' => 1 ) );
 	}

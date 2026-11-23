@@ -72,7 +72,7 @@
 
   /* SongSelect-style printable sheet: title block, key | tempo | time, two columns, numbered sections, chords bold over the words, CCLI line at the foot */
   function buildSheet(text) {
-    var meta = { title: '', by: [], key: '', tempo: '', time: '', ccli: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
+    var meta = { title: '', by: [], key: '', tempo: '', time: '', ccli: '', iswc: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
     function open(label) { cur = { label: label, lines: [] }; secs.push(cur); }
     function add(html) { (cur || (open(''), cur)).lines.push(html); }
     text.split(/\r\n|\r|\n/).forEach(function (line) {
@@ -86,6 +86,7 @@
         else if (k === 'tempo') meta.tempo = a;
         else if (k === 'time') meta.time = a;
         else if (k === 'ccli' || k === 'ccli_song') meta.ccli = a.replace(/^#\s*/, '');
+        else if (k === 'iswc') meta.iswc = a;
         else if (k === 'copyright') meta.copy = a;
         else if (/^(comment|c|comment_italic|ci)$/.test(k)) add('<p class="sh-note">' + esc(a) + '</p>');
         else if (/^start_of_/.test(k) && k !== 'start_of_tab') {
@@ -101,15 +102,21 @@
       if (line.trim() === '') { if (cur && !cur.lines.length) return; if (!cur) return; add('<div class="gap"></div>'); return; }
       add(renderLine(line));
     });
+    var C = window.SP_SHEET || {};
     var by = meta.by.join(' | '), mt = [];
     if (meta.key) mt.push('Key - ' + meta.key);
     if (meta.tempo) mt.push('Tempo - ' + meta.tempo);
     if (meta.time) mt.push('Time - ' + meta.time);
-    var h = '<header class="sh-head"><h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
+    var num = (meta.ccli || C.ccli) ? 'CCLI Song # ' + (meta.ccli || C.ccli) : ((meta.iswc || C.iswc) ? 'ISWC ' + (meta.iswc || C.iswc) : '');
+    var foot = [];
+    if (num) foot.push(esc(num));
+    if (C.publisher) C.publisher.split(/\r?\n/).forEach(function (l) { if (l.trim()) foot.push(esc(l.trim())); });
+    if (meta.copy) foot.push(esc(meta.copy));
+    var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
     secs.forEach(function (sc) {
       h += '<section class="sh-sec">' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
-    h += '</div><footer class="sh-foot">' + (meta.ccli ? 'CCLI Song # ' + esc(meta.ccli) : '') + (meta.copy ? (meta.ccli ? '<br>' : '') + esc(meta.copy) : '') + '</footer>';
+    h += '</div><footer class="sh-foot">' + foot.join('<br>') + '</footer>';
     return h;
   }
   function printSheet() {
