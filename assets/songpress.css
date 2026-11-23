@@ -941,13 +941,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-alerts label{display:flex;gap:8px;align-items:center}
 
 /* On a phone the menu opens from a button, as a drawer, so Settings, People and the notification bell can be reached. */
-.sp-menu-btn,.sp-scrim{display:none}
 @media (max-width:759px){
- .sp-menu-btn{display:flex;position:fixed;right:14px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:46px;height:46px;border-radius:50%;background:#f5a524;color:#111;border:0;padding:0;align-items:center;justify-content:center;z-index:40;box-shadow:0 4px 14px rgba(0,0,0,.45);cursor:pointer}
- .sp-menu-btn svg{width:22px;height:22px}
- .sp-shell.sp-menu-open .sp-side{display:flex;position:fixed;left:0;top:0;bottom:0;width:80%;max-width:320px;height:100vh;height:100dvh;z-index:60;padding-top:calc(24px + env(safe-area-inset-top,0px));box-shadow:6px 0 24px rgba(0,0,0,.5)}
- .sp-shell.sp-menu-open .sp-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:55}
- .sp-shell.sp-menu-open .sp-menu-btn{z-index:70}
 }
 
 .sp-who{display:flex;align-items:center;flex-wrap:wrap;gap:2px}
@@ -965,3 +959,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-bell-msg{flex:1 1 100%;margin:2px 8px 8px;font-size:12px;line-height:1.4;color:#a4a8b0}
 .sp-bell-msg[hidden]{display:none}
 .songpress-top h2.songpress-notitle{color:var(--sp-mute);font-style:italic}
+
+.sp-notes{max-width:720px}
+.sp-notelist{list-style:none;margin:14px 0;padding:0;display:grid;gap:8px}
+.sp-notelist li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid rgba(255,255,255,.12);border-radius:10px}
+.sp-notelist li.new{border-left:4px solid #f5a524}
+.sp-notelist li.done{opacity:.55}
+.sp-notelist small{opacity:.7;margin-left:6px}
+.songpress-userbar .sp-bell{margin:0 6px}

@@ -92,6 +92,9 @@ class Songpress_Screens {
 	}
 
 	public static function render( $slug ) {
+		if ( 'notifications' === $slug ) {
+			return Songpress_Push::inbox_html();
+		}
 		if ( in_array( $slug, array( 'link', 'artists', 'people' ), true ) ) {
 			$kind = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person'; // phpcs:ignore WordPress.Security.NonceVerification
 			$act  = 'link' === $slug ? 'link' : ( 'artists' === $slug ? 'artists' : ( in_array( $kind, array( 'band', 'label', 'publisher' ), true ) ? $kind : 'person' ) );

@@ -22,6 +22,7 @@ class Songpress_Push {
 		add_action( 'admin_post_songpress_push_send', array( __CLASS__, 'handle_send' ) );
 		add_action( 'admin_post_songpress_push_alerts', array( __CLASS__, 'handle_alerts' ) );
 		add_action( 'admin_post_songpress_push_test', array( __CLASS__, 'handle_test' ) );
+		add_action( 'admin_post_songpress_push_done', array( __CLASS__, 'handle_done' ) );
 	}
 
 	/* ---------- pure helpers ---------- */
@@ -267,10 +268,79 @@ JS;
 			update_user_meta( $uid, self::SUBS, array_values( array_diff( $subs, array( $ep ) ) ) );
 			wp_send_json_success();
 		}
+		if ( 'count' === $mode ) {
+			wp_send_json_success( array( 'count' => self::unread( $uid ) ) );
+		}
 		if ( 'test' === $mode ) {
 			wp_send_json_success( array( 'reached' => self::notify( $uid, 'SongPress', __( 'Notifications are on. This is a test.', 'songpress' ) ) ) );
 		}
 		wp_send_json_error( 'bad request', 400 );
+	}
+
+	/* ---------- the Notifications section: what has come in, and what is dealt with ---------- */
+
+	public static function inbox( $uid ) {
+		$l = get_user_meta( (int) $uid, self::NOTICES, true );
+		return is_array( $l ) ? array_reverse( $l ) : array();
+	}
+
+	/** How many notifications this person has not marked done. */
+	public static function unread( $uid ) {
+		$n = 0;
+		foreach ( self::inbox( $uid ) as $x ) {
+			if ( empty( $x['done'] ) ) {
+				$n++;
+			}
+		}
+		return $n;
+	}
+
+	public static function inbox_html() {
+		$uid  = get_current_user_id();
+		$list = self::inbox( $uid );
+		$post = esc_url( admin_url( 'admin-post.php' ) );
+		$o    = '<div class="sp-notes"><h2>' . esc_html__( 'Notifications', 'songpress' ) . '</h2>';
+		if ( ! $list ) {
+			return $o . '<p class="songpress-note">' . esc_html__( 'Nothing yet. Password requests, payments and other alerts show up here, and on your phone if you turned notifications on.', 'songpress' ) . '</p></div>';
+		}
+		if ( self::unread( $uid ) ) {
+			$o .= '<form method="post" action="' . $post . '"><input type="hidden" name="action" value="songpress_push_done"><input type="hidden" name="id" value="all">' . wp_nonce_field( 'songpress_push_done', '_wpnonce', true, false ) . '<button class="button">' . esc_html__( 'Mark all done', 'songpress' ) . '</button></form>';
+		}
+		$o .= '<ul class="sp-notelist">';
+		foreach ( $list as $n ) {
+			$done = ! empty( $n['done'] );
+			$o   .= '<li class="' . ( $done ? 'done' : 'new' ) . '"><div><b>' . esc_html( (string) ( $n['title'] ?? '' ) ) . '</b> <small>' . esc_html( human_time_diff( (int) ( $n['t'] ?? time() ) ) . ' ' . __( 'ago', 'songpress' ) ) . '</small><br>' . esc_html( (string) ( $n['body'] ?? '' ) ) . '</div>';
+			if ( ! $done ) {
+				$o .= '<form method="post" action="' . $post . '"><input type="hidden" name="action" value="songpress_push_done"><input type="hidden" name="id" value="' . esc_attr( (string) ( $n['id'] ?? '' ) ) . '">' . wp_nonce_field( 'songpress_push_done', '_wpnonce', true, false ) . '<button class="button">' . esc_html__( 'Done', 'songpress' ) . '</button></form>';
+			}
+			$o .= '</li>';
+		}
+		return $o . '</ul></div>';
+	}
+
+	public static function handle_done() {
+		check_admin_referer( 'songpress_push_done' );
+		$uid  = get_current_user_id();
+		$id   = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+		$list = get_user_meta( $uid, self::NOTICES, true );
+		$list = is_array( $list ) ? $list : array();
+		foreach ( $list as $i => $n ) {
+			if ( 'all' === $id || ( $n['id'] ?? '' ) === $id ) {
+				$list[ $i ]['done'] = 1;
+			}
+		}
+		update_user_meta( $uid, self::NOTICES, $list );
+		wp_safe_redirect( add_query_arg( 'sp_page', 'notifications', Songpress_Editor::list_url() ) );
+		exit;
+	}
+
+	/** The rail asks every half minute: keeps the Notifications badge live while a desktop page stays open. */
+	public static function badge_script() {
+		if ( ! is_user_logged_in() ) {
+			return '';
+		}
+		$cfg = wp_json_encode( array( 'ajax' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_push' ) ) );
+		return '<script>(function(){var C=' . $cfg . ',a=document.querySelector(\'.sp-side a[href*="sp_page=notifications"]\');if(!a)return;function put(n){var b=a.querySelector(".sp-badge");if(n>0){if(!b){b=document.createElement("span");b.className="sp-badge";a.appendChild(b)}b.textContent=n}else if(b){b.remove()}document.title=(n>0?"("+n+") ":"")+document.title.replace(/^\\(\\d+\\) /,"")}function poll(){if(document.hidden)return;var f=new FormData();f.append("action","songpress_push");f.append("nonce",C.nonce);f.append("mode","count");fetch(C.ajax,{method:"POST",body:f,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(j&&j.data&&typeof j.data.count==="number")put(j.data.count)}).catch(function(){})}setInterval(poll,30000);document.addEventListener("visibilitychange",poll)})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
 	/* ---------- alerts: what happens on the site, sent to the phones you choose ---------- */
@@ -464,13 +534,25 @@ JS;
 		return '<link rel="manifest" href="' . esc_url( add_query_arg( 'sp_manifest', '1', home_url( '/' ) ) ) . '"><link rel="apple-touch-icon" href="' . esc_url( SONGPRESS_URL . 'assets/icon-180.png' ) . '"><meta name="theme-color" content="#0f1012"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="SongPress"><meta name="apple-mobile-web-app-status-bar-style" content="black">';
 	}
 
-	/** The bell beside the person's name, and the script that drives it. Bell with a slash when off, solid amber when on. */
+	/** The bell beside the person's name: bell with a slash when off, solid amber when on. Markup only; script_tag() drives every bell on the page. */
 	public static function item() {
+		if ( ! is_user_logged_in() || ! self::keys() ) {
+			return '';
+		}
+		$svg  = function ( $d ) {
+			return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
+		};
+		$bell = 'M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0';
+		return '<button type="button" class="sp-bell" hidden title="' . esc_attr__( 'Notifications', 'songpress' ) . '" aria-label="' . esc_attr__( 'Notifications', 'songpress' ) . '"><span class="b-off">' . $svg( '<path d="' . $bell . '"/><path d="M3 3l18 18"/>' ) . '</span><span class="b-on">' . $svg( '<path d="' . $bell . '" fill="currentColor"/>' ) . '</span></button><p class="sp-bell-msg" hidden></p>';
+	}
+
+	/** The script for the bells on the page. Printed once, after the page. */
+	public static function script_tag() {
 		$k = self::keys();
 		if ( ! is_user_logged_in() || ! $k ) {
 			return '';
 		}
-		$cfg  = wp_json_encode( array(
+		$cfg = wp_json_encode( array(
 			'key'    => $k['pub'],
 			'sw'     => add_query_arg( 'sp_sw', '1', home_url( '/' ) ),
 			'scope'  => (string) wp_parse_url( home_url( '/' ), PHP_URL_PATH ) ?: '/',
@@ -482,34 +564,30 @@ JS;
 			'denied' => __( 'Notifications are blocked. Allow them for SongPress in your phone settings.', 'songpress' ),
 			'test'   => __( 'Notifications are on. A test was sent.', 'songpress' ),
 		) );
-		$svg  = function ( $d ) {
-			return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
-		};
-		$bell = 'M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0';
-		return '<button type="button" id="sp-push" class="sp-bell" hidden title="' . esc_attr__( 'Notifications', 'songpress' ) . '" aria-label="' . esc_attr__( 'Notifications', 'songpress' ) . '"><span class="b-off">' . $svg( '<path d="' . $bell . '"/><path d="M3 3l18 18"/>' ) . '</span><span class="b-on">' . $svg( '<path d="' . $bell . '" fill="currentColor"/>' ) . '</span></button><p id="sp-push-msg" class="sp-bell-msg" hidden></p><script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and fixed markup.
+		return '<script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 
 	private static function script() {
 		return <<<'JS'
-var b=document.getElementById('sp-push'),m=document.getElementById('sp-push-msg');if(!b)return;
+var bells=Array.prototype.slice.call(document.querySelectorAll('.sp-bell'));if(!bells.length)return;
 var ios=/iphone|ipad|ipod/i.test(navigator.userAgent),app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
 var ok='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
-function say(t){m.textContent=t;m.hidden=!t}
+function say(t){bells.forEach(function(b){var m=b.nextElementSibling;if(m&&m.classList.contains('sp-bell-msg')){m.textContent=t;m.hidden=!t}})}
 function key(s){var p=(s+'==='.slice((s.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/'),r=atob(p),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
 function post(o){var f=new FormData();f.append('action','songpress_push');f.append('nonce',C.nonce);for(var k in o)f.append(k,o[k]);return fetch(C.ajax,{method:'POST',body:f,credentials:'same-origin'}).then(function(r){return r.json()})}
-if(!ok){if(ios&&!app){b.hidden=false;b.addEventListener('click',function(e){e.preventDefault();say(C.ios)})}return}
-b.hidden=false;
+if(!ok){if(ios&&!app){bells.forEach(function(b){b.hidden=false;b.addEventListener('click',function(){say(C.ios)})})}return}
+bells.forEach(function(b){b.hidden=false});
 var reg=null;
-function show(sub){var t=sub?C.on:C.off;b.title=t;b.setAttribute('aria-label',t);b.dataset.on=sub?'1':'0'}
-navigator.serviceWorker.register(C.sw,{scope:C.scope}).then(function(){return navigator.serviceWorker.ready}).then(function(r){reg=r;return r.pushManager.getSubscription()}).then(function(s){show(!!s);if(s&&Notification.permission==='granted'){post({mode:'add',endpoint:s.endpoint})}}).catch(function(){b.hidden=true});
-b.addEventListener('click',function(e){e.preventDefault();if(!reg)return;
+function show(sub){var t=sub?C.on:C.off;bells.forEach(function(b){b.title=t;b.setAttribute('aria-label',t);b.dataset.on=sub?'1':'0'})}
+navigator.serviceWorker.register(C.sw,{scope:C.scope}).then(function(){return navigator.serviceWorker.ready}).then(function(r){reg=r;return r.pushManager.getSubscription()}).then(function(s){show(!!s);if(s&&Notification.permission==='granted'){post({mode:'add',endpoint:s.endpoint})}}).catch(function(){bells.forEach(function(b){b.hidden=true})});
+bells.forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();if(!reg)return;
  if(b.dataset.on==='1'){reg.pushManager.getSubscription().then(function(s){if(!s)return;var ep=s.endpoint;return s.unsubscribe().then(function(){return post({mode:'remove',endpoint:ep})})}).then(function(){show(false);say('')});return}
  if(Notification.permission==='denied'){say(C.denied);return}
  Notification.requestPermission().then(function(p){
   if(p!=='granted'){say(C.denied);return}
   return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(C.key)}).then(function(s){return post({mode:'add',endpoint:s.endpoint})}).then(function(){show(true);return post({mode:'test'})}).then(function(){say(C.test)});
  }).catch(function(){say(C.denied)});
-});
+})});
 JS;
 	}
 }
