@@ -468,13 +468,13 @@ class Songpress_Editor {
 	}
 
 	/** Paste the text DistroKid shows after a release (HyperFollow) and the streaming links in it are added to this version. Runs in the browser; nothing is sent until the work saves. */
-	const LOGO_BASE = 'https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/';
+	const LOGO_BASE = 'https://www.google.com/s2/favicons?sz=128&domain=';
 
 	/** Streaming icons for a list of links (kind, url), as plain anchors. Empty when there is nothing to open. */
 	public static function stream_links_html( $links ) {
 		$names = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'itunes' => 'iTunes', 'amazon' => 'Amazon Music', 'youtube' => 'YouTube', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'tiktok' => 'TikTok', 'bandcamp' => 'Bandcamp', 'soundcloud' => 'SoundCloud' );
 		$cols  = array( 'spotify' => '#1db954', 'apple' => '#fa2d48', 'itunes' => '#b455f0', 'amazon' => '#00a8e1', 'youtube' => '#ff0000', 'tidal' => '#111111', 'deezer' => '#a238ff', 'pandora' => '#3668ff', 'tiktok' => '#111111', 'bandcamp' => '#1da0c3', 'soundcloud' => '#ff5500' );
-		$slug  = array( 'spotify' => 'spotify', 'apple' => 'applemusic', 'itunes' => 'itunes', 'amazon' => 'amazonmusic', 'youtube' => 'youtube', 'tidal' => 'tidal', 'deezer' => 'deezer', 'pandora' => 'pandora', 'tiktok' => 'tiktok', 'bandcamp' => 'bandcamp', 'soundcloud' => 'soundcloud' );
+		$slug  = array( 'spotify' => 'spotify.com', 'apple' => 'music.apple.com', 'itunes' => 'itunes.apple.com', 'amazon' => 'music.amazon.com', 'youtube' => 'youtube.com', 'tidal' => 'tidal.com', 'deezer' => 'deezer.com', 'pandora' => 'pandora.com', 'tiktok' => 'tiktok.com', 'bandcamp' => 'bandcamp.com', 'soundcloud' => 'soundcloud.com' );
 		$o     = '';
 		$seen  = array();
 		foreach ( (array) $links as $l ) {
@@ -486,7 +486,7 @@ class Songpress_Editor {
 			$seen[ $k ] = 1;
 			/* translators: %s: streaming service */
 			$t  = sprintf( __( 'Open on %s', 'songpress' ), $names[ $k ] );
-			$o .= '<a class="spe-st" href="' . esc_url( $u ) . '" target="_blank" rel="noopener" style="background:' . esc_attr( $cols[ $k ] ) . '" title="' . esc_attr( $t ) . '" aria-label="' . esc_attr( $t ) . '"><img src="' . esc_url( self::LOGO_BASE . $slug[ $k ] . '.svg' ) . '" alt="" width="28" height="28" loading="lazy" onerror="this.outerHTML=\'<b>' . esc_attr( $names[ $k ][0] ) . '</b>\'"></a>';
+			$o .= '<a class="spe-st" href="' . esc_url( $u ) . '" target="_blank" rel="noopener" style="background:' . esc_attr( $cols[ $k ] ) . '" title="' . esc_attr( $t ) . '" aria-label="' . esc_attr( $t ) . '"><img src="' . esc_url( self::LOGO_BASE . $slug[ $k ] ) . '" alt="" width="28" height="28" loading="lazy" onerror="this.outerHTML=\'<b>' . esc_attr( $names[ $k ][0] ) . '</b>\'"></a>';
 		}
 		return '' === $o ? '' : '<div class="spe-streams" aria-label="' . esc_attr__( 'Listen on', 'songpress' ) . '">' . $o . '</div>';
 	}
@@ -496,10 +496,10 @@ class Songpress_Editor {
 		$names = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'itunes' => 'iTunes', 'amazon' => 'Amazon Music', 'youtube' => 'YouTube', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'tiktok' => 'TikTok', 'bandcamp' => 'Bandcamp', 'soundcloud' => 'SoundCloud' );
 		$cols  = array( 'spotify' => '#1db954', 'apple' => '#fa2d48', 'itunes' => '#b455f0', 'amazon' => '#00a8e1', 'youtube' => '#ff0000', 'tidal' => '#111111', 'deezer' => '#a238ff', 'pandora' => '#3668ff', 'tiktok' => '#111111', 'bandcamp' => '#1da0c3', 'soundcloud' => '#ff5500' );
 		
-		$cfg   = wp_json_encode( array( 'names' => $names, 'cols' => $cols, 'slug' => array( 'spotify' => 'spotify', 'apple' => 'applemusic', 'itunes' => 'itunes', 'amazon' => 'amazonmusic', 'youtube' => 'youtube', 'tidal' => 'tidal', 'deezer' => 'deezer', 'pandora' => 'pandora', 'tiktok' => 'tiktok', 'bandcamp' => 'bandcamp', 'soundcloud' => 'soundcloud' ), 'base' => self::LOGO_BASE, 'open' => __( 'Open on %s', 'songpress' ), 'none' => __( 'Streaming icons appear here once this version has links.', 'songpress' ) ) );
+		$cfg   = wp_json_encode( array( 'names' => $names, 'cols' => $cols, 'slug' => array( 'spotify' => 'spotify.com', 'apple' => 'music.apple.com', 'itunes' => 'itunes.apple.com', 'amazon' => 'music.amazon.com', 'youtube' => 'youtube.com', 'tidal' => 'tidal.com', 'deezer' => 'deezer.com', 'pandora' => 'pandora.com', 'tiktok' => 'tiktok.com', 'bandcamp' => 'bandcamp.com', 'soundcloud' => 'soundcloud.com' ), 'base' => self::LOGO_BASE, 'open' => __( 'Open on %s', 'songpress' ), 'none' => __( 'Streaming icons appear here once this version has links.', 'songpress' ) ) );
 		return '<div class="spe-streams" id="spe-streams" aria-label="' . esc_attr__( 'Listen on', 'songpress' ) . '"></div><script>(function(){var C=' . $cfg . ',box=document.getElementById("spe-streams"),g;'
 			. 'function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]})}'
-			. 'function draw(){var h="",seen={};Array.prototype.forEach.call(g.querySelectorAll(".spe-rows .spe-pair"),function(r){var i=r.querySelectorAll("input"),k=(i[0].value||"").toLowerCase().trim(),u=(i[1].value||"").trim();if(!C.names[k]||!/^https?:\/\//i.test(u)||seen[k])return;seen[k]=1;var n=C.names[k];h+="<a class=\"spe-st\" href=\""+esc(u)+"\" target=\"_blank\" rel=\"noopener\" style=\"background:"+C.cols[k]+"\" title=\""+esc(C.open.replace("%s",n))+"\" aria-label=\""+esc(C.open.replace("%s",n))+"\">"+"<img src=\""+C.base+C.slug[k]+".svg\" alt=\"\" width=\"28\" height=\"28\" onerror=\"this.outerHTML=\'<b>"+esc(n.charAt(0))+"</b>\'\">"+"</a>"});box.innerHTML=h||"<span class=\\"spe-help\\">"+esc(C.none)+"</span>";box.hidden=false}'
+			. 'function draw(){var h="",seen={};Array.prototype.forEach.call(g.querySelectorAll(".spe-rows .spe-pair"),function(r){var i=r.querySelectorAll("input"),k=(i[0].value||"").toLowerCase().trim(),u=(i[1].value||"").trim();if(!C.names[k]||!/^https?:\/\//i.test(u)||seen[k])return;seen[k]=1;var n=C.names[k];h+="<a class=\"spe-st\" href=\""+esc(u)+"\" target=\"_blank\" rel=\"noopener\" style=\"background:"+C.cols[k]+"\" title=\""+esc(C.open.replace("%s",n))+"\" aria-label=\""+esc(C.open.replace("%s",n))+"\">"+"<img src=\""+C.base+C.slug[k]+"\" alt=\"\" width=\"28\" height=\"28\" onerror=\"this.outerHTML=\'<b>"+esc(n.charAt(0))+"</b>\'\">"+"</a>"});box.innerHTML=h||"<span class=\\"spe-help\\">"+esc(C.none)+"</span>";box.hidden=false}'
 			. 'function init(){g=document.querySelector(".spe-pairs[data-group=links]");if(!box)return;if(!g){box.innerHTML="<span class=\\"spe-help\\">"+esc(C.none)+"</span>";return}g.addEventListener("input",draw);g.addEventListener("click",function(){setTimeout(draw,0)});draw()}if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init)}else{init()}})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
 

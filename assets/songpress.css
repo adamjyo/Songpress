@@ -1043,4 +1043,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-header .spe-streams,.songpress .spe-streams{margin:10px 0}
 .songpress-topl .spe-streams{flex-wrap:nowrap;overflow-x:auto;gap:10px;margin:12px 0 0;scrollbar-width:none}.songpress-topl .spe-streams::-webkit-scrollbar{display:none}
 .songpress-topl .spe-st{flex:none;width:56px;height:56px;font-size:24px}.sp-app .spe-st,.sp-app .spe-st b{color:#fff!important}
-.spe-st img{width:56%;height:56%;filter:brightness(0) invert(1);display:block}.songpress-topl .spe-st img{width:28px;height:28px}
+.spe-st{background:#fff!important}.spe-st img{width:62%;height:62%;display:block;border-radius:6px}.songpress-topl .spe-st img{width:34px;height:34px}
