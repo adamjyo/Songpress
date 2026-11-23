@@ -928,3 +928,11 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-forgot form{margin-top:8px}
 .spm-asks ul{list-style:none;margin:0;padding:0}
 .spm-asks li{padding:6px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+.spm-hscroll{overflow-x:auto;border:1px solid var(--sp-line);border-radius:10px;-webkit-overflow-scrolling:touch}
+.spm-block .spm-qcols{table-layout:auto;width:max-content;min-width:100%;margin:0;border-collapse:separate;border-spacing:0}
+.spm-qcols th,.spm-qcols td{padding:6px 10px;white-space:nowrap;min-width:84px}
+.spm-qcols thead th{font-weight:600;border-bottom:1px solid var(--sp-line)}
+.spm-qcols tbody th[scope=row],.spm-qcols thead th:first-child{position:sticky;left:0;z-index:2;background:var(--sp-card,#141518);text-align:left;min-width:80px;width:auto;border-right:1px solid var(--sp-line)}
+.spm-qcols .spm-allt{position:sticky;right:0;z-index:2;background:var(--sp-card,#141518);border-left:1px solid var(--sp-line)}
+.spm-qcols tr.spm-tot td,.spm-qcols tr.spm-tot th{border-top:1px solid var(--sp-line)}

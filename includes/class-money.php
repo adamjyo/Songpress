@@ -972,13 +972,10 @@ class Songpress_Money {
 					}
 				}
 			}
-			$o   .= '<div class="spm-vscroll"><table class="spm-table spm-income spm-qrows"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th>';
-			foreach ( $sc as $label ) {
-				$o .= '<th class="n">' . esc_html( $label ) . '</th>';
-			}
-			$o .= '<th class="n">' . esc_html__( 'Total', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Paid', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Left', 'songpress' ) . '</th></tr></thead><tbody>';
+			// Quarters run left to right, oldest to newest, in a strip that scrolls sideways (it opens at the newest). The labels on the left and the all-time column on the right stay put.
 			$first = '';
-			$html  = array();
+			$cols  = array();
+			$o    .= '<div class="spm-hscroll"><table class="spm-table spm-income spm-qcols"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th>';
 			foreach ( $pq as $q ) {
 				$dlgq[ $q ] = 1;
 				$v    = isset( $grid[ $k ][ $q ] ) ? array_sum( $grid[ $k ][ $q ] ) : 0;
@@ -995,27 +992,35 @@ class Songpress_Money {
 				}
 				$data = ' data-person="' . esc_attr( $names[ $k ] ) . '" data-q="' . esc_attr( $q ) . '" data-left="' . esc_attr( number_format( max( 0, $left ), 2, '.', '' ) ) . '"'
 					. ( $h ? ' data-id="' . (int) $h->id . '" data-amt="' . esc_attr( number_format( (float) $h->amount, 2, '.', '' ) ) . '" data-on="' . esc_attr( (string) $h->paid_on ) . '" data-notes="' . esc_attr( (string) $h->notes ) . '"' : '' );
-				$r = '<tr><td class="spm-qn">' . esc_html( $q ) . '</td>';
-				foreach ( $sc as $sk => $label ) {
-					$sv = $grid[ $k ][ $q ][ $sk ] ?? 0;
-					$r .= '<td class="n">' . ( $sv ? esc_html( self::money( $sv ) ) : '' ) . '</td>';
-				}
-				$r .= '<td class="n"><b>' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</b></td>'
-					. '<td class="n"><button type="button" class="spm-pcell" title="' . esc_attr( $h ? __( 'Edit this payment', 'songpress' ) : __( 'Record a payment for this quarter', 'songpress' ) ) . '"' . $data . '>' . ( 0.0 !== (float) $p ? esc_html( self::money( $p ) ) . $mark : '&mdash;' ) . '</button></td>'
-					. '<td class="n spm-lc"><button type="button" class="spm-pcell' . ( $left > 0.005 ? ' due' : '' ) . '" title="' . esc_attr__( 'Record a payment for this quarter', 'songpress' ) . '"' . str_replace( ' data-id=', ' data-xid=', $data ) . '>' . ( $left > 0.005 ? esc_html( self::money( $left ) ) : '&mdash;' ) . '</button></td></tr>';
-				$html[] = $r;
+				$cols[ $q ] = array( 'v' => $v, 'p' => $p, 'left' => $left, 'h' => $h, 'mark' => $mark, 'data' => $data );
+				$o         .= '<th class="n">' . esc_html( $q ) . '</th>';
 			}
-			$o .= implode( '', array_reverse( $html ) );
-			$span = 1 + count( $sc );
-			$o   .= '</tbody><tfoot><tr class="spm-tot"><td>' . esc_html__( 'All time', 'songpress' ) . '</td>';
+			$o .= '<th class="n spm-allt">' . esc_html__( 'All time', 'songpress' ) . '</th></tr></thead><tbody>';
 			foreach ( $sc as $sk => $label ) {
 				$at = 0;
-				foreach ( $grid[ $k ] as $bys ) {
-					$at += $bys[ $sk ] ?? 0;
+				$r  = '<tr><th scope="row">' . esc_html( $label ) . '</th>';
+				foreach ( $pq as $q ) {
+					$sv  = $grid[ $k ][ $q ][ $sk ] ?? 0;
+					$at += $sv;
+					$r  .= '<td class="n">' . ( $sv ? esc_html( self::money( $sv ) ) : '' ) . '</td>';
 				}
-				$o .= '<td class="n">' . esc_html( self::money( $at ) ) . '</td>';
+				$o .= $r . '<td class="n spm-allt">' . esc_html( self::money( $at ) ) . '</td></tr>';
 			}
-			$o .= '<td class="n"><b>' . esc_html( self::money( $earned[ $k ] ) ) . '</b></td><td class="n">' . esc_html( self::money( $pd ) ) . '</td><td class="n"><b>' . esc_html( self::money( max( 0, $ow ) ) ) . '</b></td></tr></tfoot></table></div>';
+			$o .= '<tr class="spm-tot"><th scope="row">' . esc_html__( 'Total', 'songpress' ) . '</th>';
+			foreach ( $pq as $q ) {
+				$o .= '<td class="n"><b>' . ( $cols[ $q ]['v'] ? esc_html( self::money( $cols[ $q ]['v'] ) ) : '' ) . '</b></td>';
+			}
+			$o .= '<td class="n spm-allt"><b>' . esc_html( self::money( $earned[ $k ] ) ) . '</b></td></tr><tr><th scope="row">' . esc_html__( 'Paid', 'songpress' ) . '</th>';
+			foreach ( $pq as $q ) {
+				$c  = $cols[ $q ];
+				$o .= '<td class="n"><button type="button" class="spm-pcell" title="' . esc_attr( $c['h'] ? __( 'Edit this payment', 'songpress' ) : __( 'Record a payment for this quarter', 'songpress' ) ) . '"' . $c['data'] . '>' . ( 0.0 !== (float) $c['p'] ? esc_html( self::money( $c['p'] ) ) . $c['mark'] : '&mdash;' ) . '</button></td>';
+			}
+			$o .= '<td class="n spm-allt">' . esc_html( self::money( $pd ) ) . '</td></tr><tr><th scope="row">' . esc_html__( 'Left', 'songpress' ) . '</th>';
+			foreach ( $pq as $q ) {
+				$c  = $cols[ $q ];
+				$o .= '<td class="n spm-lc"><button type="button" class="spm-pcell' . ( $c['left'] > 0.005 ? ' due' : '' ) . '" title="' . esc_attr__( 'Record a payment for this quarter', 'songpress' ) . '"' . str_replace( ' data-id=', ' data-xid=', $c['data'] ) . '>' . ( $c['left'] > 0.005 ? esc_html( self::money( $c['left'] ) ) : '&mdash;' ) . '</button></td>';
+			}
+			$o .= '<td class="n spm-allt"><b>' . esc_html( self::money( max( 0, $ow ) ) ) . '</b></td></tr></tbody></table></div>';
 			$def = '' !== $first ? $first : ( '' !== $sel ? $sel : ( $qopts ? $qopts[0] : '' ) );
 			$o  .= '<div class="spm-foot"><details class="spm-paybox"><summary>' . esc_html__( 'Record a payment', 'songpress' ) . '</summary>'
 				. self::form_open( 'songpress_money_payment', 'spm-pay' ) . '<input type="hidden" name="person" value="' . esc_attr( $names[ $k ] ) . '"><label><span>' . esc_html__( 'Amount', 'songpress' ) . '</span><input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $ow > 0 ? number_format( $ow, 2, '.', '' ) : '' ) . '" placeholder="0.00" required></label>'
@@ -1071,7 +1076,7 @@ class Songpress_Money {
 			. 'else{set(add,"person",D.person);set(add,"quarter",D.q);set(add,"amount",+D.left>0?D.left:"");set(add,"paid_on",today);set(add,"notes","")}'
 			. 'if(d.showModal)d.showModal();else d.setAttribute("open","");return}'
 			. 'if(e.target.closest("[data-close]")||e.target===d)d.close()})}());</script>';
-		return $o . '</div><script>(function(){var f=document.querySelector(".spm-find");if(!f)return;f.addEventListener("input",function(){var q=f.value.trim().toLowerCase();document.querySelectorAll(".spm-block").forEach(function(b){b.hidden=q&&b.getAttribute("data-name").indexOf(q)<0})})}());</script>';
+		return $o . '</div><script>(function(){function e(){Array.prototype.forEach.call(document.querySelectorAll(".spm-hscroll"),function(d){d.scrollLeft=d.scrollWidth})}e();window.addEventListener("load",e)})()</script><script>(function(){var f=document.querySelector(".spm-find");if(!f)return;f.addEventListener("input",function(){var q=f.value.trim().toLowerCase();document.querySelectorAll(".spm-block").forEach(function(b){b.hidden=q&&b.getAttribute("data-name").indexOf(q)<0})})}());</script>';
 	}
 
 	/** Record a payment to one person against a quarter. A quarter holds one running row per person: more payments in it are added on, and a planned (unpaid) amount is replaced. */
