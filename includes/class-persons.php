@@ -41,6 +41,10 @@ class Songpress_Persons {
 		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE kind = 'person' ORDER BY name LIMIT 2000" ) as $p ) { // phpcs:ignore WordPress.DB
 			$out[ Songpress_Profiles::key( $p->name ) ] = array( 'name' => $p->name, 'profile' => $p, 'user' => null );
 		}
+		// A name that is a band is not a person: leave it out unless someone has a login under that name.
+		foreach ( $wpdb->get_col( "SELECT name_key FROM {$t} WHERE kind = 'band'" ) as $bk ) { // phpcs:ignore WordPress.DB
+			unset( $out[ $bk ] );
+		}
 		$ids = array_map( 'intval', get_users( array( 'meta_key' => Songpress_Caps::META, 'meta_compare' => 'EXISTS', 'fields' => 'ID' ) ) ); // phpcs:ignore WordPress.DB.SlowDBQuery
 		foreach ( get_users( array( 'capability' => 'manage_options', 'fields' => 'ID' ) ) as $a ) {
 			$ids[] = (int) $a;
