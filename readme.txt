@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.102
+Stable tag: 0.63.103
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.103 =
+* Works editor: the audio player loads the track length up front so the full player with its playhead shows, and the delete icon is on the right.
 
 = 0.63.102 =
 * Works editor: removed the Choose another and Remove links under cover art and audio (dropping a file in replaces it). A trash can icon now sits to the left of the audio track, and in the corner of the cover art, to remove it.
