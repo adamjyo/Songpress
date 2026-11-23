@@ -830,3 +830,21 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-tools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .spm-find{height:30px;padding:0 10px;font-size:13px;width:180px!important}
 .spm-block .spm-table{table-layout:fixed}.spm-block .spm-table th:first-child,.spm-block .spm-table td:first-child{width:90px}
+
+.spm-chart{--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--surf:var(--sp-card,#141518);position:relative;margin-bottom:10px}
+.spm-legend{list-style:none;display:flex;gap:16px;flex-wrap:wrap;margin:0 0 10px;padding:0;font-size:13px;color:var(--sp-soft)}
+.spm-legend li{display:flex;align-items:center;gap:6px}.spm-sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+.s1{background:var(--c1)}.s2{background:var(--c2)}.s3{background:var(--c3)}.s4{background:var(--c4)}
+.spm-plot{display:flex;gap:8px;height:260px;padding-top:22px}
+.spm-yaxis{position:relative;width:44px;flex:none;margin-bottom:24px}
+.spm-yaxis span{position:absolute;right:0;transform:translateY(50%);font-size:11px;color:var(--sp-mute);font-variant-numeric:tabular-nums}
+.spm-cols{position:relative;flex:1;display:flex;align-items:stretch;justify-content:space-around;gap:6px;border-bottom:1px solid var(--sp-line);margin-bottom:24px}
+.spm-grid{position:absolute;left:0;right:0;border-top:1px solid var(--sp-line);pointer-events:none}
+.spm-col{position:relative;flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;max-width:90px;z-index:1}
+.spm-col em{position:absolute;bottom:-22px;font-style:normal;font-size:11px;color:var(--sp-mute);white-space:nowrap}
+.spm-stack{width:24px;display:flex;flex-direction:column-reverse;gap:2px;position:relative}
+.spm-seg{display:block;min-height:2px;cursor:default}
+.spm-stack .spm-seg:last-of-type{border-radius:4px 4px 0 0}
+.spm-cap{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:4px;font-size:11px;font-weight:500;color:var(--sp-soft);white-space:nowrap}
+.spm-tip{position:absolute;pointer-events:none;background:#000d;color:#fff;border:1px solid var(--sp-line);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;z-index:5}
+.spm-tv{margin-top:8px}.spm-tv summary{cursor:pointer;color:var(--sp-soft);font-size:13px}
