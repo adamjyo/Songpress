@@ -77,6 +77,7 @@ class Songpress_Access {
 				wp_set_current_user( $user->ID );
 				wp_set_auth_cookie( $user->ID, true );
 				do_action( 'wp_login', $user->user_login, $user );
+				Songpress_Push::alert( __( 'Password set', 'songpress' ), sprintf( /* translators: %s: name */ __( '%s chose a password and is signed in.', 'songpress' ), $user->display_name ), Songpress_Persons::url( array( 'person' => Songpress_Profiles::key( $user->display_name ) ) ) );
 				Songpress_Audit::log( 'people', 'Chose a password from a link', $user->display_name, array( 'login' => $user->user_login ), (int) $user->ID );
 				wp_safe_redirect( $here );
 				exit;
@@ -231,11 +232,7 @@ class Songpress_Access {
 			$all                 = (array) get_option( self::ASKS, array() );
 			$all[ $user->ID ]    = time();
 			update_option( self::ASKS, $all, false );
-			foreach ( get_users( array( 'fields' => 'ID' ) ) as $id ) {
-				if ( 'manager' === Songpress_Caps::class_of( (int) $id ) ) {
-					Songpress_Push::notify( (int) $id, __( 'Password help', 'songpress' ), sprintf( /* translators: %s: name */ __( '%s forgot their password. Open People to send a link.', 'songpress' ), $user->display_name ), Songpress_Persons::url() );
-				}
-			}
+			Songpress_Push::alert( __( 'Password help', 'songpress' ), sprintf( /* translators: %s: name */ __( '%s forgot their password. Open People to send a link.', 'songpress' ), $user->display_name ), Songpress_Persons::url() );
 			Songpress_Audit::log( 'people', 'Asked for a password link', $user->display_name, array( 'login' => $user->user_login ), 0 );
 		}
 		wp_safe_redirect( add_query_arg( 'sp_login', 'asked', remove_query_arg( array( 'sp_login', 'sp_forgot' ) ) ) );

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.66
+Stable tag: 0.63.67
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.67 =
+* People: "Alerts to your phone". Choose who gets a phone notification when something happens that you would otherwise only see on the desktop (someone forgot their password, or chose one from a link). Until you choose, alerts go to adam.page, or to every Manager if there is no such login. A "Send a test alert" button checks it.
 
 = 0.63.66 =
 * Money: each person's card now scrolls sideways through the quarters (oldest on the left, opening at the newest). The labels on the left and the All time column on the right stay in view. Tap a Paid or Left amount to record or edit a payment, as before.

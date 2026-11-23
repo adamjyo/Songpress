@@ -277,6 +277,7 @@ class Songpress_Persons {
 		}
 		$o .= Songpress_Access::asks_box();
 		$o .= Songpress_Access::old_box();
+		$o .= Songpress_Push::alerts_box();
 		$o .= Songpress_Push::send_box();
 		$o .= '<h3>' . esc_html__( 'Everyone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_member_update', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_update">';
 		$o .= '<div class="spe-head spe-mhead"><span>' . esc_html__( 'Person', 'songpress' ) . '</span><span>' . esc_html__( 'Class', 'songpress' ) . '</span><span>' . esc_html__( 'New password', 'songpress' ) . '</span><span>' . esc_html__( 'Earned', 'songpress' ) . '</span></div>';

@@ -11,11 +11,14 @@ class Songpress_Push {
 	const KEYS    = 'songpress_vapid';
 	const SUBS    = 'songpress_push_subs';
 	const NOTICES = 'songpress_notices';
+	const ALERTS  = 'songpress_alert_users';
 
 	public static function init() {
 		add_action( 'init', array( __CLASS__, 'serve' ), 2 );
 		add_action( 'wp_ajax_songpress_push', array( __CLASS__, 'ajax' ) );
 		add_action( 'admin_post_songpress_push_send', array( __CLASS__, 'handle_send' ) );
+		add_action( 'admin_post_songpress_push_alerts', array( __CLASS__, 'handle_alerts' ) );
+		add_action( 'admin_post_songpress_push_test', array( __CLASS__, 'handle_test' ) );
 	}
 
 	/* ---------- pure helpers ---------- */
@@ -263,6 +266,84 @@ JS;
 			wp_send_json_success( array( 'reached' => self::notify( $uid, 'SongPress', __( 'Notifications are on. This is a test.', 'songpress' ) ) ) );
 		}
 		wp_send_json_error( 'bad request', 400 );
+	}
+
+	/* ---------- alerts: what happens on the site, sent to the phones you choose ---------- */
+
+	/** Who gets alerts: the people chosen under People; until someone is chosen, adam.page, else every Manager. */
+	public static function alert_ids() {
+		$ids = array();
+		foreach ( (array) get_option( self::ALERTS, array() ) as $id ) {
+			if ( get_userdata( (int) $id ) && '' !== Songpress_Caps::class_of( (int) $id ) ) {
+				$ids[] = (int) $id;
+			}
+		}
+		if ( $ids ) {
+			return $ids;
+		}
+		$u = get_user_by( 'login', 'adam.page' );
+		if ( $u && '' !== Songpress_Caps::class_of( $u->ID ) ) {
+			return array( (int) $u->ID );
+		}
+		foreach ( get_users( array( 'fields' => 'ID' ) ) as $id ) {
+			if ( 'manager' === Songpress_Caps::class_of( (int) $id ) ) {
+				$ids[] = (int) $id;
+			}
+		}
+		return $ids;
+	}
+
+	/** Send an alert to every phone chosen. Returns the number of phones reached. */
+	public static function alert( $title, $body, $url = '' ) {
+		$n = 0;
+		foreach ( self::alert_ids() as $id ) {
+			$n += self::notify( $id, $title, $body, $url );
+		}
+		return $n;
+	}
+
+	private static function guard_people() {
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+	}
+
+	public static function handle_alerts() {
+		check_admin_referer( 'songpress_push_alerts' );
+		self::guard_people();
+		$ids = array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['alert'] ?? array() ) ) ) ) ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- ids only.
+		update_option( self::ALERTS, $ids, false );
+		$names = array_map( function ( $id ) {
+			$u = get_userdata( $id );
+			return $u ? $u->display_name : '#' . $id;
+		}, $ids );
+		Songpress_Audit::log( 'people', 'Chose who gets alerts', '', array( 'people' => $names ? implode( ', ', $names ) : 'nobody chosen' ) );
+		wp_safe_redirect( add_query_arg( 'sp_saved', rawurlencode( __( 'Saved who gets alerts.', 'songpress' ) ), Songpress_Persons::url() ) );
+		exit;
+	}
+
+	public static function handle_test() {
+		check_admin_referer( 'songpress_push_test' );
+		self::guard_people();
+		$n = self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
+		wp_safe_redirect( add_query_arg( $n ? 'sp_saved' : 'sp_err', rawurlencode( $n ? sprintf( /* translators: %d: phones */ _n( 'Test sent. It reached %d phone.', 'Test sent. It reached %d phones.', $n, 'songpress' ), $n ) : __( 'It did not reach a phone. The person has to open the app from their Home Screen and tap the bell to turn notifications on.', 'songpress' ) ), Songpress_Persons::url() ) );
+		exit;
+	}
+
+	/** People: choose who gets the alerts, and test them. */
+	public static function alerts_box() {
+		$on = self::alert_ids();
+		$o  = '<h3>' . esc_html__( 'Alerts to your phone', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_push_alerts', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_alerts"><div class="spm-alerts">';
+		foreach ( get_users( array( 'fields' => array( 'ID', 'display_name', 'user_login' ) ) ) as $u ) {
+			if ( '' === Songpress_Caps::class_of( (int) $u->ID ) ) {
+				continue;
+			}
+			$o .= '<label><input type="checkbox" name="alert[]" value="' . (int) $u->ID . '"' . ( in_array( (int) $u->ID, $on, true ) ? ' checked' : '' ) . '> ' . esc_html( $u->display_name ) . ' <small>' . esc_html( $u->user_login ) . ' · ' . esc_html( self::devices( (int) $u->ID ) ? __( 'phone on', 'songpress' ) : __( 'phone not on yet', 'songpress' ) ) . '</small></label>';
+		}
+		$o .= '</div><button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>'
+			. '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" style="display:inline">' . wp_nonce_field( 'songpress_push_test', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_push_test"><button class="spe-btn" type="submit">' . esc_html__( 'Send a test alert', 'songpress' ) . '</button></form>'
+			. '<p class="spe-help">' . esc_html__( 'These people get a notification on their phone when something happens that you would otherwise only see on the desktop: someone forgot their password, or chose one from a link. Each person must open the app from their Home Screen and tap the bell once.', 'songpress' ) . '</p>';
+		return $o;
 	}
 
 	/** A Manager sends a message to one person or to everyone who turned notifications on. */
