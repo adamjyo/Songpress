@@ -96,7 +96,7 @@ if ( ! function_exists( 'wp_normalize_path' ) ) { function wp_normalize_path( $p
 if ( ! function_exists( 'wp_strip_all_tags' ) ) { function wp_strip_all_tags( $s ) { return strip_tags( (string) $s ); } }
 require_once __DIR__ . '/../includes/class-import.php';
 if ( ! function_exists( 'remove_accents' ) ) { function remove_accents( $s ) { return strtr( (string) $s, array( 'é' => 'e', 'è' => 'e', 'á' => 'a', 'ñ' => 'n', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o' ) ); } }
-if ( ! class_exists( 'Songpress_Editor', false ) ) { class Songpress_Editor { public static function edit_url( $id ) { return 'https://site.test/edit/' . (int) $id; } } }
+if ( ! class_exists( 'Songpress_Editor', false ) ) { class Songpress_Editor { public static function list_url() { return 'https://site.test/app/'; } public static function edit_url( $id ) { return 'https://site.test/edit/' . (int) $id; } } }
 require __DIR__ . '/../includes/class-names.php';
 require __DIR__ . '/../includes/class-backup.php';
 require __DIR__ . '/../includes/class-health.php';
@@ -629,6 +629,21 @@ check( 'notes screen: delete', array( Songpress_Journal::ajax_op( array( 'op' =>
 check( 'audit: known action', Songpress_Audit::classify( 'songpress_session_save' ), array( 'sessions', 'Saved a session' ) );
 check( 'audit: money action by prefix', Songpress_Audit::classify( 'songpress_money_import' ), array( 'money', 'Import' ) );
 check( 'audit: payment actions log themselves, not as plain entries', array( Songpress_Audit::classify( 'songpress_money_payment' ), Songpress_Audit::classify( 'songpress_money_payment_update' ), Songpress_Audit::classify( 'songpress_money_expense_add' ) ), array( null, null, null ) );
+// bands: the payee gets the band's DistroKid money less the performers' shares
+$bs = Songpress_Songs::create( array( 'title' => 'Band Song', 'artist' => 'Test Band' ), 1 );
+Songpress_Songs::replace_credits( $bs, array( array( 'role' => 'performer', 'name' => 'Lead Singer', 'share' => '25' ), array( 'role' => 'performer', 'name' => 'Drummer', 'share' => '' ) ) );
+$wpdb->insert( 'wp_songpress_earnings', array( 'song_id' => $bs, 'quarter' => '2026-Q1', 'src' => 'distrokid', 'amount' => 100 ) );
+Songpress_Profiles::upsert( 'band', 'Test Band', array( 'payee' => 'Pat Payee' ) );
+$br = Songpress_Money::band_rows( Songpress_Money::person_key( 'Pat Payee' ) );
+check( 'band payee gets earnings less performer shares (25% + default 25%)', array( count( $br ), round( $br[0]->total, 2 ) ), array( 1, 50.0 ) );
+$bd = Songpress_Money::band_detail();
+check( 'band detail shows earned, performers and what is left', array( round( $bd['test band']['rows']['2026-Q1']['gross'], 2 ), round( $bd['test band']['rows']['2026-Q1']['performers'], 2 ), round( $bd['test band']['rows']['2026-Q1']['net'], 2 ) ), array( 100.0, 50.0, 50.0 ) );
+if ( ! function_exists( 'wp_nonce_field' ) ) { function wp_nonce_field() { return ''; } }
+if ( ! function_exists( 'admin_url' ) ) { function admin_url( $p = '' ) { return '/wp-admin/' . $p; } }
+$bh = new ReflectionMethod( 'Songpress_Money', 'bands_html' ); $bh->setAccessible( true );
+check( 'bands section shows the band, its payee box and the quarter', array( false !== strpos( $bh->invoke( null ), 'Pays to' ), false !== strpos( $bh->invoke( null ), '2026-Q1' ), false !== strpos( $bh->invoke( null ), 'Pat Payee' ) ), array( true, true, true ) );
+Songpress_Profiles::upsert( 'band', 'Test Band', array( 'payee' => '' ) );
+check( 'clearing the payee stops the band money', Songpress_Money::band_rows(), array() );
 check( 'audit: unknown songpress action', Songpress_Audit::classify( 'songpress_zip_zap' ), array( 'other', 'Zip zap' ) );
 check( 'audit: ajax and foreign actions skipped', array( Songpress_Audit::classify( 'songpress_journal_ajax' ), Songpress_Audit::classify( 'save-post' ) ), array( null, null ) );
 check( 'audit: only identifying fields kept', Songpress_Audit::pick( array( 'title' => 'T', 'password' => 'x', 'pass1' => 'y', 'entry_id' => '4', 'empty' => '' ) ), array( 'entry_id' => '4', 'title' => 'T' ) );

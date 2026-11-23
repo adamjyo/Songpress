@@ -43,6 +43,14 @@ class Songpress_Profiles {
 				$in[ $k ] = 'bio' === $k || 'aliases' === $k ? sanitize_textarea_field( $f[ $k ] ) : ( 'website' === $k ? esc_url_raw( $f[ $k ] ) : sanitize_text_field( $f[ $k ] ) );
 			}
 		}
+		if ( array_key_exists( 'payee', $f ) ) {
+			$py = sanitize_text_field( (string) $f['payee'] );
+			if ( '' !== $py ) {
+				$in['payee'] = $py;
+			} elseif ( empty( $f['keep'] ) ) {
+				$in['payee'] = '';
+			}
+		}
 		if ( ! empty( $f['photo_id'] ) ) {
 			$in['photo_id']  = absint( $f['photo_id'] );
 			$in['photo_url'] = '';
@@ -198,7 +206,7 @@ class Songpress_Profiles {
 				if ( '' === $pick( $r, array( 'name' ) ) ) {
 					continue;
 				}
-				if ( self::upsert( 'band', $r['name'], array( 'photo_url' => $pick( $r, array( 'icon_url' ) ), 'bio' => $pick( $r, array( 'bio', 'notes' ) ), 'keep' => true ) ) ) {
+				if ( self::upsert( 'band', $r['name'], array( 'photo_url' => $pick( $r, array( 'icon_url' ) ), 'bio' => $pick( $r, array( 'bio', 'notes' ) ), 'payee' => in_array( strtolower( $pick( $r, array( 'pays_to' ) ) ), array( 'artist', 'performer' ), true ) ? '' : $pick( $r, array( 'pays_to' ) ), 'keep' => true ) ) ) {
 					$out['bands']++;
 				}
 			}

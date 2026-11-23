@@ -29,7 +29,7 @@ class Songpress_Money {
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
-		foreach ( array( 'import', 'pay', 'payment', 'payment_update', 'payment_delete', 'expense_add', 'expense_delete', 'stats_import' ) as $a ) {
+		foreach ( array( 'import', 'pay', 'payment', 'payment_update', 'payment_delete', 'expense_add', 'expense_delete', 'band_payee', 'stats_import' ) as $a ) {
 			add_action( 'admin_post_songpress_money_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
 	}
@@ -421,43 +421,88 @@ class Songpress_Money {
 		return $rows;
 	}
 
-	/**
-	 * What the bands a person is paid for have earned: the DistroKid earnings of every song released under each band whose profile names them as payee.
-	 * Rows of person_key, person, quarter, src ('band') and total; limited to one person when $only is a person key.
-	 */
-	public static function band_rows( $only = '' ) {
-		global $wpdb;
-		$pt    = self::t( 'profiles' );
-		$payee = array();
-		foreach ( (array) $wpdb->get_results( "SELECT name, name_key, aliases, payee FROM {$pt} WHERE kind = 'band' AND payee <> ''" ) as $b ) { // phpcs:ignore WordPress.DB
-			$k = self::person_key( $b->payee );
-			if ( '' === $k || ( '' !== $only && $k !== $only ) ) {
-				continue;
+	/** The part of a song's DistroKid money that goes to its performers (their shares, 25% each when none is set). Bands keep the rest. */
+	public static function performer_cut( $song_id ) {
+		static $cache = array();
+		$id = (int) $song_id;
+		if ( isset( $cache[ $id ] ) ) {
+			return $cache[ $id ];
+		}
+		$sum = 0.0;
+		foreach ( Songpress_Songs::credits( $id ) as $c ) {
+			if ( 'performer' === $c->role && '' !== trim( (string) $c->name ) ) {
+				$sum += null === $c->share || '' === $c->share ? 0.25 : max( 0.0, (float) $c->share / 100 );
 			}
-			$payee[ $b->name_key ] = array( $k, trim( $b->payee ) );
+		}
+		return $cache[ $id ] = min( 1.0, $sum );
+	}
+
+	/**
+	 * Every band's DistroKid money by quarter, with what is left for the band after its performers' shares.
+	 * Returns key => array( name, payee, rows => quarter => array( gross, performers, net ) ). Bands are matched by name or alias.
+	 */
+	public static function band_detail() {
+		global $wpdb;
+		$pt   = self::t( 'profiles' );
+		$map  = array();
+		$info = array();
+		foreach ( (array) $wpdb->get_results( "SELECT name, name_key, aliases, payee FROM {$pt} WHERE kind = 'band'" ) as $b ) { // phpcs:ignore WordPress.DB
+			$info[ $b->name_key ] = array( 'name' => $b->name, 'payee' => trim( (string) $b->payee ), 'rows' => array() );
+			$map[ $b->name_key ]  = $b->name_key;
 			foreach ( preg_split( '/[,\n]+/', (string) $b->aliases ) as $al ) {
 				$ak = Songpress_Profiles::key( $al );
 				if ( '' !== $ak ) {
-					$payee[ $ak ] = array( $k, trim( $b->payee ) );
+					$map[ $ak ] = $b->name_key;
 				}
 			}
 		}
-		if ( ! $payee ) {
-			return array();
+		$e = self::t( 'earnings' );
+		$s = self::t( 'songs' );
+		foreach ( (array) $wpdb->get_results( "SELECT e.song_id AS song_id, s.artist AS artist, e.quarter AS quarter, SUM(e.amount) AS total FROM {$e} e JOIN {$s} s ON s.id = e.song_id WHERE e.src = 'distrokid' AND s.artist <> '' GROUP BY e.song_id, s.artist, e.quarter" ) as $r ) { // phpcs:ignore WordPress.DB
+			$ak = Songpress_Profiles::key( $r->artist );
+			$k  = $map[ $ak ] ?? $ak;
+			if ( ! isset( $info[ $k ] ) ) {
+				$info[ $k ] = array( 'name' => trim( $r->artist ), 'payee' => '', 'rows' => array() );
+			}
+			$gross = (float) $r->total;
+			$perf  = round( $gross * self::performer_cut( $r->song_id ), 6 );
+			$cell  = $info[ $k ]['rows'][ $r->quarter ] ?? array( 'gross' => 0.0, 'performers' => 0.0, 'net' => 0.0 );
+			$cell['gross']      += $gross;
+			$cell['performers'] += $perf;
+			$cell['net']        += $gross - $perf;
+			$info[ $k ]['rows'][ $r->quarter ] = $cell;
 		}
-		$e   = self::t( 'earnings' );
-		$s   = self::t( 'songs' );
+		foreach ( $info as $k => $v ) {
+			if ( ! $v['rows'] ) {
+				unset( $info[ $k ] );
+			} else {
+				krsort( $info[ $k ]['rows'] );
+			}
+		}
+		uasort( $info, function ( $x, $y ) {
+			return strcmp( strtolower( $x['name'] ), strtolower( $y['name'] ) );
+		} );
+		return $info;
+	}
+
+	/**
+	 * What the bands a person is paid for have earned after their performers' shares: rows of person_key, person, quarter, src ('band') and total.
+	 * Limited to one person when $only is a person key.
+	 */
+	public static function band_rows( $only = '' ) {
 		$out = array();
-		foreach ( (array) $wpdb->get_results( "SELECT s.artist AS artist, e.quarter AS quarter, SUM(e.amount) AS total FROM {$e} e JOIN {$s} s ON s.id = e.song_id WHERE e.src = 'distrokid' AND s.artist <> '' GROUP BY s.artist, e.quarter" ) as $r ) { // phpcs:ignore WordPress.DB
-			$hit = $payee[ Songpress_Profiles::key( $r->artist ) ] ?? null;
-			if ( ! $hit ) {
+		foreach ( self::band_detail() as $b ) {
+			$k = '' === $b['payee'] ? '' : self::person_key( $b['payee'] );
+			if ( '' === $k || ( '' !== $only && $k !== $only ) ) {
 				continue;
 			}
-			$id = $hit[0] . '|' . $r->quarter;
-			if ( ! isset( $out[ $id ] ) ) {
-				$out[ $id ] = (object) array( 'person_key' => $hit[0], 'person' => $hit[1], 'quarter' => $r->quarter, 'src' => 'band', 'total' => 0.0 );
+			foreach ( $b['rows'] as $q => $c ) {
+				$id = $k . '|' . $q;
+				if ( ! isset( $out[ $id ] ) ) {
+					$out[ $id ] = (object) array( 'person_key' => $k, 'person' => $b['payee'], 'quarter' => $q, 'src' => 'band', 'total' => 0.0 );
+				}
+				$out[ $id ]->total += $c['net'];
 			}
-			$out[ $id ]->total += (float) $r->total;
 		}
 		return array_values( $out );
 	}
@@ -1147,6 +1192,63 @@ class Songpress_Money {
 		self::go( 'money', array( 'm_ok' => __( 'Expense removed.', 'songpress' ) ) );
 	}
 
+	public static function handle_band_payee() {
+		self::guard( 'songpress_money_band_payee' );
+		$in    = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- cleaned below.
+		$name  = sanitize_text_field( $in['band'] ?? '' );
+		$payee = sanitize_text_field( $in['payee'] ?? '' );
+		if ( '' === Songpress_Profiles::key( $name ) ) {
+			self::go( 'money', array( 'm_err' => __( 'Choose a band.', 'songpress' ) ) );
+		}
+		global $wpdb;
+		$t   = self::t( 'profiles' );
+		$old = (string) $wpdb->get_var( $wpdb->prepare( "SELECT payee FROM {$t} WHERE kind = 'band' AND name_key = %s", Songpress_Profiles::key( $name ) ) ); // phpcs:ignore WordPress.DB
+		Songpress_Profiles::upsert( 'band', $name, array( 'payee' => $payee ) );
+		if ( $old !== $payee ) {
+			Songpress_Audit::log( 'money', 'Changed a band payee', $name, array( 'payee' => array( '' !== $old ? $old : 'nobody', '' !== $payee ? $payee : 'nobody' ) ) );
+		}
+		self::go( 'money', array( 'm_ok' => '' === $payee ? sprintf( /* translators: %s: band */ __( '%s no longer pays anyone.', 'songpress' ), $name ) : sprintf( /* translators: 1: band, 2: person */ __( '%1$s now pays %2$s.', 'songpress' ), $name, $payee ) ) );
+	}
+
+	/** The Bands section under the persons: each band's DistroKid money by quarter, less its performers, and who is paid it. */
+	private static function bands_html() {
+		$bands = self::band_detail();
+		if ( ! $bands ) {
+			return '';
+		}
+		global $wpdb;
+		$people = array();
+		foreach ( (array) $wpdb->get_col( 'SELECT DISTINCT person FROM ' . self::t( 'person_earnings' ) . " WHERE person <> ''" ) as $n ) { // phpcs:ignore WordPress.DB
+			$people[ self::person_key( $n ) ] = $n;
+		}
+		foreach ( (array) $wpdb->get_col( 'SELECT name FROM ' . self::t( 'profiles' ) . " WHERE kind = 'person'" ) as $n ) { // phpcs:ignore WordPress.DB
+			$people[ self::person_key( $n ) ] = $people[ self::person_key( $n ) ] ?? $n;
+		}
+		asort( $people );
+		$dl = '<datalist id="spm-people">';
+		foreach ( $people as $n ) {
+			$dl .= '<option value="' . esc_attr( $n ) . '">';
+		}
+		$dl .= '</datalist>';
+		$o  = '<h3>' . esc_html__( 'Bands', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'DistroKid money for each band by quarter. The performers on a song take their share first; what is left goes to the person you pick, and shows on their card as Band.', 'songpress' ) . '</p>' . $dl . '<div class="spm-bands">';
+		foreach ( $bands as $b ) {
+			$gross = $perf = $net = 0.0;
+			foreach ( $b['rows'] as $c ) {
+				$gross += $c['gross'];
+				$perf  += $c['performers'];
+				$net   += $c['net'];
+			}
+			$o .= '<section class="spm-band"><header><b>' . esc_html( $b['name'] ) . '</b><small>' . esc_html( sprintf( /* translators: 1: statement total, 2: left for the band */ __( '%1$s earned · %2$s after performers', 'songpress' ), self::money( $gross ), self::money( $net ) ) ) . '</small></header>'
+				. self::form_open( 'songpress_money_band_payee', 'spm-payee' ) . '<input type="hidden" name="band" value="' . esc_attr( $b['name'] ) . '"><label><span>' . esc_html__( 'Pays to', 'songpress' ) . '</span><input name="payee" list="spm-people" value="' . esc_attr( $b['payee'] ) . '" placeholder="' . esc_attr__( 'nobody yet', 'songpress' ) . '"></label><button class="spe-save" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button></form>'
+				. '<div class="spm-vscroll"><table class="spm-bq"><thead><tr><th>' . esc_html__( 'Quarter', 'songpress' ) . '</th><th>' . esc_html__( 'Earned', 'songpress' ) . '</th><th>' . esc_html__( 'Performers', 'songpress' ) . '</th><th>' . esc_html__( 'To payee', 'songpress' ) . '</th></tr></thead><tbody>';
+			foreach ( $b['rows'] as $q => $c ) {
+				$o .= '<tr><td>' . esc_html( $q ) . '</td><td>' . esc_html( self::money( $c['gross'] ) ) . '</td><td>' . esc_html( self::money( $c['performers'] ) ) . '</td><td><b>' . esc_html( self::money( $c['net'] ) ) . '</b></td></tr>';
+			}
+			$o .= '</tbody><tfoot><tr><td>' . esc_html__( 'All time', 'songpress' ) . '</td><td>' . esc_html( self::money( $gross ) ) . '</td><td>' . esc_html( self::money( $perf ) ) . '</td><td><b>' . esc_html( self::money( $net ) ) . '</b></td></tr></tfoot></table></div></section>';
+		}
+		return $o . '</div>';
+	}
+
 	/* ---------- screens ---------- */
 
 	public static function form_open( $action, $class = '' ) {
@@ -1232,6 +1334,7 @@ class Songpress_Money {
 		}
 
 		$o .= self::people_html( $qs, $sel );
+		$o .= self::bands_html();
 
 		// expenses
 		$o .= '<h3>' . esc_html__( 'Expenses', 'songpress' ) . '</h3>' . self::form_open( 'songpress_money_expense_add', 'spm-exp' ) . '<div class="spe-grid">';
