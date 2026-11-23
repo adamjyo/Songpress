@@ -153,7 +153,7 @@ class Songpress_Editor {
 		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Add as many people as the song has.', 'songpress' ) ) . '</p>';
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 4, true, true, true );
 		if ( ! $root ) {
-			$o .= '<div class="spe-own">' . self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, false, false );
+			$o .= '<div class="spe-own">' . self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, true, false );
 			$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false ) . '</div>';
 		} else {
 			$o .= '<p class="spe-help">' . esc_html__( 'Performers and producers are added on each version. Changes here to the title, lyrics, chords, story, writers, publishers and labels are copied to every version.', 'songpress' ) . '</p>';
@@ -369,7 +369,7 @@ class Songpress_Editor {
 		$h   .= '<input class="' . ( $with_user ? '' : 'adv' ) . '" name="' . esc_attr( $n ) . '[ipi]" value="' . esc_attr( $c->ipi ?? '' ) . '" placeholder="IPI">';
 		if ( $with_share ) {
 			$share = ( isset( $c->share ) && null !== $c->share ) ? rtrim( rtrim( (string) $c->share, '0' ), '.' ) : '';
-			$h    .= '<input name="' . esc_attr( $n ) . '[share]" value="' . esc_attr( $share ) . '" inputmode="decimal" placeholder="%">';
+			$h    .= '<input name="' . esc_attr( $n ) . '[share]" value="' . esc_attr( $share ) . '" inputmode="decimal" placeholder="' . esc_attr( 'performer' === $role ? rtrim( rtrim( number_format( (float) Songpress_Money::rules()['performer_default'], 2, '.', '' ), '0' ), '.' ) . '%' : '%' ) . '" title="' . esc_attr( 'performer' === $role ? __( 'Performer share of this recording. Leave blank for the default set in Settings > Earnings.', 'songpress' ) : '' ) . '">';
 		} else {
 			$h .= '<span></span>';
 		}
