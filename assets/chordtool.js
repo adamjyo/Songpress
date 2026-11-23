@@ -103,6 +103,11 @@
       add(renderLine(line));
     });
     var C = window.SP_SHEET || {};
+    if (!meta.title && C.title) meta.title = C.title;
+    if (!meta.by.length && C.by) meta.by = [C.by];
+    if (!meta.key && C.key) meta.key = C.key;
+    if (!meta.tempo && C.tempo) meta.tempo = C.tempo;
+    if (!meta.time && C.time) meta.time = C.time;
     var by = meta.by.join(' | '), mt = [];
     if (meta.key) mt.push('Key - ' + meta.key);
     if (meta.tempo) mt.push('Tempo - ' + meta.tempo);
@@ -281,9 +286,13 @@
     var sh = document.getElementById('ct-sheet');
     if (!sh) { sh = document.createElement('div'); sh.id = 'ct-sheet'; document.body.appendChild(sh); }
     var fit = function () {
-      var sc = Math.min(1, (document.documentElement.clientWidth - 16) / 816);
-      sh.style.transform = 'scale(' + sc + ')';
-      document.getElementById('ct-sheetbox').style.height = Math.ceil(sh.offsetHeight * sc) + 'px';
+      var vw = document.documentElement.clientWidth, narrow = vw < 700;
+      document.body.classList.toggle('ct-narrow', narrow);
+      var sc = narrow ? 1 : Math.min(1, (vw - 16) / 816);
+      sh.style.transform = narrow ? 'none' : 'scale(' + sc + ')';
+      var hh = Math.ceil(sh.offsetHeight * sc);
+      document.getElementById('ct-sheetbox').style.height = hh + 'px';
+      window.parent.postMessage({ spSheetH: hh + 16 }, location.origin);
     };
     var paint = function (t) { ed.value = t; sh.innerHTML = buildSheet(t); fit(); };
     window.addEventListener('message', function (e) {
@@ -293,7 +302,9 @@
     window.addEventListener('resize', fit);
     var pb = document.getElementById('ct-sheet-print');
     if (pb) pb.addEventListener('click', function () { printSheet(); });
-    paint('');
+    var auto = window.SP_SHEET && typeof window.SP_SHEET.chart === 'string';
+    paint(auto ? window.SP_SHEET.chart : '');
+    if (auto && /[?&]print=1/.test(location.search)) setTimeout(printSheet, 400);
     window.parent.postMessage({ spSheetReady: 1 }, location.origin);
   }
 })();

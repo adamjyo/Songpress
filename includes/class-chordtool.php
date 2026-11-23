@@ -22,10 +22,16 @@ class Songpress_ChordTool {
 			'ccli'      => '',
 			'iswc'      => '',
 		);
-		$id = isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
-		if ( $id && is_user_logged_in() && Songpress_Caps::can_see_song( $id ) ) {
-			$s    = Songpress_Songs::get( $id );
-			$ids  = array( $id );
+		$id  = isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		$tok = isset( $_GET['t'] ) ? sanitize_text_field( wp_unslash( $_GET['t'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$ids = array();
+		$s   = null;
+		if ( '' !== $tok && ! $id ) {
+			// a shared link: the chart and header only, never the codes
+			$s = Songpress_Songs::by_token( $tok );
+		} elseif ( $id && is_user_logged_in() && Songpress_Caps::can_see_song( $id ) ) {
+			$s   = Songpress_Songs::get( $id );
+			$ids = array( $id );
 			if ( $s && (int) $s->family_id ) {
 				global $wpdb;
 				$root = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE family_id = %d AND version_no = 0 LIMIT 1', (int) $s->family_id ) );
@@ -33,6 +39,16 @@ class Songpress_ChordTool {
 					$ids[] = $root; // codes entered on the original work apply to every version
 				}
 			}
+		}
+		if ( $s ) {
+			$cfg['chart'] = (string) $s->chordpro;
+			$cfg['title'] = (string) Songpress_Songs::display_title( $s );
+			$cfg['by']    = str_replace( ', ', ' | ', (string) Songpress_Songs::authors_line( (int) $s->id, 0 ) );
+			$cfg['key']   = (string) $s->musical_key;
+			$cfg['tempo'] = (string) $s->tempo;
+			$cfg['time']  = (string) $s->time_signature;
+		}
+		if ( $ids ) {
 			foreach ( $ids as $sid ) {
 				foreach ( (array) Songpress_Songs::identifiers( $sid ) as $r ) {
 					$k = strtolower( (string) $r->kind );
@@ -63,7 +79,7 @@ class Songpress_ChordTool {
 		};
 		echo '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html__( 'ChordPro tool', 'songpress' ) . ' · ' . esc_html( get_bloginfo( 'name' ) ) . '</title><style id="ct-printcss">' . $css . '</style></head><body' . ( $embed ? ' class="ct-embed" data-embed="1"' : '' ) . ( $sheetview ? ' class="ct-sheetview" data-sheetview="1"' : '' ) . '>'; // phpcs:ignore WordPress.Security.EscapeOutput
 		if ( $sheetview ) {
-			echo '<div class="ct-sv-bar"><button type="button" class="ct-b ct-go" id="ct-sheet-print">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span class="ct-note">' . esc_html__( 'The sheet follows the ChordPro text above. Set the publisher line and logo in Settings > Chord sheet.', 'songpress' ) . '</span></div><div id="ct-sheetbox"><div id="ct-sheet"></div></div>';
+			echo ( isset( $_GET['nobar'] ) ? '' : '<div class="ct-sv-bar"><button type="button" class="ct-b ct-go" id="ct-sheet-print">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span class="ct-note">' . esc_html__( 'The sheet follows the ChordPro text above. Set the publisher line and logo in Settings > Chord sheet.', 'songpress' ) . '</span></div>' ) . '<div id="ct-sheetbox"><div id="ct-sheet"></div></div>';
 		}
 		echo '<header class="ct-top"><img src="' . esc_url( SONGPRESS_URL . 'assets/seal-amber.svg' ) . '" alt="" width="34" height="34"><h1>' . esc_html__( 'ChordPro tool', 'songpress' ) . '</h1><span class="ct-note">' . esc_html__( 'Works in your browser only. Nothing is saved on the server and it never touches the catalog.', 'songpress' ) . '</span></header>';
 		if ( $embed ) {
@@ -98,6 +114,6 @@ class Songpress_ChordTool {
 			. '.ct-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:18px}.ct-modal[hidden]{display:none}.ct-modal>div{background:#1b1721;border:1px solid #3a3342;border-radius:12px;padding:14px;width:min(720px,100%)}.ct-modal textarea{width:100%;background:#100e13;color:#ece7f0;border:1px solid #3a3342;border-radius:8px;font:14px ui-monospace,Menlo,monospace;padding:10px}'
 			. '.ct-go{background:#f5c04a;color:#1b1406;border-color:#f5c04a;font-weight:700}.ct-embed .ct-top,.ct-embed .ct-foot{display:none}.ct-embed #ct-text{min-height:56vh}'
 			. '.ct-foot{text-align:center;padding:12px;font-size:13px}.ct-foot a{color:#f5c04a}'
-			. '#ct-sheet{display:none}#ct-sheet .sh-head{position:relative;padding-right:150pt}#ct-sheet .sh-logo{position:absolute;right:0;top:0;max-width:140pt;max-height:44pt;object-fit:contain}#ct-sheet .sh-head h1{font-size:19pt;margin:0 0 3pt;font-weight:700;color:#000}#ct-sheet .sh-by{margin:0 0 2pt;font-size:8.5pt;color:#333}#ct-sheet .sh-mt{margin:0 0 14pt;font-size:8.5pt;font-weight:700;color:#000}#ct-sheet .sh-cols{column-count:2;column-gap:36pt}#ct-sheet .sh-sec{break-inside:avoid;margin:0 0 16pt}#ct-sheet .sh-sec h4{margin:0 0 4pt;font-size:8.5pt;font-weight:700;letter-spacing:0;color:#000}#ct-sheet .cl{display:flex;flex-wrap:wrap;align-items:flex-end;margin:0}#ct-sheet .cb{display:inline-flex;flex-direction:column;white-space:pre}#ct-sheet .cb i{font-style:normal;font-weight:700;color:#000;font-size:9.5pt;min-height:1.2em}#ct-sheet .cb i{padding-right:.55em}#ct-sheet .cb b{font-weight:400;font-size:9.5pt;color:#000}#ct-sheet .gap{height:5pt}#ct-sheet .sh-note{margin:2pt 0;font-size:8.5pt;font-style:italic}#ct-sheet .sh-foot{text-align:center;font-size:7.5pt;font-weight:700;color:#000}.ct-sheetview>*:not(.ct-sv-bar):not(#ct-sheetbox):not(script){display:none!important}.ct-sheetview{background:#2a2d33}.ct-sv-bar{display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap}#ct-sheetbox{position:relative;margin:0 8px 12px;overflow:hidden}.ct-sheetview #ct-sheet{display:block;position:absolute;left:0;top:0;width:816px;min-height:1056px;box-sizing:border-box;padding:48px 58px 72px;background:#fff;color:#000;font:11pt/1.25 Arial,Helvetica,sans-serif;transform-origin:0 0;box-shadow:0 2px 12px rgba(0,0,0,.5)}.ct-sheetview #ct-sheet .sh-foot{position:absolute;left:0;right:0;bottom:22px}@media print{body.ct-printing.ct-sheetview>#ct-sheetbox{display:block!important}.ct-sheetview{background:#fff}.ct-sv-bar{display:none!important}.ct-sheetview #ct-sheetbox{margin:0;height:auto!important;overflow:visible}.ct-sheetview #ct-sheet{position:static;width:auto;min-height:0;padding:0 0 .5in;box-shadow:none;transform:none!important}.ct-sheetview #ct-sheet .sh-foot{position:fixed;bottom:0}}@media print{@page{size:letter;margin:.5in .6in}body.ct-printing>*:not(#ct-sheet){display:none!important}body.ct-printing{background:#fff;color:#000;font:11pt/1.25 Arial,Helvetica,sans-serif}body.ct-printing #ct-sheet{display:block;color:#000;font-family:Arial,Helvetica,sans-serif;padding-bottom:.5in}#ct-sheet .sh-foot{position:fixed;left:0;right:0;bottom:0;text-align:center;font-size:7.5pt;font-weight:700;color:#000}}@media print{body{background:#fff;color:#000}.ct-top,.ct-bar,.ct-edit,.ct-foot,.ct-modal{display:none!important}.ct-main{display:block;padding:0}.chart{background:#fff;color:#000;border:0}.chart h1,.cb i{color:#000}.sec.chorus{background:none;border-left-color:#000}.ct-diag figure{background:#fff;border-color:#999}.ds{stroke:#444}.dd{fill:#000}.dn,.dx{fill:#000}.do{stroke:#000}}';
+			. '#ct-sheet{display:none}#ct-sheet .sh-head{position:relative;padding-right:150pt}#ct-sheet .sh-logo{position:absolute;right:0;top:0;max-width:140pt;max-height:44pt;object-fit:contain}#ct-sheet .sh-head h1{font-size:19pt;margin:0 0 3pt;font-weight:700;color:#000}#ct-sheet .sh-by{margin:0 0 2pt;font-size:8.5pt;color:#333}#ct-sheet .sh-mt{margin:0 0 14pt;font-size:8.5pt;font-weight:700;color:#000}#ct-sheet .sh-cols{column-count:2;column-gap:36pt}#ct-sheet .sh-sec{break-inside:avoid;margin:0 0 16pt}#ct-sheet .sh-sec h4{margin:0 0 4pt;font-size:8.5pt;font-weight:700;letter-spacing:0;color:#000}#ct-sheet .cl{display:flex;flex-wrap:wrap;align-items:flex-end;margin:0}#ct-sheet .cb{display:inline-flex;flex-direction:column;white-space:pre}#ct-sheet .cb i{font-style:normal;font-weight:700;color:#000;font-size:9.5pt;min-height:1.2em}#ct-sheet .cb i{padding-right:.55em}#ct-sheet .cb b{font-weight:400;font-size:9.5pt;color:#000}#ct-sheet .gap{height:5pt}#ct-sheet .sh-note{margin:2pt 0;font-size:8.5pt;font-style:italic}#ct-sheet .sh-foot{text-align:center;font-size:7.5pt;font-weight:700;color:#000}.ct-sheetview>*:not(.ct-sv-bar):not(#ct-sheetbox):not(script){display:none!important}.ct-sheetview{background:#2a2d33}.ct-sv-bar{display:flex;gap:10px;align-items:center;padding:8px 10px;flex-wrap:wrap}#ct-sheetbox{position:relative;margin:0 8px 12px;overflow:hidden}.ct-sheetview #ct-sheet{display:block;position:absolute;left:0;top:0;width:816px;min-height:1056px;box-sizing:border-box;padding:48px 58px 72px;background:#fff;color:#000;font:11pt/1.25 Arial,Helvetica,sans-serif;transform-origin:0 0;box-shadow:0 2px 12px rgba(0,0,0,.5)}.ct-sheetview #ct-sheet .sh-foot{position:absolute;left:0;right:0;bottom:22px}@media screen{body.ct-narrow #ct-sheet{position:relative!important;width:auto!important;min-height:0!important;padding:18px 16px 56px!important}body.ct-narrow #ct-sheet .sh-cols{column-count:1}body.ct-narrow #ct-sheet .sh-head{padding-right:0}body.ct-narrow #ct-sheet .sh-logo{position:static;display:block;margin:0 0 8px;max-height:40px}body.ct-narrow #ct-sheet .sh-foot{position:static!important;margin-top:18px}}@media print{body.ct-printing.ct-sheetview>#ct-sheetbox{display:block!important}.ct-sheetview{background:#fff}.ct-sv-bar{display:none!important}.ct-sheetview #ct-sheetbox{margin:0;height:auto!important;overflow:visible}.ct-sheetview #ct-sheet{position:static;width:auto;min-height:0;padding:0 0 .5in;box-shadow:none;transform:none!important}.ct-sheetview #ct-sheet .sh-foot{position:fixed;bottom:0}}@media print{@page{size:letter;margin:.5in .6in}body.ct-printing>*:not(#ct-sheet){display:none!important}body.ct-printing{background:#fff;color:#000;font:11pt/1.25 Arial,Helvetica,sans-serif}body.ct-printing #ct-sheet{display:block;color:#000;font-family:Arial,Helvetica,sans-serif;padding-bottom:.5in}#ct-sheet .sh-foot{position:fixed;left:0;right:0;bottom:0;text-align:center;font-size:7.5pt;font-weight:700;color:#000}}@media print{body{background:#fff;color:#000}.ct-top,.ct-bar,.ct-edit,.ct-foot,.ct-modal{display:none!important}.ct-main{display:block;padding:0}.chart{background:#fff;color:#000;border:0}.chart h1,.cb i{color:#000}.sec.chorus{background:none;border-left-color:#000}.ct-diag figure{background:#fff;border-color:#999}.ds{stroke:#444}.dd{fill:#000}.dn,.dx{fill:#000}.do{stroke:#000}}';
 	}
 }

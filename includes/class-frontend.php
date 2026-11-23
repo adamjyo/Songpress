@@ -453,6 +453,22 @@ class Songpress_Frontend {
 		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . ( wp_is_mobile() ? '' : self::tabs( 'catalog' ) ) . '</div>';
 	}
 
+	/** The ChordPro level as the printable chord sheet (the PDF layout), with print and share icons above it. */
+	private static function sheet_panel( $s, $uid ) {
+		$tool  = Songpress_ChordTool::url() . '&sheet=1';
+		$q     = $uid ? '&song=' . (int) $s->id : '&t=' . rawurlencode( (string) $s->share_token );
+		$share = '' !== (string) $s->share_token ? $tool . '&print=1&t=' . rawurlencode( (string) $s->share_token ) : '';
+		$ico   = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+		$o     = '<div class="songpress-sheetbar"><a class="songpress-sheetbtn" href="' . esc_url( $tool . $q . '&print=1' ) . '" target="_blank" rel="noopener" title="' . esc_attr__( 'Print or save as PDF', 'songpress' ) . '" aria-label="' . esc_attr__( 'Print or save as PDF', 'songpress' ) . '">' . $ico . '<path d="M7 9V3h10v6M7 17H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v7H7z"/></svg></a>';
+		if ( '' !== $share ) {
+			$o .= '<button type="button" class="songpress-sheetbtn" data-share="' . esc_url( $share ) . '" data-title="' . esc_attr( Songpress_Songs::display_title( $s ) ) . '" title="' . esc_attr__( 'Share the chord sheet', 'songpress' ) . '" aria-label="' . esc_attr__( 'Share the chord sheet', 'songpress' ) . '">' . $ico . '<path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg></button>';
+		}
+		$o .= '</div><iframe class="songpress-sheetframe" title="' . esc_attr__( 'Chord sheet', 'songpress' ) . '" src="' . esc_url( $tool . $q . '&nobar=1' ) . '" loading="lazy"></iframe>';
+		$o .= '<script>(function(){var r=document.currentScript.parentNode,f=r.querySelector("iframe"),b=r.querySelector("[data-share]");window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||!e.data.spSheetH||e.source!==f.contentWindow)return;f.style.height=e.data.spSheetH+"px"});'
+			. 'if(b)b.addEventListener("click",function(){var u=b.getAttribute("data-share"),t=b.getAttribute("data-title");if(navigator.share){navigator.share({title:t,url:u}).catch(function(){})}else if(navigator.clipboard){navigator.clipboard.writeText(u).then(function(){b.title="Link copied"})}else{window.prompt("",u)}})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped parts and a fixed script.
+		return $o;
+	}
+
 	/** The song itself: cover, audio, title, writers, chart. Shared by the logged-in view and the public share page. */
 	private static function song_body( $s, $uid, $top = '' ) {
 		$id = (int) $s->id;
@@ -508,7 +524,7 @@ class Songpress_Frontend {
 				}
 				$on   = $lk === $want;
 				$out .= '<button type="button" role="tab" class="songpress-tab' . ( $on ? ' on' : '' ) . '" data-lv="' . esc_attr( $lk ) . '" aria-selected="' . ( $on ? 'true' : 'false' ) . '">' . esc_html( $ll ) . '</button>';
-				$pan .= '<div class="songpress-panel" data-lv="' . esc_attr( $lk ) . '"' . ( $on ? '' : ' hidden' ) . '>' . ( 'chordpro' === $lk ? wp_kses_post( Songpress_ChordPro::render( $lv[ $lk ][0] ) ) : '<pre class="songpress-chart">' . esc_html( $lv[ $lk ][0] ) . '</pre>' ) . '</div>';
+				$pan .= '<div class="songpress-panel" data-lv="' . esc_attr( $lk ) . '"' . ( $on ? '' : ' hidden' ) . '>' . ( 'chordpro' === $lk ? self::sheet_panel( $s, $uid ) : '<pre class="songpress-chart">' . esc_html( $lv[ $lk ][0] ) . '</pre>' ) . '</div>';
 			}
 			$out .= '</div>' . $pan . '<script>(function(){var m=document.currentScript.parentNode,t=m.querySelectorAll(".songpress-tab");t.forEach(function(b){b.addEventListener("click",function(){t.forEach(function(x){var o=x===b;x.classList.toggle("on",o);x.setAttribute("aria-selected",o?"true":"false");});m.querySelectorAll(".songpress-panel").forEach(function(p){p.hidden=p.getAttribute("data-lv")!==b.getAttribute("data-lv");});});});})();</script>';
 		}

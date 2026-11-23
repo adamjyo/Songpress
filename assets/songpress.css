@@ -1051,3 +1051,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-st img{width:100%;height:100%;border-radius:12px}
 .songpress-top>.spe-streams .spe-st img,.songpress-topl .spe-st img{width:100%;height:100%}
 .spe-sheet{margin-top:10px}.spe-sheet summary{cursor:pointer;font-weight:600;margin-bottom:8px}.spe-sheet iframe{width:100%;height:640px;border:1px solid var(--sp-line,#2a2d33);border-radius:10px;background:#2a2d33}
+.songpress-sheetbar{display:flex;justify-content:flex-end;gap:10px;margin:0 0 8px}.songpress-sheetbtn{width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:transparent;border:1.5px solid var(--sp-accent,#f2a52c);color:var(--sp-accent,#f2a52c);cursor:pointer;padding:0;text-decoration:none}.songpress-sheetbtn:active{opacity:.7}
+.songpress-sheetframe{display:block;width:100%;height:560px;border:0;border-radius:10px;background:#2a2d33}

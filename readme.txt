@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.129
+Stable tag: 0.63.130
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.130 =
+* Work page: when a work has ChordPro, the chart is shown as the printable chord sheet (the PDF layout) at the top of the lyrics, with a print icon (print or Save as PDF) and a share icon (sends a link to the sheet). On phones the sheet reflows to one column at full size; printing keeps the two-column page.
 
 = 0.63.129 =
 * Fix: the Chord sheet publisher information and logo now save as soon as you change them. Before, they only saved if you pressed Save changes at the bottom of Settings, so leaving the page lost them.
