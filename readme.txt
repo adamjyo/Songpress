@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.131
+Stable tag: 0.63.132
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.132 =
+* The chord sheet is always the standard letter page with two columns of song sections, on phones too (it is scaled to fit the screen). The one-column phone layout is gone.
 
 = 0.63.131 =
 * Work page: a transpose tool sits above the chord sheet (down or up a half step, the key shown in the middle, a sharp/flat switch and a reset). It only appears with the ChordPro sheet and hides on the other lyric tabs. Print and share carry the transposed key, and the print and share links now open the sheet as a preview first.

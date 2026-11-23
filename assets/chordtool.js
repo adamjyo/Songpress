@@ -288,7 +288,7 @@
     var sh = document.getElementById('ct-sheet');
     if (!sh) { sh = document.createElement('div'); sh.id = 'ct-sheet'; document.body.appendChild(sh); }
     var fit = function () {
-      var vw = document.documentElement.clientWidth, narrow = vw < 700;
+      var vw = document.documentElement.clientWidth, narrow = false; /* always the standard letter page, two columns */
       document.body.classList.toggle('ct-narrow', narrow);
       var sc = narrow ? 1 : Math.min(1, (vw - 16) / 816);
       sh.style.transform = narrow ? 'none' : 'scale(' + sc + ')';
