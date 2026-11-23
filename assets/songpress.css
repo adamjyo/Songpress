@@ -987,3 +987,6 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app a.spe-toolico:hover{background:rgba(245,165,36,.14);border-color:var(--sp-accent,#f5a524)}
 
 .sp-app button.spe-topsave[hidden],.spe-topsave[hidden]{display:none!important}
+
+.sp-app .spe-topdel button.armed{width:auto;gap:8px;padding:0 14px;background:#d63638;border-color:#d63638;color:#fff;font-size:13px;font-weight:600;white-space:nowrap}
+.sp-app .spe-topdel .spe-delt[hidden]{display:none}
