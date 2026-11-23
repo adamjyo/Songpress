@@ -30,6 +30,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.63.63 =
+* People: send a password link. On a person's page, "Send a password link" makes a one-time link (copy it, or email it when they have an address). It opens a page where they choose their own password and signs them in; the same link works when someone forgets their password. It lapses after a week.
+* People: "Bring old accounts across" brings the old plugin's usernames and passwords over, so earlier users can sign in. Writers and contributors become Writers, members become Viewers.
+* The old addresses work: /desktop and /app both open the app (pages are made, or taken over if the old plugin left them), and old ?swp_view= links land on the matching screen.
+
 = 0.63.62 =
 * Settings > Earnings: shows how earnings are worked out and lets you change the numbers. Set the default performer share and whether bands pay out less their performers, recalculate DistroKid splits, and check any person song by song, with each performer share editable in place. Changes go in the activity log.
 
