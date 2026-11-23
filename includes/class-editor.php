@@ -175,7 +175,7 @@ class Songpress_Editor {
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
-			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::input( 'artist', __( 'Performing artist or band', 'songpress' ), $song );
+			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::artist_select( $song );
 			$rel .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' );
 			$rel .= '<datalist id="spe-genres">';
 			foreach ( Songpress_Songs::genres() as $gn ) {
@@ -311,6 +311,26 @@ class Songpress_Editor {
 		$o .= '</div><template>' . self::credit_row( $role, '__I__', null, $with_user, $with_share ) . '</template>';
 		$o .= '<button type="button" class="spe-add">+ ' . esc_html( $add_label ) . '</button></div>';
 		return $o;
+	}
+
+	/** Performing artist or band: a drop-down of the bands (People > Bands) and artists already set up. A value a work already has stays in the list. */
+	private static function artist_select( $song ) {
+		global $wpdb;
+		$cur   = trim( (string) self::f( $song, 'artist' ) );
+		$names = array();
+		foreach ( (array) $wpdb->get_col( 'SELECT name FROM ' . Songpress_Install::table( 'profiles' ) . " WHERE kind = 'band' ORDER BY name" ) as $n ) { // phpcs:ignore WordPress.DB
+			$names[] = (string) $n;
+		}
+		foreach ( Songpress_Artists::all() as $a ) {
+			$names[] = (string) $a->name;
+		}
+		$names = Songpress_Songs::merge_options( array(), array_merge( $names, array( $cur ) ) );
+		natcasesort( $names );
+		$o = '<option value=""></option>';
+		foreach ( $names as $n ) {
+			$o .= '<option value="' . esc_attr( $n ) . '"' . selected( strtolower( $cur ), strtolower( $n ), false ) . '>' . esc_html( $n ) . '</option>';
+		}
+		return '<label class="spe-field"><span>' . esc_html__( 'Performing artist or band', 'songpress' ) . '</span><select name="artist">' . $o . '</select></label>';
 	}
 
 	/** The ISRC belongs to one recording, so it sits with the Release details. A second value gets its own field labelled "Alt". */

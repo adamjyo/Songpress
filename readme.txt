@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.108
+Stable tag: 0.63.109
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.109 =
+* Works editor: Performing artist or band is now a drop-down filled from the bands and artists lists. A value a work already has stays in the list.
 
 = 0.63.108 =
 * Works editor: the ISRC is now entered with the Release details, not under Publishing.
