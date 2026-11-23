@@ -148,7 +148,8 @@
     function range(i, j) { var t = 0; for (var k = i; k < j; k++) t += hs[k]; return t; }
     var plan = []; /* pages: [[colA indexes], [colB indexes]] */
     var fitsOne = false, pick = -1;
-    if (secs.length > 1) {
+    if (total <= avail1) pick = secs.length; /* everything fits in the first column: leave it there */
+    else if (secs.length > 1) {
       if (ch > -1 && ch < secs.length - 1 && range(0, ch + 1) <= avail1 && range(ch + 1, secs.length) <= avail1) pick = ch + 1;
       else { var bm = 1e9; for (var k = 1; k < secs.length; k++) { var m = Math.max(range(0, k), range(k, secs.length)); if (m <= avail1 && m < bm) { bm = m; pick = k; } } }
     }

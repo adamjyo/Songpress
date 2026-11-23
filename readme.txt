@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.134
+Stable tag: 0.63.135
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.135 =
+* Chord sheet: if everything fits in the first column, it stays in the first column.
 
 = 0.63.134 =
 * Chord sheet: the two columns are laid out by whole sections, so a section is never split and no stray lines are left in column two. If the song fits the page, column two starts after the first chorus (or at the most even section break); a longer song fills column one, then column two, then the next page.
