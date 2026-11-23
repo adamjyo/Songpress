@@ -11,6 +11,7 @@ class Songpress_Persons {
 	public static function init() {
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
 		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
+		add_action( 'admin_post_songpress_person_delete', array( __CLASS__, 'handle_delete' ) );
 	}
 
 	public static function url( $args = array() ) {
@@ -175,6 +176,59 @@ class Songpress_Persons {
 		self::go( array( 'sp_saved' => rawurlencode( sprintf( /* translators: 1: renamed 2: merged */ __( 'Tidied logins: %1$d renamed, %2$d duplicates merged into the account with the plain login.', 'songpress' ), $ren, $mer ) ) ) );
 	}
 
+	/** The trash can on a person: one form for the page, buttons point at it. The first press arms it, the second deletes. */
+	private static function del_button( $name ) {
+		return '<button type="submit" form="sp-person-del" name="person" value="' . esc_attr( Songpress_Profiles::key( $name ) ) . '" class="spe-trash" data-name="' . esc_attr( $name ) . '" title="' . esc_attr__( 'Delete this person', 'songpress' ) . '" aria-label="' . esc_attr( sprintf( /* translators: %s: name */ __( 'Delete %s', 'songpress' ), $name ) ) . '"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12M9 7V4h6v3"/></svg></button>';
+	}
+
+	private static function del_form() {
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			return '';
+		}
+		return '<form method="post" id="sp-person-del" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_person_delete', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_person_delete"></form>'
+			. '<script>(function(){var f=document.getElementById("sp-person-del"),armed=null,tm;if(!f)return;f.addEventListener("submit",function(e){var b=e.submitter;if(!b||!b.classList.contains("spe-trash"))return;if(armed!==b){e.preventDefault();if(armed)armed.classList.remove("armed");armed=b;b.classList.add("armed");b.title="Click again to delete "+b.getAttribute("data-name");clearTimeout(tm);tm=setTimeout(function(){b.classList.remove("armed");armed=null},4000)}})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed script.
+	}
+
+	/** Remove a person: their profile and their SongPress access. Their login account is kept, and a person who is credited on songs or has earnings is not deleted (that would orphan the credits and the money). */
+	public static function handle_delete() {
+		check_admin_referer( 'songpress_person_delete' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		global $wpdb;
+		$key = sanitize_text_field( wp_unslash( $_POST['person'] ?? '' ) );
+		$all = self::rows();
+		if ( '' === $key || ! isset( $all[ $key ] ) ) {
+			self::go( array( 'sp_err' => rawurlencode( __( 'That person was not found.', 'songpress' ) ) ) );
+		}
+		$r    = $all[ $key ];
+		$name = $r['name'];
+		$u    = $r['user'];
+		if ( $u && ( Songpress_Caps::is_wp_admin( $u->ID ) || get_current_user_id() === (int) $u->ID ) ) {
+			self::go( array( 'sp_err' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s is a manager or is you, so they cannot be deleted here.', 'songpress' ), $name ) ) ) );
+		}
+		$ct    = Songpress_Install::table( 'credits' );
+		$uid   = $u ? (int) $u->ID : 0;
+		$count = 0;
+		foreach ( (array) $wpdb->get_results( "SELECT name, user_id FROM {$ct}" ) as $c ) { // phpcs:ignore WordPress.DB
+			if ( Songpress_Profiles::key( $c->name ) === $key || ( $uid && (int) $c->user_id === $uid ) ) {
+				++$count;
+			}
+		}
+		$earn = abs( self::total_for( $name ) );
+		if ( $count || $earn > 0.004 ) {
+			self::go( array( 'sp_err' => rawurlencode( sprintf( /* translators: 1: name 2: credits */ __( '%1$s is credited on %2$d songs or has earnings, so they were not deleted. Take them off the songs first, or rename them to the person they should become.', 'songpress' ), $name, $count ) ) ) );
+		}
+		if ( $r['profile'] ) {
+			$wpdb->delete( Songpress_Install::table( 'profiles' ), array( 'id' => (int) $r['profile']->id ) );
+			Songpress_Profiles::reset_cache();
+		}
+		if ( $u ) {
+			Songpress_Caps::assign( (int) $u->ID, '' );
+		}
+		self::go( array( 'sp_saved' => rawurlencode( sprintf( /* translators: %s: name */ __( '%s was deleted.', 'songpress' ), $name ) . ( $u ? ' ' . __( 'Their login was kept but no longer has access to SongPress.', 'songpress' ) : '' ) ) ) );
+	}
+
 	/* ---------- rename ---------- */
 
 	private static function go( $args ) {
@@ -253,7 +307,7 @@ class Songpress_Persons {
 		}
 		$one = isset( $_GET['person'] ) ? Songpress_Profiles::key( sanitize_text_field( wp_unslash( $_GET['person'] ) ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
 		$all = self::rows();
-		return '' !== $one && isset( $all[ $one ] ) ? self::render_one( $all[ $one ] ) : self::render_list( $all );
+		return ( '' !== $one && isset( $all[ $one ] ) ? self::render_one( $all[ $one ] ) : self::render_list( $all ) ) . self::del_form();
 	}
 
 	private static function notes() {
@@ -297,7 +351,7 @@ class Songpress_Persons {
 			} else {
 				$o .= '<span><small>' . esc_html__( 'Open the person to give them a login', 'songpress' ) . '</small></span><span></span>';
 			}
-			$o .= '<span class="n">' . esc_html( $earn ) . '</span></div>';
+			$o .= '<span class="n">' . esc_html( $earn ) . ' ' . self::del_button( $r['name'] ) . '</span></div>';
 		}
 		return $o . '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html__( 'Save changes', 'songpress' ) . '</button></div></form></div>';
 	}
@@ -316,7 +370,7 @@ class Songpress_Persons {
 			}
 		}
 		$o  = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . Songpress_Profiles::chip( $name, 40, 'person' ) . esc_html( $name ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></div>' . self::notes();
-		$o .= '<p>' . ( $r['profile'] ? '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => (int) $r['profile']->id, 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Edit photo, bio, contact and IPI', 'songpress' ) . '</a>' : '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a profile', 'songpress' ) . '</a>' ) . '</p>';
+		$o .= '<p>' . self::del_button( $name ) . ' ' . ( $r['profile'] ? '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => (int) $r['profile']->id, 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Edit photo, bio, contact and IPI', 'songpress' ) . '</a>' : '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a profile', 'songpress' ) . '</a>' ) . '</p>';
 
 		$o .= '<h3>' . esc_html__( 'Name and login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false )
 			. '<input type="hidden" name="action" value="songpress_person_rename"><input type="hidden" name="uid" value="' . (int) ( $u ? $u->ID : 0 ) . '"><input type="hidden" name="old" value="' . esc_attr( $name ) . '">'
