@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.75
+Stable tag: 0.63.76
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.76 =
+* Turning on notifications now shows a clear step-by-step panel: how to add SongPress to the iPhone Home Screen, where to allow notifications in the phone's settings, and what to check if nothing appears.
 
 = 0.63.75 =
 * The notification test buttons (Settings and People) work in place and show the answer beside the button instead of loading the homepage.

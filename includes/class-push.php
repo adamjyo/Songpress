@@ -591,10 +591,28 @@ JS;
 			'nonce'  => wp_create_nonce( 'songpress_push' ),
 			'on'     => __( 'Notifications are on. Tap to turn them off.', 'songpress' ),
 			'off'    => __( 'Notifications are off. Tap to turn them on.', 'songpress' ),
-			'ios'    => __( 'To get notifications, tap Share, then Add to Home Screen, and open SongPress from your Home Screen.', 'songpress' ),
-			'denied' => wp_is_mobile() ? __( 'Notifications are blocked. Allow them for SongPress in your phone settings.', 'songpress' ) : __( 'Notifications are blocked for this site in your browser. Click the lock or site-settings icon beside the address (in Safari: Safari menu, Settings, Websites, Notifications), set this site to Allow, then reload and click the bell again.', 'songpress' ),
+			'ok'     => __( 'OK', 'songpress' ),
+			'ios'    => array(
+				__( 'Add SongPress to your Home Screen first', 'songpress' ),
+				__( 'iPhone only allows notifications for apps on the Home Screen.', 'songpress' ),
+				__( '1. In Safari, tap the Share button (the square with an arrow).', 'songpress' ),
+				__( '2. Tap Add to Home Screen, then Add.', 'songpress' ),
+				__( '3. Close Safari and open SongPress from its new Home Screen icon.', 'songpress' ),
+				__( '4. Tap the bell and choose Allow. SongPress then appears in Settings > Notifications.', 'songpress' ),
+			),
+			'denied' => wp_is_mobile() ? array(
+				__( 'Notifications are blocked', 'songpress' ),
+				__( 'iPhone: open Settings > Notifications > SongPress and turn on Allow Notifications. If SongPress is not in that list, delete the Home Screen icon, add SongPress to the Home Screen again, open it and tap the bell.', 'songpress' ),
+				__( 'Android: open Chrome, tap the menu > Settings > Site settings > Notifications, and allow this site.', 'songpress' ),
+			) : array(
+				__( 'Notifications are blocked in this browser', 'songpress' ),
+				__( 'Click the lock or site-settings icon beside the address (in Safari: Safari menu > Settings > Websites > Notifications), set this site to Allow, then reload and click the bell again.', 'songpress' ),
+			),
 			'fail'   => __( 'Could not turn notifications on:', 'songpress' ),
-			'test'   => __( 'Notifications are on. A test was sent.', 'songpress' ),
+			'test'   => array(
+				__( 'Notifications are on', 'songpress' ),
+				__( 'A test was sent. If nothing appeared, check Settings > Notifications > SongPress (iPhone) or the site settings in Chrome (Android), and allow banners and sounds.', 'songpress' ),
+			),
 		) );
 		return '<script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
 	}
@@ -604,7 +622,7 @@ JS;
 var bells=Array.prototype.slice.call(document.querySelectorAll('.sp-bell'));if(!bells.length)return;
 var ios=/iphone|ipad|ipod/i.test(navigator.userAgent),app=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
 var ok='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
-function say(t){bells.forEach(function(b){var m=b.nextElementSibling;if(m&&m.classList.contains('sp-bell-msg')){m.textContent=t;m.hidden=!t}})}
+function say(t){var old=document.getElementById('sp-sheet');if(old)old.remove();if(!t)return;var L=Array.isArray(t)?t:[t],d=document.createElement('div');d.id='sp-sheet';d.setAttribute('role','dialog');d.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;padding:16px';var c=document.createElement('div');c.style.cssText='background:#1b1e24;color:#f2f3f5;max-width:420px;width:100%;border-radius:14px;padding:18px 18px 14px;font:15px/1.45 -apple-system,system-ui,sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.5)';L.forEach(function(x,i){var p=document.createElement(i?'p':'h3');p.textContent=x;p.style.cssText=i?'margin:8px 0':'margin:0 0 6px;font-size:17px';c.appendChild(p)});var o=document.createElement('button');o.type='button';o.textContent=C.ok;o.style.cssText='margin-top:10px;width:100%;padding:12px;border:0;border-radius:10px;background:#f5a524;color:#111;font-weight:600;font-size:16px';o.onclick=function(){d.remove()};c.appendChild(o);d.appendChild(c);d.addEventListener('click',function(e){if(e.target===d)d.remove()});document.body.appendChild(d)}
 function key(s){var p=(s+'==='.slice((s.length+3)%4)).replace(/-/g,'+').replace(/_/g,'/'),r=atob(p),a=new Uint8Array(r.length);for(var i=0;i<r.length;i++)a[i]=r.charCodeAt(i);return a}
 function post(o){var f=new FormData();f.append('action','songpress_push');f.append('nonce',C.nonce);for(var k in o)f.append(k,o[k]);return fetch(C.ajax,{method:'POST',body:f,credentials:'same-origin'}).then(function(r){return r.json()})}
 if(!ok){if(ios&&!app){bells.forEach(function(b){b.hidden=false;b.addEventListener('click',function(){say(C.ios)})})}return}
@@ -618,7 +636,7 @@ bells.forEach(function(b){b.addEventListener('click',function(e){e.preventDefaul
  Notification.requestPermission().then(function(p){
   if(p!=='granted'){say(C.denied);return}
   return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(C.key)}).then(function(s){return post({mode:'add',endpoint:s.endpoint})}).then(function(){show(true);return post({mode:'test'})}).then(function(){say(C.test)});
- }).catch(function(e){say(C.fail+' '+(e&&e.message?e.message:''))});
+ }).catch(function(e){say([C.fail,(e&&e.message?e.message:'')])});
 })});
 JS;
 	}
