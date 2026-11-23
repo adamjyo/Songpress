@@ -610,8 +610,26 @@ class Songpress_Money {
 		return $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE paid = 1 AND kind = 'writer' AND party_key = %s ORDER BY pay_year DESC, pay_quarter DESC", $key ) ); // phpcs:ignore WordPress.DB
 	}
 
+	/** Money that went out, by quarter: payouts (paid payments, counted toward the quarter chosen) and expenses (by the date spent). quarter => array( 'pay' => x, 'exp' => y ). */
+	public static function outflow_by_quarter() {
+		global $wpdb;
+		$out = array();
+		$pt  = self::t( 'payments' );
+		foreach ( (array) $wpdb->get_results( "SELECT pay_year, pay_quarter, SUM(amount) AS total FROM {$pt} WHERE paid = 1 GROUP BY pay_year, pay_quarter" ) as $r ) { // phpcs:ignore WordPress.DB
+			$out[ (int) $r->pay_year . '-Q' . (int) $r->pay_quarter ]['pay'] = (float) $r->total;
+		}
+		$et = self::t( 'expenses' );
+		foreach ( (array) $wpdb->get_results( "SELECT spent_on, amount FROM {$et}" ) as $r ) { // phpcs:ignore WordPress.DB
+			if ( preg_match( '/^(\d{4})-(\d{2})/', (string) $r->spent_on, $m ) ) {
+				$q = (int) $m[1] . '-Q' . (int) ceil( (int) $m[2] / 3 );
+				$out[ $q ]['exp'] = ( $out[ $q ]['exp'] ?? 0 ) + (float) $r->amount;
+			}
+		}
+		return $out;
+	}
+
 	/** Stacked columns, one per quarter, split by income stream. Plain HTML and CSS, with a table view under it. */
-	private static function quarter_chart( array $grid, array $cols ) {
+	private static function quarter_chart( array $grid, array $cols, array $outq = array() ) {
 		$streams = array();
 		foreach ( self::SOURCES as $sk => $label ) {
 			foreach ( $grid as $bys ) {
@@ -625,9 +643,20 @@ class Songpress_Money {
 		foreach ( $cols as $q ) {
 			$max = max( $max, array_sum( $grid[ $q ] ?? array() ) );
 		}
-		if ( ! $streams || $max <= 0 ) {
+		$hasout = false;
+		foreach ( $cols as $q ) {
+			$max = max( $max, ( $outq[ $q ]['pay'] ?? 0 ) + ( $outq[ $q ]['exp'] ?? 0 ) );
+			if ( ! empty( $outq[ $q ] ) ) {
+				$hasout = true;
+			}
+		}
+		if ( $max <= 0 ) {
 			return '';
 		}
+		$outs = array(
+			'pay' => array( 's5', __( 'Payouts', 'songpress' ) ),
+			'exp' => array( 's6', __( 'Expenses', 'songpress' ) ),
+		);
 		$pw   = pow( 10, floor( log10( $max ) ) );
 		$f    = $max / $pw;
 		$step = ( $f <= 1 ? 0.25 : ( $f <= 2 ? 0.5 : ( $f <= 5 ? 1 : 2 ) ) ) * $pw;
@@ -635,10 +664,15 @@ class Songpress_Money {
 		$fmt  = function ( $v ) {
 			return $v >= 10000 ? '$' . round( $v / 1000 ) . 'K' : ( $v >= 1000 && 0 === (int) $v % 1000 ? '$' . ( (int) $v / 1000 ) . 'K' : '$' . number_format( $v, $v < 100 && $v != floor( $v ) ? 2 : 0 ) );
 		};
-		$o  = '<section class="spm-block spm-chart" role="group" aria-label="' . esc_attr__( 'Earnings by quarter and income stream', 'songpress' ) . '"><ul class="spm-legend">';
+		$o  = '<section class="spm-block spm-chart" role="group" aria-label="' . esc_attr__( 'Money in and out by quarter', 'songpress' ) . '"><ul class="spm-legend">';
 		$i  = 0;
 		foreach ( $streams as $sk => $label ) {
 			$o .= '<li><i class="spm-sw s' . ( ++$i ) . '"></i>' . esc_html( $label ) . '</li>';
+		}
+		if ( $hasout ) {
+			foreach ( $outs as $ok => $od ) {
+				$o .= '<li class="spm-out"><i class="spm-sw ' . $od[0] . '"></i>' . esc_html( $od[1] ) . '</li>';
+			}
 		}
 		$o .= '</ul><div class="spm-plot"><div class="spm-yaxis">';
 		for ( $t = $top; $t >= 0; $t -= $step ) {
@@ -650,7 +684,7 @@ class Songpress_Money {
 		}
 		foreach ( $cols as $q ) {
 			$tot = array_sum( $grid[ $q ] ?? array() );
-			$o  .= '<div class="spm-col"><div class="spm-stack" style="height:' . round( 100 * $tot / $top, 2 ) . '%"><b class="spm-cap">' . ( $tot ? esc_html( $fmt( $tot ) ) : '' ) . '</b>';
+			$o  .= '<div class="spm-col"><div class="spm-pair"><div class="spm-stack" style="height:' . round( 100 * $tot / $top, 2 ) . '%"><b class="spm-cap">' . ( $tot ? esc_html( $fmt( $tot ) ) : '' ) . '</b>';
 			$i   = 0;
 			foreach ( $streams as $sk => $label ) {
 				++$i;
@@ -659,7 +693,19 @@ class Songpress_Money {
 					$o .= '<span class="spm-seg s' . $i . '" style="flex:' . round( $v, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . $label . ': ' . self::money( $v ) ) . '"></span>';
 				}
 			}
-			$o  .= '</div><em>' . esc_html( $q ) . '</em></div>';
+			$o .= '</div>';
+			if ( $hasout ) {
+				$ot = ( $outq[ $q ]['pay'] ?? 0 ) + ( $outq[ $q ]['exp'] ?? 0 );
+				$o .= '<div class="spm-stack spm-outs" style="height:' . round( 100 * $ot / $top, 2 ) . '%">';
+				foreach ( $outs as $ok => $od ) {
+					$v = $outq[ $q ][ $ok ] ?? 0;
+					if ( $v > 0 ) {
+						$o .= '<span class="spm-seg ' . $od[0] . '" style="flex:' . round( $v, 2 ) . ' 1 0" data-tip="' . esc_attr( $q . ' · ' . $od[1] . ': ' . self::money( $v ) ) . '"></span>';
+					}
+				}
+				$o .= '</div>';
+			}
+			$o .= '</div><em>' . esc_html( $q ) . '</em></div>';
 		}
 		$o .= '</div></div><details class="spm-tv"><summary>' . esc_html__( 'Table view', 'songpress' ) . '</summary><div class="spm-scroll"><table class="spm-table spm-income"><thead><tr><th></th>';
 		foreach ( $cols as $q ) {
@@ -678,11 +724,24 @@ class Songpress_Money {
 			}
 			$o .= '<td class="n">' . esc_html( self::money( $at ) ) . '</td></tr>';
 		}
-		$o .= '<tr class="spm-tot"><td>' . esc_html__( 'Total', 'songpress' ) . '</td>';
+		$o .= '<tr class="spm-tot"><td>' . esc_html__( 'Total income', 'songpress' ) . '</td>';
 		foreach ( $cols as $q ) {
 			$o .= '<td class="n">' . esc_html( self::money( array_sum( $grid[ $q ] ?? array() ) ) ) . '</td>';
 		}
-		$o .= '<td class="n"><b>' . esc_html( self::money( self::earned_total() ) ) . '</b></td></tr></tbody></table></div></details><div class="spm-tip" hidden></div></section>';
+		$o .= '<td class="n"><b>' . esc_html( self::money( self::earned_total() ) ) . '</b></td></tr>';
+		foreach ( $outs as $ok => $od ) {
+			$at = 0;
+			foreach ( $outq as $v ) {
+				$at += $v[ $ok ] ?? 0;
+			}
+			$o .= '<tr class="spm-sub"><td>' . esc_html( $od[1] ) . '</td>';
+			foreach ( $cols as $q ) {
+				$v  = $outq[ $q ][ $ok ] ?? 0;
+				$o .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
+			}
+			$o .= '<td class="n">' . esc_html( self::money( $at ) ) . '</td></tr>';
+		}
+		$o .= '</tbody></table></div></details><div class="spm-tip" hidden></div></section>';
 		$o .= '<script>(function(){var c=document.querySelector(".spm-chart");if(!c)return;var t=c.querySelector(".spm-tip");c.addEventListener("mousemove",function(e){var s=e.target.closest("[data-tip]");if(!s){t.hidden=true;return}t.textContent=s.getAttribute("data-tip");t.hidden=false;var r=c.getBoundingClientRect();t.style.left=Math.min(e.clientX-r.left+12,r.width-t.offsetWidth-8)+"px";t.style.top=(e.clientY-r.top-34)+"px"});c.addEventListener("mouseleave",function(){t.hidden=true})}());</script>';
 		return $o;
 	}
@@ -949,10 +1008,13 @@ class Songpress_Money {
 		foreach ( self::by_quarter() as $r ) {
 			$grid[ $r->quarter ][ $r->src ] = (float) $r->total;
 		}
-		if ( $grid ) {
+		$outq = self::outflow_by_quarter();
+		if ( $grid || $outq ) {
 			$all  = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
-			$cols = array_reverse( $all ? $qs : array_slice( $qs, 0, 8 ) );
-			$o   .= '<h3>' . esc_html__( 'All earnings by quarter', 'songpress' ) . '</h3>' . self::quarter_chart( $grid, $cols );
+			$qall = array_unique( array_merge( $qs, array_keys( $outq ) ) );
+			rsort( $qall );
+			$cols = array_reverse( $all ? $qall : array_slice( $qall, 0, 8 ) );
+			$o   .= '<h3>' . esc_html__( 'Money in and out by quarter', 'songpress' ) . '</h3>' . self::quarter_chart( $grid, $cols, $outq );
 		}
 
 		// top songs
