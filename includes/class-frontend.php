@@ -325,13 +325,13 @@ class Songpress_Frontend {
 				$faces     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 75, 'person' ) . '</span>';
 			}
 			$band = '' !== trim( (string) $s->artist ) ? '<span class="songpress-icon songpress-bandicon" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 75, 'band' ) . '</span>' : '';
-			if ( ! $desktop ) { // phones: a card with the cover art on the right; number, release title and artist on the left, style at the far right
+			if ( ! $desktop ) { // phones: a card with the cover art on the right; number, release title and artist on the left, genre at the far right
 				$rel   = 0 === (int) $s->version_no ? $s->title : $s->release_title; // only an original work shows the work name; a version shows its release title
 				$none  = ( 0 !== (int) $s->version_no && '' === trim( (string) $rel ) );
 				if ( $none ) {
-					$rel = Songpress_Songs::display_title( $s ); // no release title yet: show the work name (its style is on the card too)
+					$rel = Songpress_Songs::display_title( $s ); // no release title yet: show the work name (its genre is on the card too)
 				}
-				$out  .= '<li class="songpress-card">' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->style ) ? '<span class="songpress-cardstyle">' . esc_html( $s->style ) . '</span>' : '' ) . '</span></span></a></li>';
+				$out  .= '<li class="songpress-card">' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->genre ) ? '<span class="songpress-cardstyle">' . esc_html( $s->genre ) . '</span>' : '' ) . '</span></span></a></li>';
 				continue;
 			}
 			$out .= '<li class="songpress-row">' . ( $bulk ? '<input type="checkbox" class="songpress-pick" name="ids[]" value="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Select %s', 'songpress' ), $s->title ) ) . '">' : '' ) . $art . '<a class="songpress-rowlink" href="' . $link . '">'
@@ -463,7 +463,7 @@ class Songpress_Frontend {
 			$out .= '<h2>' . esc_html( $name ) . '</h2>';
 		} elseif ( '' !== trim( (string) Songpress_Songs::display_title( $s ) ) ) {
 			// a version with no release title yet: the work name, and its style
-			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>' . ( '' !== trim( (string) $s->style ) ? '<p class="songpress-sub">' . esc_html( $s->style ) . '</p>' : '' );
+			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>' . ( '' !== trim( (string) $s->genre ) ? '<p class="songpress-sub">' . esc_html( $s->genre ) . '</p>' : '' );
 		}
 		if ( '' !== trim( (string) $s->artist ) ) {
 			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 28, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
