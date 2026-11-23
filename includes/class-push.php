@@ -268,6 +268,10 @@ JS;
 			update_user_meta( $uid, self::SUBS, array_values( array_diff( $subs, array( $ep ) ) ) );
 			wp_send_json_success();
 		}
+		if ( 'done' === $mode ) {
+			self::mark_done( $uid, sanitize_text_field( wp_unslash( $_POST['id'] ?? '' ) ) );
+			wp_send_json_success( array( 'count' => self::unread( $uid ) ) );
+		}
 		if ( 'count' === $mode ) {
 			wp_send_json_success( array( 'count' => self::unread( $uid ) ) );
 		}
@@ -315,13 +319,11 @@ JS;
 			}
 			$o .= '</li>';
 		}
-		return $o . '</ul></div>';
+		$cfg = wp_json_encode( array( 'ajax' => admin_url( 'admin-ajax.php' ), 'nonce' => wp_create_nonce( 'songpress_push' ) ) );
+		return $o . '</ul><script>(function(){var C=' . $cfg . ',box=document.querySelector(".sp-notes");if(!box)return;box.addEventListener("submit",function(e){var f=e.target;if(!f.querySelector("[name=id]"))return;e.preventDefault();var id=f.querySelector("[name=id]").value,fd=new FormData();fd.append("action","songpress_push");fd.append("nonce",C.nonce);fd.append("mode","done");fd.append("id",id);fetch(C.ajax,{method:"POST",body:fd,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(!j||!j.success){f.submit();return}box.querySelectorAll("li.new").forEach(function(li){var x=li.querySelector("[name=id]");if(id==="all"||(x&&x.value===id)){li.className="done";var b=li.querySelector("form");if(b)b.remove()}});if(id==="all"||!j.data.count){var all=box.querySelector("[value=all]");if(all)all.closest("form").remove()}var a=document.querySelector(\'.sp-side a[href*="sp_page=notifications"]\');if(a){var bd=a.querySelector(".sp-badge");if(j.data.count>0){if(!bd){bd=document.createElement("span");bd.className="sp-badge";a.appendChild(bd)}bd.textContent=j.data.count}else if(bd){bd.remove()}}}).catch(function(){f.submit()})})})()</script></div>';
 	}
 
-	public static function handle_done() {
-		check_admin_referer( 'songpress_push_done' );
-		$uid  = get_current_user_id();
-		$id   = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+	public static function mark_done( $uid, $id ) {
 		$list = get_user_meta( $uid, self::NOTICES, true );
 		$list = is_array( $list ) ? $list : array();
 		foreach ( $list as $i => $n ) {
@@ -330,6 +332,11 @@ JS;
 			}
 		}
 		update_user_meta( $uid, self::NOTICES, $list );
+	}
+
+	public static function handle_done() {
+		check_admin_referer( 'songpress_push_done' );
+		self::mark_done( get_current_user_id(), isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '' );
 		wp_safe_redirect( add_query_arg( 'sp_page', 'notifications', Songpress_Editor::list_url() ) );
 		exit;
 	}
