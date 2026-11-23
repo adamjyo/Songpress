@@ -69,7 +69,7 @@ class Songpress_Editor {
 				. '<button type="submit" class="spe-ib danger" title="' . esc_attr( $lab ) . '" aria-label="' . esc_attr( $lab ) . '">' . self::ico( 'trash' ) . '</button></form>';
 		}
 		$o       .= '<div class="spe-top"><a class="spe-back spe-ib" href="' . esc_url( self::list_url() ) . '" title="' . esc_attr__( 'Back to Works', 'songpress' ) . '">' . self::ico( 'back' ) . '<span>' . esc_html__( 'Works', 'songpress' ) . '</span></a>' . Songpress_Steps::nav( $id, self::list_url() ) . '<h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2><span class="sp-total" aria-live="polite"></span>' . ( $song ? self::share_popup( $song ) : '' ) . $del
-			. '<button type="submit" form="spe-form" class="spe-save spe-topsave" title="' . esc_attr( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '">' . self::ico( 'save' ) . '<span>' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</span></button><span id="spe-updated" class="spe-updated" role="status" aria-live="polite" hidden></span></div>';
+			. '<span id="spe-updated" class="spe-updated" role="status" aria-live="polite" hidden></span></div>';
 		$o       .= self::notices();
 		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
