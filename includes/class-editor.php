@@ -113,7 +113,7 @@ class Songpress_Editor {
 		$media .= self::media_box( 'audio', __( 'Audio', 'songpress' ), 'audio/*', (int) self::f( $song, 'audio_id' ), self::f( $song, 'audio_url' ) );
 		$media .= '</div></section>';
 		$o .= '<div class="spe-hero">' . $media;
-		$o .= '<section class="spe-panel simple" data-panel="basics"><h3>' . esc_html__( 'Basics', 'songpress' ) . '</h3>' . ( $root ? '' : '<p class="spe-legend"><i></i>' . esc_html__( 'Tinted fields belong to this version only. Everything else is shared with every version of the song.', 'songpress' ) . '</p>' ) . '<div class="spe-grid">';
+		$o .= '<section class="spe-panel simple" data-panel="basics"><h3 class="spe-h3row">' . esc_html__( 'Basics', 'songpress' ) . ( $root ? '' : '<span class="spe-legend"><i></i>' . esc_html__( 'Tinted fields belong to this version only. Everything else is shared with every version of the song.', 'songpress' ) . '</span>' ) . '</h3><div class="spe-grid">';
 		if ( $root || ! $song ) {
 			$o .= '<label class="spe-field wide"><span>' . esc_html__( 'Title', 'songpress' ) . '</span><input name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '" required' . Songpress_Names::attrs( 'song', $song ? (int) $song->family_id : 0 ) . '></label>' . Songpress_Names::script();
 		} else {

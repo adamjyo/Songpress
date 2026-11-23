@@ -1012,3 +1012,6 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-mrow.audio{flex-direction:row-reverse}
 .sp-app .spe-prev.spe-player audio{width:100%;height:44px;min-width:0}
 .sp-app .spe-mhead{justify-content:flex-end}.sp-app .spe-mhead:empty{display:none}
+
+.sp-app .spe-h3row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 16px}
+.sp-app .spe-h3row .spe-legend{margin:0;font-weight:400;text-transform:none;letter-spacing:0;flex:1 1 280px;min-width:0}

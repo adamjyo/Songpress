@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.104
+Stable tag: 0.63.105
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.105 =
+* Works editor: the note about tinted fields now sits beside the Basics heading instead of under it.
 
 = 0.63.104 =
 * Works editor: removed the Cover art and Audio labels above the boxes. The palette icon stays at the right of the cover art.
