@@ -238,6 +238,11 @@ class Songpress_Songs {
 			'writer' => "(SELECT MIN(w.name) FROM {$c} w WHERE w.song_id = s.id AND w.role = 'writer')",
 		);
 		$order = isset( $args['order'], $cols[ $args['order'] ] ) ? $cols[ $args['order'] ] . " {$dir}, s.serial ASC" : 's.family_id DESC, s.version_no DESC';
+		if ( ! empty( $args['ids_only'] ) ) { // every matching id in list order (the editor's Previous / Next)
+			$ids_sql = "SELECT s.id FROM {$s} s WHERE {$sql} ORDER BY {$order}";
+			$ids     = $vals ? $wpdb->get_col( $wpdb->prepare( $ids_sql, $vals ) ) : $wpdb->get_col( $ids_sql );
+			return array( 'ids' => array_map( 'intval', (array) $ids ), 'rows' => array(), 'total' => count( (array) $ids ) );
+		}
 		$rows_sql  = "SELECT s.* FROM {$s} s WHERE {$sql} ORDER BY {$order} LIMIT %d OFFSET %d";
 		$total     = (int) ( $vals ? $wpdb->get_var( $wpdb->prepare( $total_sql, $vals ) ) : $wpdb->get_var( $total_sql ) );
 		$rows      = $wpdb->get_results( $wpdb->prepare( $rows_sql, array_merge( $vals, array( $per, $offset ) ) ) );

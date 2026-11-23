@@ -475,6 +475,24 @@ $pr = Songpress_Uploads::people_rows( $hl, '2026-Q2', 'distrokid', 100.0 );
 check( 'DistroKid: performer without a share gets 25%, a stored share is used, 0 gets nothing', array_map( function ( $r ) { return $r[0] . ':' . $r[6]; }, $pr ), array( 'Per One:25', 'Per Two:10' ) );
 $pr = Songpress_Uploads::people_rows( $hl, '2026-Q2', 'mlc', 100.0 );
 check( 'writer split unchanged', array_map( function ( $r ) { return $r[0] . ':' . $r[6]; }, $pr ), array( 'Wri Ter:100' ) );
+if ( ! function_exists( 'esc_js' ) ) { function esc_js( $s ) { return addslashes( $s ); } }
+if ( ! class_exists( 'Songpress_Caps', false ) ) { class Songpress_Caps { public static function can( $c ) { return true; } } }
+if ( ! function_exists( 'get_current_user_id' ) ) { function get_current_user_id() { return 1; } }
+if ( ! function_exists( 'add_query_arg' ) ) { function add_query_arg( $a, $url = '' ) { return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . http_build_query( $a ); } }
+require_once __DIR__ . '/../includes/class-steps.php';
+$sn = new class { function invoke( $x, $id ) { return Songpress_Steps::nav( $id, 'https://site.test/works/' ); } };
+$all = Songpress_Songs::query( array( 'ids_only' => 1 ) )['ids'];
+check( 'ids-only query lists every work', count( $all ) > 1 && count( $all ) === Songpress_Songs::query( array( 'per_page' => 1000 ) )['total'], true );
+$mid = $all[1];
+$html = $sn->invoke( null, $mid );
+check( 'editor step nav links to neighbours', array( strpos( $html, 'sp_song=' . $all[0] ) !== false, isset( $all[2] ) ? strpos( $html, 'sp_song=' . $all[2] ) !== false : true, strpos( $html, '2 of ' . count( $all ) ) !== false ), array( true, true, true ) );
+check( 'first work has no previous', strpos( $sn->invoke( null, $all[0] ), 'off prev' ) !== false, true );
+$_GET['sp_q'] = 'Harbor';
+$hits = Songpress_Songs::query( array( 'search' => 'Harbor', 'ids_only' => 1 ) )['ids'];
+$h2 = $sn->invoke( null, $hits[0] );
+check( 'step nav follows the list search', array( strpos( $h2, '1 of ' . count( $hits ) ) !== false, strpos( $h2, 'sp_q=Harbor' ) !== false ), array( true, true ) );
+check( 'a song outside the search has no nav', $sn->invoke( null, array_values( array_diff( $all, $hits ) )[0] ), '' );
+unset( $_GET['sp_q'] );
 check( 'download sql names real tables', strpos( Songpress_Uploads::sql( 'earnings' ), 'wp_songpress_earnings' ) !== false, true );
 $bad = 0;
 foreach ( array_keys( Songpress_Uploads::DOWNLOADS ) as $k ) {

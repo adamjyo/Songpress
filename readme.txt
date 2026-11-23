@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.52
+Stable tag: 0.63.53
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.53 =
+* Works editor: Previous and Next buttons at the top, with where you are in the list ("3 of 41"). They follow the list you came from, including its search, status filter and sort. Unsaved changes ask before you leave.
 
 = 0.63.52 =
 * Money: DistroKid statements now credit each performer their performer share (25% when none is stored, as the old catalog did) instead of dividing the whole statement among them; quarters credited the old way are worked out again once on update.

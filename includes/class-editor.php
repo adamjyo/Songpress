@@ -46,7 +46,7 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a><h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? self::share_popup( $song ) : '' ) . '</div>';
+		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' . Songpress_Steps::nav( $id, self::list_url() ) . '<h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? self::share_popup( $song ) : '' ) . '</div>';
 		$o       .= self::notices();
 		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
