@@ -864,3 +864,17 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app a.spe-step:hover{border-color:var(--sp-soft)}
 .spe-step.off{border:1px solid var(--sp-line);border-radius:8px;padding:5px 11px;opacity:.35;white-space:nowrap}
 .spe-steppos{font-variant-numeric:tabular-nums;white-space:nowrap}.spe-steppos em{font-style:normal;color:var(--sp-mute)}
+
+/* sticky top bar of the works editor */
+.spe-top{position:sticky;top:0;z-index:30;background:var(--sp-bg);padding:10px 0;margin:0 0 12px;border-bottom:1px solid var(--sp-line);flex-wrap:nowrap;gap:8px}
+.spe-top h2{flex:1;min-width:0;margin:0;font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-app .spe-ib{display:inline-flex;align-items:center;gap:6px;height:36px;min-width:36px;padding:0 9px;justify-content:center;border-radius:9px;border:1px solid var(--sp-line);background:transparent;color:var(--sp-soft);font:inherit;font-size:14px;cursor:pointer;text-decoration:none;margin:0}
+.sp-app .spe-ib:hover{border-color:var(--sp-accent);color:var(--sp-accent)}
+.sp-app .spe-ib.off{opacity:.3;cursor:default;pointer-events:none}
+.sp-app .spe-ib.danger{color:#ff8a8f}.sp-app .spe-ib.danger:hover{border-color:#ff8a8f;color:#ff8a8f}
+.spe-stepnav{gap:4px}.spe-stepnav .spe-steppos{padding:0 6px;font-size:13px}
+.spe-top .spe-sharebtn{margin-left:0}
+.spe-topdel{margin:0;display:inline-flex}
+.sp-app button.spe-topsave{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;font-size:14px}
+.spe-top .sp-total{font-size:12px;color:var(--sp-mute);white-space:nowrap}
+@media(max-width:900px){.spe-back span,.spe-topsave span{display:none}.spe-steppos em{display:none}}

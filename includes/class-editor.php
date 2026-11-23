@@ -33,6 +33,17 @@ class Songpress_Editor {
 		return '<label class="spe-field ' . esc_attr( $class ) . '"><span>' . esc_html( $label ) . '</span><input name="' . esc_attr( $name ) . '" value="' . esc_attr( self::f( $song, $name ) ) . '" ' . $extra . '></label>';
 	}
 
+	/** Small line icons for the editor's top bar. */
+	private static function ico( $name ) {
+		$d = array(
+			'back'   => '<path d="M15 18l-6-6 6-6"/>',
+			'save'   => '<path d="M5 12l5 5L20 7"/>',
+			'share'  => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/>',
+			'trash'  => '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+		);
+		return '<svg class="spe-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ( $d[ $name ] ?? '' ) . '</svg>';
+	}
+
 	public static function render( $id ) {
 		$id   = (int) $id;
 		$song = $id ? Songpress_Songs::get( $id ) : null;
@@ -46,7 +57,19 @@ class Songpress_Editor {
 		$here     = self::edit_url( $id );
 		$title    = $song ? Songpress_Songs::display_title( $song ) : '';
 		$o        = '<div class="songpress sp-app sp-editor" id="spe">';
-		$o       .= '<div class="spe-top"><a class="spe-back" href="' . esc_url( self::list_url() ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' . Songpress_Steps::nav( $id, self::list_url() ) . '<h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2>' . ( $song ? self::share_popup( $song ) : '' ) . '</div>';
+		$del = '';
+		if ( $song && Songpress_Caps::can( 'delete' ) ) {
+			$many = count( Songpress_Songs::delete_ids( $id ) );
+			$ask  = 0 === (int) $song->version_no && $many > 1
+				? sprintf( /* translators: %d: number of songs */ __( 'Delete this work and its %d versions? This cannot be undone.', 'songpress' ), $many - 1 )
+				: __( 'Delete this song? This cannot be undone.', 'songpress' );
+			$lab  = 0 === (int) $song->version_no ? __( 'Delete this work', 'songpress' ) : __( 'Delete this version', 'songpress' );
+			$del  = '<form method="post" class="spe-topdel" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(' . esc_attr( wp_json_encode( $ask ) ) . ')">' . wp_nonce_field( 'songpress_delete', '_wpnonce', true, false )
+				. '<input type="hidden" name="action" value="songpress_delete"><input type="hidden" name="song_id" value="' . (int) $id . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">'
+				. '<button type="submit" class="spe-ib danger" title="' . esc_attr( $lab ) . '" aria-label="' . esc_attr( $lab ) . '">' . self::ico( 'trash' ) . '</button></form>';
+		}
+		$o       .= '<div class="spe-top"><a class="spe-back spe-ib" href="' . esc_url( self::list_url() ) . '" title="' . esc_attr__( 'Back to Works', 'songpress' ) . '">' . self::ico( 'back' ) . '<span>' . esc_html__( 'Works', 'songpress' ) . '</span></a>' . Songpress_Steps::nav( $id, self::list_url() ) . '<h2>' . ( $song ? '<span class="songpress-serial">' . esc_html( $song->serial ) . '</span> ' . esc_html( $title ) : esc_html__( 'Add a song', 'songpress' ) ) . '</h2><span class="sp-total" aria-live="polite"></span>' . ( $song ? self::share_popup( $song ) : '' ) . $del
+			. '<button type="submit" form="spe-form" class="spe-save spe-topsave" title="' . esc_attr( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '">' . self::ico( 'save' ) . '<span>' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</span></button></div>';
 		$o       .= self::notices();
 		if ( Songpress_Songs::ARCHIVING && $song && $song->archived_at ) {
 			$o .= '<p class="spe-note warn">' . esc_html__( 'This song is archived. It is hidden from the catalog and from public pages, and its serial number stays reserved. Restore it from the Versions and sharing section.', 'songpress' ) . '</p>';
@@ -55,7 +78,7 @@ class Songpress_Editor {
 		$on = isset( $_GET['sp_tab'] ) ? sanitize_key( wp_unslash( $_GET['sp_tab'] ) ) : 'basics'; // phpcs:ignore WordPress.Security.NonceVerification
 		$o .= '<div class="spe-layout"><div class="spe-panels" data-on="' . esc_attr( $on ) . '">';
 
-		$o .= '<form method="post" class="spe-form" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_save', '_wpnonce', true, false );
+		$o .= '<form method="post" class="spe-form" id="spe-form" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_save', '_wpnonce', true, false );
 		$o .= '<input type="hidden" name="action" value="songpress_save"><input type="hidden" name="song_id" value="' . $id . '"><input type="hidden" name="revision" value="' . (int) ( $song->revision ?? 0 ) . '"><input type="hidden" name="sp_return" value="' . esc_url( remove_query_arg( array( 'sp_saved', 'sp_err', 'sp_dropped', 'sp_noacct', 'sp_shares', 'sp_deleted' ) ) ) . '">'; // saving stays on this work, with the list search still riding along
 
 		if ( function_exists( 'wp_enqueue_media' ) && Songpress_Caps::can( 'upload' ) ) {
@@ -198,7 +221,6 @@ class Songpress_Editor {
 		}
 		$o .= '</section>';
 
-		$o .= '<div class="spe-bar"><button type="submit" class="spe-save">' . esc_html( $song ? __( 'Save', 'songpress' ) : __( 'Create song', 'songpress' ) ) . '</button><a href="' . esc_url( self::list_url() ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a><span class="sp-total" aria-live="polite"></span></div>';
 		$o .= '</form>';
 
 		if ( $song ) {
@@ -243,7 +265,7 @@ class Songpress_Editor {
 	private static function share_popup( $song ) {
 		$link  = add_query_arg( 'sp_share', Songpress_Songs::token_for( (int) $song->id ), home_url( '/' ) );
 		$title = Songpress_Songs::display_title( $song );
-		$o     = '<button type="button" class="spe-btn spe-sharebtn" id="spe-share-open">' . esc_html__( 'Share', 'songpress' ) . '</button>';
+		$o     = '<button type="button" class="spe-ib spe-sharebtn" id="spe-share-open" title="' . esc_attr__( 'Share', 'songpress' ) . '" aria-label="' . esc_attr__( 'Share', 'songpress' ) . '">' . self::ico( 'share' ) . '</button>';
 		$o    .= '<dialog class="spe-dialog" id="spe-share-dlg" aria-labelledby="spe-share-h"><form method="dialog"><h3 id="spe-share-h">' . esc_html( sprintf( /* translators: %s: song title */ __( 'Share %s', 'songpress' ), $title ) ) . '</h3>';
 		$o    .= '<p class="spe-help">' . esc_html__( 'Anyone with this link can read the song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money.', 'songpress' ) . '</p>';
 		$o    .= '<input type="text" readonly id="spe-share-link" value="' . esc_attr( $link ) . '" onfocus="this.select()" data-title="' . esc_attr( $title ) . '">';
