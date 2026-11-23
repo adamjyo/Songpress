@@ -616,7 +616,7 @@ class Songpress_Money {
 		if ( ! $rows ) {
 			return '';
 		}
-		$split = ! empty( $_GET['streams'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$split = empty( $_GET['totals'] ); // phpcs:ignore WordPress.Security.NonceVerification
 		$all   = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
 		$cols  = $all ? $qs : array_slice( $qs, 0, 8 );
 		$cols  = array_reverse( $cols ); // oldest to newest, left to right
@@ -632,8 +632,8 @@ class Songpress_Money {
 		$paidc = self::paid_cells();
 		$base  = Songpress_Editor::list_url();
 		$o    = '<h3>' . esc_html__( 'Income by person', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'What each person earned in each quarter, from every income stream.', 'songpress' ) . ' <span class="spm-ok">&#10003;</span> ' . esc_html__( 'paid,', 'songpress' ) . ' <span class="spm-part">&#10003;</span> ' . esc_html__( 'partly paid.', 'songpress' ) . ' '
-			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'streams' => $split ? '' : '1', 'allq' => $all ? '1' : '' ), $base ) ) . '">' . esc_html( $split ? __( 'Show totals only', 'songpress' ) : __( 'Split by stream', 'songpress' ) ) . '</a> · '
-			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'streams' => $split ? '1' : '', 'allq' => $all ? '' : '1' ), $base ) ) . '">' . esc_html( $all ? __( 'Last 8 quarters', 'songpress' ) : __( 'Every quarter', 'songpress' ) ) . '</a></p>';
+			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'totals' => $split ? '1' : '', 'allq' => $all ? '1' : '' ), $base ) ) . '">' . esc_html( $split ? __( 'Totals only', 'songpress' ) : __( 'Break down by stream', 'songpress' ) ) . '</a> · '
+			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'totals' => $split ? '' : '1', 'allq' => $all ? '' : '1' ), $base ) ) . '">' . esc_html( $all ? __( 'Last 8 quarters', 'songpress' ) : __( 'Every quarter', 'songpress' ) ) . '</a></p>';
 		$o   .= '<div class="spm-scroll"><table class="spm-table spm-income"><thead><tr><th>' . esc_html__( 'Person', 'songpress' ) . '</th>';
 		foreach ( $cols as $q ) {
 			$o .= '<th class="n">' . esc_html( $q ) . '</th>';

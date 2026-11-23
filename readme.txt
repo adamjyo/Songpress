@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.43
+Stable tag: 0.63.44
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.44 =
+* Money: the income table now shows each person's quarters broken down by income stream (DistroKid, MLC, ASCAP, CCLI, Band) by default, with a Totals only switch.
 
 = 0.63.43 =
 * Money: each person's photo (or initials) sits to the left of their name in the income and accounting tables.
