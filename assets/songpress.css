@@ -1003,3 +1003,9 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app .spe-relh{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .sp-app button.spe-nvbtn{display:inline-flex;align-items:center;height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--sp-accent,#f5a524);background:none;color:var(--sp-accent,#f5a524);font-size:13px;font-weight:600;cursor:pointer;text-transform:none;letter-spacing:0}
 .sp-app button.spe-nvbtn:hover{background:rgba(245,165,36,.14)}
+
+.sp-app .spe-mrow.audio{display:flex;align-items:center;gap:8px}
+.sp-app .spe-mrow.audio .spe-prev{flex:1;min-width:0}
+.sp-app .spe-mrow.art{position:relative}
+.sp-app .spe-mrow.art .spe-rm{position:absolute;top:8px;left:8px;z-index:2;background:rgba(15,16,18,.78)}
+.sp-app .spe-mrow .spe-rm[hidden]{display:none}
