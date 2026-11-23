@@ -110,7 +110,7 @@
     if (!meta.key && C.key) { var km = /^([A-G][#b]?)(.*)$/.exec(C.key); meta.key = TR.n && km ? shift(km[1], TR.n) + km[2] : C.key; }
     if (!meta.tempo && C.tempo) meta.tempo = C.tempo;
     if (!meta.time && C.time) meta.time = C.time;
-    var by = meta.by.join(' | '), mt = [];
+    var firstC = 0, by = meta.by.join(' | '), mt = [];
     if (meta.key) mt.push('Key - ' + meta.key);
     if (meta.tempo) mt.push('Tempo - ' + meta.tempo);
     if (meta.time) mt.push('Time - ' + meta.time);
@@ -120,25 +120,64 @@
     if (C.publisher) C.publisher.split(/\r?\n/).forEach(function (l) { if (l.trim()) foot.push(esc(l.trim())); });
     if (meta.copy) foot.push(esc(meta.copy));
     var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
-    /* with room to spare, the second column starts after the first chorus */
-    var brk = -1;
-    secs.some(function (sc, i) { if (/^chorus/i.test(sc.label)) { brk = i; return true; } return false; });
-    var units = function (sc) { var j = sc.lines.join(''); return (j.match(/class="cl"/g) || []).length + (j.match(/class="gap"/g) || []).length * 0.25 + (j.match(/sh-note/g) || []).length * 0.6 + (sc.label ? 1.5 : 0) + 1; };
-    if (brk > -1 && brk < secs.length - 1) {
-      var u1 = 0, u2 = 0;
-      secs.forEach(function (sc, i) { if (i <= brk) u1 += units(sc); else u2 += units(sc); });
-      if (u1 > 27 || u2 > 27) brk = -1;
-    } else brk = -1;
     secs.forEach(function (sc, i) {
-      h += '<section class="sh-sec' + (i === brk ? ' sh-break' : '') + '">' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
+      h += '<section class="sh-sec"' + (!firstC && /^chorus/i.test(sc.label) && (firstC = i + 1) ? ' data-chorus="1"' : '') + '>' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
     h += '</div><footer class="sh-foot">' + foot.join('<br>') + '</footer>';
     return h;
+  }
+
+  /* Two columns of whole sections, laid out by hand so no browser can split a section and strand a line or two in column two. Page one: the second column starts after the first chorus when everything fits on the page, otherwise the most even split. A longer song fills column one, then column two, then the next page. */
+  function layoutSheet(sh) {
+    var cols = sh.querySelector('.sh-cols');
+    if (!cols) return;
+    var secs = [].slice.call(cols.querySelectorAll('.sh-sec'));
+    if (!secs.length) return;
+    var old = sh.style.cssText, hidden = sh.offsetHeight === 0;
+    if (hidden) sh.style.cssText = 'display:block;position:absolute;left:-9999px;top:0;width:816px;padding:48px 58px 72px;box-sizing:border-box;transform:none';
+    var wrap = document.createElement('div'); wrap.className = 'sh-pages';
+    var A = document.createElement('div'); A.className = 'sh-col';
+    var G = document.createElement('div'); G.className = 'sh-cols'; G.appendChild(A);
+    var B0 = document.createElement('div'); B0.className = 'sh-col'; G.appendChild(B0);
+    cols.parentNode.replaceChild(wrap, cols); wrap.appendChild(G);
+    secs.forEach(function (x) { A.appendChild(x); });
+    var hs = secs.map(function (x) { return x.offsetHeight + 21; });
+    var head = sh.querySelector('.sh-head'), avail1 = 900 - (head ? head.offsetHeight + 20 : 0), availN = 900;
+    var ch = -1; secs.forEach(function (x, i) { if (ch < 0 && x.getAttribute('data-chorus')) ch = i; });
+    var total = hs.reduce(function (a, b) { return a + b; }, 0);
+    function range(i, j) { var t = 0; for (var k = i; k < j; k++) t += hs[k]; return t; }
+    var plan = []; /* pages: [[colA indexes], [colB indexes]] */
+    var fitsOne = false, pick = -1;
+    if (secs.length > 1) {
+      if (ch > -1 && ch < secs.length - 1 && range(0, ch + 1) <= avail1 && range(ch + 1, secs.length) <= avail1) pick = ch + 1;
+      else { var bm = 1e9; for (var k = 1; k < secs.length; k++) { var m = Math.max(range(0, k), range(k, secs.length)); if (m <= avail1 && m < bm) { bm = m; pick = k; } } }
+    }
+    if (pick > -1) { plan.push([range0(0, pick), range0(pick, secs.length)]); }
+    else {
+      var i = 0, first = true;
+      while (i < secs.length) {
+        var cap = first ? avail1 : availN, pg = [[], []], c = 0, used = 0;
+        while (i < secs.length) {
+          if (used + hs[i] > cap && pg[c].length) { if (c === 1) break; c = 1; used = 0; continue; }
+          pg[c].push(i); used += hs[i]; i++;
+        }
+        plan.push(pg); first = false;
+      }
+    }
+    function range0(i, j) { var r = []; for (var k = i; k < j; k++) r.push(k); return r; }
+    wrap.innerHTML = '';
+    plan.forEach(function (pg, pi) {
+      var g = document.createElement('div'); g.className = 'sh-cols' + (pi ? ' sh-next' : '');
+      pg.forEach(function (ixs) { var c = document.createElement('div'); c.className = 'sh-col'; ixs.forEach(function (k) { c.appendChild(secs[k]); }); g.appendChild(c); });
+      wrap.appendChild(g);
+    });
+    if (hidden) sh.style.cssText = old;
   }
   function printSheet() {
     var box = document.getElementById('ct-sheet');
     if (!box) { box = document.createElement('div'); box.id = 'ct-sheet'; document.body.appendChild(box); }
     box.innerHTML = buildSheet(ed.value);
+    layoutSheet(box);
     document.body.classList.add('ct-printing');
     var done = function () { document.body.classList.remove('ct-printing'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
@@ -305,7 +344,7 @@
       document.getElementById('ct-sheetbox').style.height = hh + 'px';
       window.parent.postMessage({ spSheetH: hh + 16 }, location.origin);
     };
-    var paint = function (t) { ed.value = t; useFlats = TR.fl; sh.innerHTML = buildSheet(TR.n ? transText(t, TR.n) : t); fit(); };
+    var paint = function (t) { ed.value = t; useFlats = TR.fl; sh.innerHTML = buildSheet(TR.n ? transText(t, TR.n) : t); layoutSheet(sh); fit(); };
     window.addEventListener('message', function (e) {
       if (e.origin !== location.origin || !e.data) return;
       if (typeof e.data.spTranspose === 'number') { TR.n = e.data.spTranspose; TR.fl = !!e.data.spFlats; paint(ed.value); return; }
