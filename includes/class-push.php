@@ -561,7 +561,8 @@ JS;
 			'on'     => __( 'Notifications are on. Tap to turn them off.', 'songpress' ),
 			'off'    => __( 'Notifications are off. Tap to turn them on.', 'songpress' ),
 			'ios'    => __( 'To get notifications, tap Share, then Add to Home Screen, and open SongPress from your Home Screen.', 'songpress' ),
-			'denied' => __( 'Notifications are blocked. Allow them for SongPress in your phone settings.', 'songpress' ),
+			'denied' => wp_is_mobile() ? __( 'Notifications are blocked. Allow them for SongPress in your phone settings.', 'songpress' ) : __( 'Notifications are blocked for this site in your browser. Click the lock or site-settings icon beside the address (in Safari: Safari menu, Settings, Websites, Notifications), set this site to Allow, then reload and click the bell again.', 'songpress' ),
+			'fail'   => __( 'Could not turn notifications on:', 'songpress' ),
 			'test'   => __( 'Notifications are on. A test was sent.', 'songpress' ),
 		) );
 		return '<script>(function(){var C=' . $cfg . ';' . self::script() . '})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- JSON and a fixed script.
@@ -586,7 +587,7 @@ bells.forEach(function(b){b.addEventListener('click',function(e){e.preventDefaul
  Notification.requestPermission().then(function(p){
   if(p!=='granted'){say(C.denied);return}
   return reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:key(C.key)}).then(function(s){return post({mode:'add',endpoint:s.endpoint})}).then(function(){show(true);return post({mode:'test'})}).then(function(){say(C.test)});
- }).catch(function(){say(C.denied)});
+ }).catch(function(e){say(C.fail+' '+(e&&e.message?e.message:''))});
 })});
 JS;
 	}
