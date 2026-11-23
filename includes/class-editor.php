@@ -10,8 +10,26 @@ defined( 'ABSPATH' ) || exit;
 class Songpress_Editor {
 
 	/** Address of the list, without any editor or message parameters. */
+	/** Where a button's action should send you back to. While a form is being handled the request is the site's own door (the home page), so the address of the app is taken from the form (sp_return), the page it was sent from, or the app page itself, never from the door. */
+	private static function return_base() {
+		$post = isset( $_REQUEST['songpress_post'] ) || ( isset( $_REQUEST['action'] ) && 0 === strpos( sanitize_key( wp_unslash( $_REQUEST['action'] ) ), 'songpress_' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( ! $post ) {
+			return false;
+		}
+		$ret = isset( $_REQUEST['sp_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_REQUEST['sp_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( '' === $ret ) {
+			$ref = wp_get_referer();
+			$ret = $ref ? wp_validate_redirect( $ref, '' ) : '';
+		}
+		if ( '' === $ret && class_exists( 'Songpress_Frontend' ) ) {
+			$id  = Songpress_Frontend::main_id( 'catalog' );
+			$ret = $id ? (string) get_permalink( $id ) : '';
+		}
+		return '' !== $ret ? $ret : home_url( '/' );
+	}
+
 	public static function list_url() {
-		return remove_query_arg( array( 'sp_edit', 'sp_saved', 'sp_err', 'sp_noacct', 'sp_shares', 'sp_dropped', 'sp_archived', 'sp_tab', 'sp_song', 'sp_view', 'sp_page', 'sp_members', 'saved', 'err', 'done', 'skipped', 'accounts', 'left', 'nomedia', 'profile', 'kind', 'loaded', 'b', 'p', 'loaderr', 'artist', 'checked', 'person', 'type', 'm_ok', 'm_err' ) );
+		return remove_query_arg( array( 'songpress_post', 'action', '_wpnonce', 'sp_edit', 'sp_saved', 'sp_err', 'sp_noacct', 'sp_shares', 'sp_dropped', 'sp_archived', 'sp_tab', 'sp_song', 'sp_view', 'sp_page', 'sp_members', 'saved', 'err', 'done', 'skipped', 'accounts', 'left', 'nomedia', 'profile', 'kind', 'loaded', 'b', 'p', 'loaderr', 'artist', 'checked', 'person', 'type', 'm_ok', 'm_err' ), self::return_base() );
 	}
 
 	public static function edit_url( $id ) {

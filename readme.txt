@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.137
+Stable tag: 0.63.138
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.138 =
+* Fix: buttons in People (Save changes and others), Notes, Sessions, Pitch and Settings no longer drop you on the home page. The address they send you back to was being read from the page the form was handled on (the site's front door); it now comes from the form's own return address, the page you were on, or the app page.
 
 = 0.63.137 =
 * A ChordPro reference sits under the ChordPro box in the work editor and in the ChordPro tool: every directive with its short form and what it does. Tap one to put it in the box at the cursor.
