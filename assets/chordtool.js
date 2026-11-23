@@ -7,6 +7,8 @@
   var FLAT = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
   var IDX = { C: 0, 'C#': 1, Db: 1, D: 2, 'D#': 3, Eb: 3, E: 4, F: 5, 'F#': 6, Gb: 6, G: 7, 'G#': 8, Ab: 8, A: 9, 'A#': 10, Bb: 10, B: 11 };
   var useFlats = false;
+  var TR = { n: 0, fl: false }; /* sheet view: semitones to transpose by, and whether to spell with flats */
+  (function () { var q = /[?&]tr=(-?\d+)/.exec(location.search); if (q) TR.n = parseInt(q[1], 10) || 0; TR.fl = /[?&]fl=1/.test(location.search); }());
 
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
@@ -105,7 +107,7 @@
     var C = window.SP_SHEET || {};
     if (!meta.title && C.title) meta.title = C.title;
     if (!meta.by.length && C.by) meta.by = [C.by];
-    if (!meta.key && C.key) meta.key = C.key;
+    if (!meta.key && C.key) { var km = /^([A-G][#b]?)(.*)$/.exec(C.key); meta.key = TR.n && km ? shift(km[1], TR.n) + km[2] : C.key; }
     if (!meta.tempo && C.tempo) meta.tempo = C.tempo;
     if (!meta.time && C.time) meta.time = C.time;
     var by = meta.by.join(' | '), mt = [];
@@ -294,9 +296,11 @@
       document.getElementById('ct-sheetbox').style.height = hh + 'px';
       window.parent.postMessage({ spSheetH: hh + 16 }, location.origin);
     };
-    var paint = function (t) { ed.value = t; sh.innerHTML = buildSheet(t); fit(); };
+    var paint = function (t) { ed.value = t; useFlats = TR.fl; sh.innerHTML = buildSheet(TR.n ? transText(t, TR.n) : t); fit(); };
     window.addEventListener('message', function (e) {
-      if (e.origin !== location.origin || !e.data || typeof e.data.spChart !== 'string') return;
+      if (e.origin !== location.origin || !e.data) return;
+      if (typeof e.data.spTranspose === 'number') { TR.n = e.data.spTranspose; TR.fl = !!e.data.spFlats; paint(ed.value); return; }
+      if (typeof e.data.spChart !== 'string') return;
       paint(e.data.spChart);
     });
     window.addEventListener('resize', fit);
