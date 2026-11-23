@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.123
+Stable tag: 0.63.124
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.124 =
+* Work page: the streaming icons are centered in one full-width row directly above the player.
 
 = 0.63.123 =
 * The streaming icons are copied into the WordPress Media Library (titled "SongPress streaming icon: ...") the first time a signed-in user with upload rights opens a page that shows them, and are served from there from then on. Google's address is only a fallback until that import works.

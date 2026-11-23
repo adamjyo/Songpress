@@ -1044,3 +1044,6 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-topl .spe-streams{flex-wrap:nowrap;overflow-x:auto;gap:10px;margin:12px 0 0;scrollbar-width:none}.songpress-topl .spe-streams::-webkit-scrollbar{display:none}
 .songpress-topl .spe-st{flex:none;width:56px;height:56px;font-size:24px}.sp-app .spe-st,.sp-app .spe-st b{color:#fff!important}
 .spe-st{background:#fff!important}.spe-st img{width:62%;height:62%;display:block;border-radius:6px}.songpress-topl .spe-st img{width:34px;height:34px}
+.songpress-top>.spe-streams{grid-column:1/-1;grid-row:2;justify-content:center;flex-wrap:nowrap;overflow-x:auto;gap:12px;margin:10px 0 0;scrollbar-width:none}.songpress-top>.spe-streams::-webkit-scrollbar{display:none}
+.songpress-top>.spe-streams .spe-st{flex:none;width:56px;height:56px}.songpress-top>.spe-streams .spe-st img{width:34px;height:34px}
+.songpress-top>.spe-streams~.songpress-audio{grid-row:3}

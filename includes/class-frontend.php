@@ -485,7 +485,7 @@ class Songpress_Frontend {
 		if ( '' !== $icons ) {
 			$out .= '<p class="songpress-authors" aria-label="' . esc_attr__( 'Authors', 'songpress' ) . '">' . $icons . '</p>';
 		}
-		$out  .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) ) . '</div>';
+		$out  .= '</div>' . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
