@@ -113,6 +113,19 @@ class Songpress_Frontend {
 		return '<a href="' . esc_url( $href ) . '"' . ( $on ? ' aria-current="page" class="on"' : '' ) . '>' . $icon . esc_html( $label ) . ( $badge > 0 ? ' <span class="sp-badge" title="' . esc_attr__( 'Follow-ups due', 'songpress' ) . '">' . (int) $badge . '</span>' : '' ) . '</a>';
 	}
 
+	/**
+	 * Each rail item remembers where you were in it. Leaving a section files its address (search, open work, open note…);
+	 * clicking another section's item goes back to where you left it, and clicking the section you are already in starts it over.
+	 */
+	private static function nav_memory() {
+		return '<script>(function(){var s=document.currentScript,n=s&&s.closest("nav");if(!n)return;var K="spnav:' . (int) get_current_user_id() . ':",on=n.querySelector("a.on");'
+			. 'function key(a){var u=new URL(a.href);return(u.searchParams.get("sp_page")||"")+"|"+u.pathname}'
+			. 'function clean(h){var u=new URL(h);["sp_deleted","sp_bulk","sp_bskip","sp_err","sp_saved","m_ok","m_err","nj_go"].forEach(function(k){u.searchParams.delete(k)});return u.toString()}'
+			. 'function save(){if(!on)return;try{localStorage.setItem(K+key(on),clean(location.href))}catch(e){}}'
+			. 'save();window.addEventListener("pagehide",save);'
+			. 'n.addEventListener("click",function(e){var a=e.target.closest("a[href]");if(!a||a===on||e.button||e.metaKey||e.ctrlKey||e.shiftKey||/action=logout/.test(a.href))return;save();try{var t=localStorage.getItem(K+key(a));if(t&&new URL(t).origin===location.origin){e.preventDefault();location.href=t}}catch(x){}})}());</script>';
+	}
+
 	private static function shell( $which, $here ) {
 		$svg = function ( $d ) {
 			return '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">' . $d . '</svg>';
@@ -148,6 +161,7 @@ class Songpress_Frontend {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';
 			$nav .= self::nav_item( add_query_arg( array( 'sp_page' => 'people', 'kind' => 'person' ), $cat_url ), __( 'People', 'songpress' ), $people, 'people' === $page || 'link' === $page || 'artists' === $page );
 		}
+		$nav .= self::nav_memory();
 		$bot  = $mk( 'settings', __( 'Settings', 'songpress' ), $manage, 'settings' );
 		$body = do_shortcode( 'catalog' === $which ? '[songpress_catalog]' : '[songpress_profile]' );
 		return '<div class="sp-shell"><nav class="sp-side" aria-label="SongPress"><div class="sp-side-logo"><img src="' . esc_url( SONGPRESS_URL . 'assets/icon.svg' ) . '" width="36" height="36" alt=""><span class="sp-side-name"><b>SongPress</b><small>' . esc_html__( 'A songwriting and publishing', 'songpress' ) . '</small></span></div>' . $nav . '<span class="sp-grow"></span>' . $bot . $out . '</nav><main class="sp-main">' . $body . '</main></div>' . '<script>(function(){var s=document.querySelector(".sp-shell > .sp-side");if(!s){return;}var sh=s.parentNode,moved=false;function check(){if(moved||window.innerWidth<760||window.pageYOffset<40){return;}var b=document.getElementById("wpadminbar"),t=b&&getComputedStyle(b).position==="fixed"?b.offsetHeight:0;if(Math.abs(s.getBoundingClientRect().top-t)>2){moved=true;document.body.appendChild(sh);window.removeEventListener("scroll",check);}}window.addEventListener("scroll",check,{passive:true});})();</script>';

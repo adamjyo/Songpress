@@ -56,7 +56,7 @@ class Songpress_Editor {
 		$o .= '<div class="spe-layout"><div class="spe-panels" data-on="' . esc_attr( $on ) . '">';
 
 		$o .= '<form method="post" class="spe-form" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_save', '_wpnonce', true, false );
-		$o .= '<input type="hidden" name="action" value="songpress_save"><input type="hidden" name="song_id" value="' . $id . '"><input type="hidden" name="revision" value="' . (int) ( $song->revision ?? 0 ) . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '">';
+		$o .= '<input type="hidden" name="action" value="songpress_save"><input type="hidden" name="song_id" value="' . $id . '"><input type="hidden" name="revision" value="' . (int) ( $song->revision ?? 0 ) . '"><input type="hidden" name="sp_return" value="' . esc_url( remove_query_arg( array( 'sp_saved', 'sp_err', 'sp_dropped', 'sp_noacct', 'sp_shares', 'sp_deleted' ) ) ) . '">'; // saving stays on this work, with the list search still riding along
 
 		if ( function_exists( 'wp_enqueue_media' ) && Songpress_Caps::can( 'upload' ) ) {
 			wp_enqueue_media(); // the audio box opens the WordPress Media Library

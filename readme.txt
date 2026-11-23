@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.53
+Stable tag: 0.63.54
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.54 =
+* Works editor: Save stays on the work (and keeps the list search for Previous and Next).
+* Rail items remember where you were: leave Works or Notes and clicking it again returns to the work or note you had open, with its search. Clicking the item you are already on starts it over. Notes keep the open note and search in the address.
 
 = 0.63.53 =
 * Works editor: Previous and Next buttons at the top, with where you are in the list ("3 of 41"). They follow the list you came from, including its search, status filter and sort. Unsaved changes ask before you leave.
