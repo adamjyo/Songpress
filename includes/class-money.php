@@ -640,38 +640,42 @@ class Songpress_Money {
 		}
 		$o   .= '<th class="n">' . esc_html__( 'All time', 'songpress' ) . '</th></tr></thead><tbody>';
 		$colt = array();
+		$ncol = count( $cols ) + 2;
 		foreach ( array_keys( $sum ) as $k ) {
-			$o .= '<tr><td>' . Songpress_Profiles::chip( $names[ $k ], 28, 'person' ) . '<b>' . esc_html( $names[ $k ] ) . '</b></td>';
+			$who = Songpress_Profiles::chip( $names[ $k ], 28, 'person' ) . '<b>' . esc_html( $names[ $k ] ) . '</b>';
+			if ( $split ) {
+				$o .= '<tr class="spm-who"><td colspan="' . (int) $ncol . '">' . $who . '</td></tr>';
+				foreach ( self::STREAMS as $sk => $label ) {
+					$cells = '';
+					$all_t = 0;
+					foreach ( $grid[ $k ] as $bys ) {
+						$all_t += $bys[ $sk ] ?? 0;
+					}
+					if ( ! $all_t ) {
+						continue;
+					}
+					foreach ( $cols as $q ) {
+						$v      = $grid[ $k ][ $q ][ $sk ] ?? 0;
+						$cells .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
+					}
+					$o .= '<tr class="spm-sub"><td>' . esc_html( $label ) . '</td>' . $cells . '<td class="n">' . esc_html( self::money( $all_t ) ) . '</td></tr>';
+				}
+				$o .= '<tr class="spm-tot"><td>' . esc_html__( 'Total', 'songpress' ) . '</td>';
+			} else {
+				$o .= '<tr class="spm-tot"><td>' . $who . '</td>';
+			}
 			foreach ( $cols as $q ) {
-				$v           = isset( $grid[ $k ][ $q ] ) ? array_sum( $grid[ $k ][ $q ] ) : 0;
-				$colt[ $q ]  = ( $colt[ $q ] ?? 0 ) + $v;
-				$pd          = $paidc[ $k ][ $q ] ?? 0;
-				$mark        = '';
+				$v          = isset( $grid[ $k ][ $q ] ) ? array_sum( $grid[ $k ][ $q ] ) : 0;
+				$colt[ $q ] = ( $colt[ $q ] ?? 0 ) + $v;
+				$pd         = $paidc[ $k ][ $q ] ?? 0;
+				$mark       = '';
 				if ( $pd > 0 ) {
 					$full = $v > 0 && $pd + 0.005 >= $v;
 					$mark = ' <span class="' . ( $full ? 'spm-ok' : 'spm-part' ) . '" title="' . esc_attr( sprintf( /* translators: 1: amount paid, 2: amount earned */ __( 'Paid %1$s of %2$s', 'songpress' ), self::money( $pd ), self::money( $v ) ) ) . '">&#10003;<span class="screen-reader-text">' . esc_html( $full ? __( 'Paid', 'songpress' ) : __( 'Partly paid', 'songpress' ) ) . '</span></span>';
 				}
-				$o          .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . $mark . '</td>';
+				$o .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . $mark . '</td>';
 			}
 			$o .= '<td class="n"><b>' . esc_html( self::money( $sum[ $k ] ) ) . '</b></td></tr>';
-			if ( $split ) {
-				foreach ( self::STREAMS as $sk => $label ) {
-					$tot = 0;
-					$cells = '';
-					foreach ( $cols as $q ) {
-						$v      = $grid[ $k ][ $q ][ $sk ] ?? 0;
-						$tot   += $v;
-						$cells .= '<td class="n">' . ( $v ? esc_html( self::money( $v ) ) : '' ) . '</td>';
-					}
-					$all_t = 0;
-					foreach ( $grid[ $k ] as $qq => $bys ) {
-						$all_t += $bys[ $sk ] ?? 0;
-					}
-					if ( $all_t ) {
-						$o .= '<tr class="spm-sub"><td>' . esc_html( $label ) . '</td>' . $cells . '<td class="n">' . esc_html( self::money( $all_t ) ) . '</td></tr>';
-					}
-				}
-			}
 		}
 		$o .= '</tbody><tfoot><tr><th>' . esc_html__( 'Everyone', 'songpress' ) . '</th>';
 		foreach ( $cols as $q ) {
@@ -711,19 +715,28 @@ class Songpress_Money {
 		}
 		$def = '' !== $sel ? $sel : ( $qopts ? $qopts[0] : '' );
 		$o   = '<h3>' . esc_html__( 'Accounting', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'What each person is owed to date: everything they have earned less everything paid to them. Record a payment and choose the quarter it counts toward.', 'songpress' ) . '</p>';
-		$o  .= '<div class="spm-scroll"><table class="spm-table spm-acct"><thead><tr><th>' . esc_html__( 'Person', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Earned', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Paid', 'songpress' ) . '</th><th class="n">' . esc_html__( 'Owed', 'songpress' ) . '</th><th>' . esc_html__( 'Record a payment', 'songpress' ) . '</th></tr></thead><tbody>';
-		$te = $tp = $to = 0;
+		$te  = $tp = $to = 0;
 		foreach ( $owed as $k => $ow ) {
 			$te += $earned[ $k ];
 			$tp += $paid[ $k ] ?? 0;
 			$to += $ow;
-			$o  .= '<tr><td>' . Songpress_Profiles::chip( $names[ $k ], 28, 'person' ) . '<b>' . esc_html( $names[ $k ] ) . '</b></td><td class="n">' . esc_html( self::money( $earned[ $k ] ) ) . '</td><td class="n">' . esc_html( self::money( $paid[ $k ] ?? 0 ) ) . '</td><td class="n"><b>' . esc_html( self::money( $ow ) ) . '</b></td><td>';
-			$o  .= self::form_open( 'songpress_money_payment', 'spm-pay' ) . '<input type="hidden" name="person" value="' . esc_attr( $names[ $k ] ) . '"><input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $ow > 0 ? number_format( $ow, 2, '.', '' ) : '' ) . '" placeholder="0.00" aria-label="' . esc_attr__( 'Amount paid', 'songpress' ) . '" required>'
-				. '<select name="quarter" aria-label="' . esc_attr__( 'Counts toward quarter', 'songpress' ) . '">';
+		}
+		$o  .= '<ul class="spm-sum"><li><span>' . esc_html__( 'Earned to date', 'songpress' ) . '</span><b>' . esc_html( self::money( $te ) ) . '</b></li><li><span>' . esc_html__( 'Paid', 'songpress' ) . '</span><b>' . esc_html( self::money( $tp ) ) . '</b></li><li class="spm-due"><span>' . esc_html__( 'Still owed', 'songpress' ) . '</span><b>' . esc_html( self::money( $to ) ) . '</b></li></ul>';
+		$o  .= '<div class="spm-people">';
+		foreach ( $owed as $k => $ow ) {
+			$pd   = $paid[ $k ] ?? 0;
+			$pct  = $earned[ $k ] > 0 ? max( 0, min( 100, (int) round( 100 * $pd / $earned[ $k ] ) ) ) : 0;
+			$even = $ow <= 0.005;
+			$o   .= '<div class="spm-person' . ( $even ? ' settled' : '' ) . '"><div class="spm-ph">' . Songpress_Profiles::chip( $names[ $k ], 36, 'person' ) . '<div class="spm-pn"><b>' . esc_html( $names[ $k ] ) . '</b><small>' . esc_html( sprintf( /* translators: 1: earned, 2: paid */ __( '%1$s earned · %2$s paid', 'songpress' ), self::money( $earned[ $k ] ), self::money( $pd ) ) ) . '</small></div>';
+			$o   .= '<div class="spm-owe"><small>' . esc_html( $even ? __( 'Settled', 'songpress' ) : __( 'Owed', 'songpress' ) ) . '</small><b>' . esc_html( self::money( $ow ) ) . '</b></div></div>';
+			$o   .= '<div class="spm-prog" title="' . esc_attr( $pct . '%' ) . '"><i style="width:' . (int) $pct . '%"></i></div>';
+			$o   .= '<details class="spm-paybox"><summary>' . esc_html__( 'Record a payment', 'songpress' ) . '</summary>'
+				. self::form_open( 'songpress_money_payment', 'spm-pay' ) . '<input type="hidden" name="person" value="' . esc_attr( $names[ $k ] ) . '"><label><span>' . esc_html__( 'Amount', 'songpress' ) . '</span><input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $ow > 0 ? number_format( $ow, 2, '.', '' ) : '' ) . '" placeholder="0.00" required></label>'
+				. '<label><span>' . esc_html__( 'For quarter', 'songpress' ) . '</span><select name="quarter">';
 			foreach ( $qopts as $q ) {
 				$o .= '<option value="' . esc_attr( $q ) . '"' . selected( $q, $def, false ) . '>' . esc_html( $q ) . '</option>';
 			}
-			$o .= '</select><input type="date" name="paid_on" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '" aria-label="' . esc_attr__( 'Date paid', 'songpress' ) . '"><input name="notes" placeholder="' . esc_attr__( 'Note', 'songpress' ) . '" aria-label="' . esc_attr__( 'Note', 'songpress' ) . '"><button class="spe-save" type="submit">' . esc_html__( 'Pay', 'songpress' ) . '</button></form>';
+			$o .= '</select></label><label><span>' . esc_html__( 'Date paid', 'songpress' ) . '</span><input type="date" name="paid_on" value="' . esc_attr( gmdate( 'Y-m-d' ) ) . '"></label><label class="grow"><span>' . esc_html__( 'Note', 'songpress' ) . '</span><input name="notes"></label><button class="spe-save" type="submit">' . esc_html__( 'Pay', 'songpress' ) . '</button></form></details>';
 			$hist = self::payments_of( $k );
 			if ( $hist ) {
 				$o .= '<details class="spm-hist"><summary>' . esc_html( sprintf( /* translators: %d: number of payments */ _n( '%d payment', '%d payments', count( $hist ), 'songpress' ), count( $hist ) ) ) . '</summary><ul>';
@@ -734,9 +747,9 @@ class Songpress_Money {
 				}
 				$o .= '</ul></details>';
 			}
-			$o .= '</td></tr>';
+			$o .= '</div>';
 		}
-		return $o . '</tbody><tfoot><tr><th>' . esc_html__( 'Everyone', 'songpress' ) . '</th><th class="n">' . esc_html( self::money( $te ) ) . '</th><th class="n">' . esc_html( self::money( $tp ) ) . '</th><th class="n">' . esc_html( self::money( $to ) ) . '</th><th></th></tr></tfoot></table></div>';
+		return $o . '</div>';
 	}
 
 	/** Record a payment to one person against a quarter. A quarter holds one running row per person: more payments in it are added on, and a planned (unpaid) amount is replaced. */

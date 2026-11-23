@@ -783,3 +783,32 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spm-acct .spm-pay input.spm-amt{width:92px}.spm-acct .spm-pay input[type=date]{width:134px}.spm-acct .spm-pay select{width:96px}.spm-acct .spm-pay input[name=notes]{width:120px}
 .spm-acct .spm-pay .spe-save{height:32px;padding:0 14px;margin:0}
 .spm-acct td{vertical-align:top}.spm-acct td:first-child{white-space:nowrap}
+
+.spm-income tr.spm-who td{padding:14px 10px 6px;border-bottom:0;background:transparent}
+.spm-income tr.spm-sub td{border-bottom:1px dashed var(--sp-line)}
+.spm-income tr.spm-tot td{border-bottom:2px solid var(--sp-line);font-weight:600}
+.spm-sum{list-style:none;display:flex;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding:0}
+.spm-sum li{flex:1 1 150px;background:rgba(255,255,255,.04);border:1px solid var(--sp-line);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:2px}
+.spm-sum li span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sp-mute)}
+.spm-sum li b{font-size:22px;font-variant-numeric:tabular-nums}
+.spm-sum li.spm-due b{color:#f5a524}
+.spm-people{align-items:start;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.spm-person{border:1px solid var(--sp-line);border-radius:12px;padding:14px;background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:10px;min-width:0}
+.spm-person.settled{opacity:.8}
+.spm-ph{display:flex;align-items:center;gap:10px}
+.spm-ph .sp-face{margin-right:0!important;flex:none}
+.spm-pn{display:flex;flex-direction:column;min-width:0;flex:1}
+.spm-pn b{font-size:15px}.spm-pn small{color:var(--sp-mute);font-size:12px}
+.spm-owe{text-align:right}.spm-owe small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sp-mute)}
+.spm-owe b{font-size:20px;font-variant-numeric:tabular-nums}
+.spm-person:not(.settled) .spm-owe b{color:#f5a524}.spm-person.settled .spm-owe b{color:#2fb344}
+.spm-prog{height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}.spm-prog i{display:block;height:100%;background:#2fb344;border-radius:3px}
+.spm-paybox summary,.spm-hist summary{cursor:pointer;color:var(--sp-soft);font-size:13px}
+.spm-paybox summary{display:inline-block;padding:5px 12px;border:1px solid var(--sp-line);border-radius:7px;color:var(--sp-text)}
+.spm-paybox[open] summary{margin-bottom:10px}
+.spm-paybox form.spm-pay{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.spm-paybox label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sp-mute)}
+.spm-paybox label.grow{flex:1 1 140px}
+.spm-paybox input,.spm-paybox select{width:auto!important;height:32px;padding:0 8px;font-size:13px;box-sizing:border-box}
+.spm-paybox input.spm-amt{width:96px!important}.spm-paybox label.grow input{width:100%!important}
+.spm-paybox .spe-save{height:32px;padding:0 16px;margin:0}
