@@ -161,7 +161,7 @@ class Songpress_Editor {
 		$o .= '</section>';
 
 		/* Publishing: the numbers, then who publishes and who releases it. Shared by every version except the ISRC. */
-		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version. DistroKid, UPC and ISRC belong to one release, so they are entered on each version.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version. DistroKid and UPC belong to one release, so they are entered on each version. The ISRC is under Release.', 'songpress' ) . '</p>';
 		$o .= self::code_fields( $song ? Songpress_Songs::identifiers( $id ) : array(), $root );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, true );
 		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, true );
@@ -171,7 +171,7 @@ class Songpress_Editor {
 		$legacy = $song && 0 === $version && ( '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		$rel    = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="release"><h3 class="spe-relh">' . esc_html__( 'Release', 'songpress' ) . ( ( $song && Songpress_Caps::can( 'create' ) ) ? ' <button type="submit" form="spe-nv-form" class="spe-nvbtn" title="' . esc_attr__( 'Create a new version of this work', 'songpress' ) . '">+ ' . esc_html__( 'Create a version', 'songpress' ) . '</button>' : '' ) . '</h3>';
 		if ( $song && ( $version > 0 || $legacy ) ) {
-			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. The ISRC, DistroKid and UPC numbers go in Publishing.', 'songpress' ) . '</p>';
+			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. The ISRC is here; the DistroKid and UPC numbers go in Publishing.', 'songpress' ) . '</p>';
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
@@ -182,7 +182,7 @@ class Songpress_Editor {
 				$rel .= '<option value="' . esc_attr( $gn ) . '">';
 			}
 			$rel .= '</datalist>';
-			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . '</div>';
+			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::isrc_fields( $song ? Songpress_Songs::identifiers( $id ) : array() ) . '</div>';
 		} else {
 			$rel .= '<p class="spe-help">' . esc_html__( 'Release details (release name, band, album, genre, key, tempo, dates) belong to versions. Add a version when this song is recorded or released.', 'songpress' ) . '</p>' . self::released_list( $song );
 		}
@@ -313,13 +313,30 @@ class Songpress_Editor {
 		return $o;
 	}
 
+	/** The ISRC belongs to one recording, so it sits with the Release details. A second value gets its own field labelled "Alt". */
+	private static function isrc_fields( $existing ) {
+		$vals = array();
+		foreach ( $existing as $c ) {
+			if ( 'isrc' === strtolower( (string) $c->kind ) ) {
+				$vals[] = (string) $c->value;
+			}
+		}
+		if ( ! $vals ) {
+			$vals = array( '' );
+		}
+		$o = '';
+		foreach ( $vals as $n => $v ) {
+			$o .= '<label class="spe-field spe-own"><span>' . esc_html( 0 === $n ? 'ISRC' : 'ISRC Alt' . ( $n > 1 ? ' ' . $n : '' ) ) . '</span><input type="hidden" name="codes[isrc' . (int) $n . '][kind]" value="isrc"><input name="codes[isrc' . (int) $n . '][value]" value="' . esc_attr( $v ) . '"></label>';
+		}
+		return $o;
+	}
+
 	/** The publishing numbers, always listed, empty or not. A second value of the same kind gets its own field labelled "Alt". */
 	private static function code_fields( $existing, $root ) {
 		$shown = array( 'iswc' => 'ISWC', 'ascap' => 'ASCAP', 'bmi' => 'BMI', 'mlc' => 'MLC', 'ccli' => 'CCLI', 'copyright' => __( 'Copyright no.', 'songpress' ), 'work_id' => __( 'Work ID', 'songpress' ) );
 		if ( ! $root ) { // these belong to one recording or release, so only a version has them
 			$shown['distrokid'] = 'DistroKid';
 			$shown['upc']       = 'UPC';
-			$shown['isrc']      = 'ISRC';
 		}
 		$by = array();
 		foreach ( $existing as $c ) {
@@ -340,6 +357,9 @@ class Songpress_Editor {
 			++$i;
 		}
 		$o .= '</div>';
+		if ( ! $root ) {
+			unset( $by['isrc'] ); // on a version the ISRC is entered under Release (isrc_fields), so it is not repeated here
+		}
 		foreach ( $by as $k => $vals ) { // a kind this form has no field for (an old import, or an ISRC on the original): kept, not shown
 			foreach ( $vals as $v ) {
 				$o .= '<input type="hidden" name="codes[' . $i . '][kind]" value="' . esc_attr( $k ) . '"><input type="hidden" name="codes[' . $i . '][value]" value="' . esc_attr( $v ) . '">';
