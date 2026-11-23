@@ -641,7 +641,7 @@ class Songpress_Money {
 		$o   .= '<th class="n">' . esc_html__( 'All time', 'songpress' ) . '</th></tr></thead><tbody>';
 		$colt = array();
 		foreach ( array_keys( $sum ) as $k ) {
-			$o .= '<tr><td><b>' . esc_html( $names[ $k ] ) . '</b></td>';
+			$o .= '<tr><td>' . Songpress_Profiles::chip( $names[ $k ], 28, 'person' ) . '<b>' . esc_html( $names[ $k ] ) . '</b></td>';
 			foreach ( $cols as $q ) {
 				$v           = isset( $grid[ $k ][ $q ] ) ? array_sum( $grid[ $k ][ $q ] ) : 0;
 				$colt[ $q ]  = ( $colt[ $q ] ?? 0 ) + $v;
@@ -717,7 +717,7 @@ class Songpress_Money {
 			$te += $earned[ $k ];
 			$tp += $paid[ $k ] ?? 0;
 			$to += $ow;
-			$o  .= '<tr><td><b>' . esc_html( $names[ $k ] ) . '</b></td><td class="n">' . esc_html( self::money( $earned[ $k ] ) ) . '</td><td class="n">' . esc_html( self::money( $paid[ $k ] ?? 0 ) ) . '</td><td class="n"><b>' . esc_html( self::money( $ow ) ) . '</b></td><td>';
+			$o  .= '<tr><td>' . Songpress_Profiles::chip( $names[ $k ], 28, 'person' ) . '<b>' . esc_html( $names[ $k ] ) . '</b></td><td class="n">' . esc_html( self::money( $earned[ $k ] ) ) . '</td><td class="n">' . esc_html( self::money( $paid[ $k ] ?? 0 ) ) . '</td><td class="n"><b>' . esc_html( self::money( $ow ) ) . '</b></td><td>';
 			$o  .= self::form_open( 'songpress_money_payment', 'spm-pay' ) . '<input type="hidden" name="person" value="' . esc_attr( $names[ $k ] ) . '"><input class="spm-amt" name="amount" inputmode="decimal" value="' . esc_attr( $ow > 0 ? number_format( $ow, 2, '.', '' ) : '' ) . '" placeholder="0.00" aria-label="' . esc_attr__( 'Amount paid', 'songpress' ) . '" required>'
 				. '<select name="quarter" aria-label="' . esc_attr__( 'Counts toward quarter', 'songpress' ) . '">';
 			foreach ( $qopts as $q ) {
