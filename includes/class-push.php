@@ -461,7 +461,28 @@ JS;
 	/** Sends the test and says what happened. Returns array( ok, message ). */
 	public static function run_test( $me, $kind = '' ) {
 		self::$kind = $kind;
-		$n    = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
+		if ( 'phone' === $kind ) { // your phone, and the phones of whoever gets alerts
+			$n = 0;
+			$names = array();
+			$rep   = array();
+			$last  = array();
+			foreach ( array_unique( array_merge( array( get_current_user_id() ), self::alert_ids() ) ) as $id ) {
+				$u  = get_userdata( $id );
+				$n += self::notify( $id, __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) );
+				foreach ( self::$names as $x ) {
+					$names[] = ( $u ? $u->display_name : '#' . $id ) . ': ' . $x;
+				}
+				foreach ( self::$report as $x ) {
+					$rep[] = ( $u ? $u->display_name : '#' . $id ) . ': ' . $x;
+				}
+				$last = array_merge( $last, self::$last );
+			}
+			self::$names  = $names;
+			self::$report = $rep;
+			self::$last   = $last;
+		} else {
+			$n = $me ? self::notify( get_current_user_id(), __( 'SongPress test', 'songpress' ), __( 'Notifications are working on this phone.', 'songpress' ) ) : self::alert( __( 'SongPress alert', 'songpress' ), __( 'This is a test alert from the site.', 'songpress' ) );
+		}
 		if ( $n ) {
 			/* translators: %s: device names */
 			$msg = sprintf( __( 'Test sent. It reached: %s. If nothing shows on that device, check its notification settings for SongPress, and that Focus or Do Not Disturb is off.', 'songpress' ), implode( '; ', array_unique( self::$names ) ) ) . ' [' . implode( ' | ', self::$report ) . ']';
