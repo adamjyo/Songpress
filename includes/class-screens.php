@@ -182,7 +182,7 @@ class Songpress_Screens {
 			return '<div class="sp-app"><p class="spe-note bad">' . esc_html( sprintf( /* translators: %s: error message */ __( 'This screen hit a problem: %s', 'songpress' ), $e->getMessage() ) ) . '</p></div>';
 		}
 		$base = esc_attr( Songpress_Editor::list_url() );
-		$h    = preg_replace( '~(<form\b[^>]*admin-post\.php[^>]*>)~i', '$1<input type="hidden" name="sp_return" value="' . $base . '">', $h );
+		$h    = preg_replace( '~(<form\b[^>]*(?:admin-post\.php|songpress_post=1)[^>]*>)~i', '$1<input type="hidden" name="sp_return" value="' . $base . '">', $h );
 		$h    = preg_replace_callback( '~href="([^"]*admin\.php\?page=(songpress[a-z-]*)[^"]*)"~i', function ( $m ) {
 			$url = html_entity_decode( $m[1] );
 			$q   = array();
