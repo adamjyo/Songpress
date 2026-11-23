@@ -468,6 +468,26 @@ class Songpress_Editor {
 	}
 
 	/** Paste the text DistroKid shows after a release (HyperFollow) and the streaming links in it are added to this version. Runs in the browser; nothing is sent until the work saves. */
+	/** Streaming icons for a list of links (kind, url), as plain anchors. Empty when there is nothing to open. */
+	public static function stream_links_html( $links ) {
+		$names = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'itunes' => 'iTunes', 'amazon' => 'Amazon Music', 'youtube' => 'YouTube', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'tiktok' => 'TikTok', 'bandcamp' => 'Bandcamp', 'soundcloud' => 'SoundCloud' );
+		$cols  = array( 'spotify' => '#1db954', 'apple' => '#fa2d48', 'itunes' => '#b455f0', 'amazon' => '#00a8e1', 'youtube' => '#ff0000', 'tidal' => '#111111', 'deezer' => '#a238ff', 'pandora' => '#3668ff', 'tiktok' => '#111111', 'bandcamp' => '#1da0c3', 'soundcloud' => '#ff5500' );
+		$o     = '';
+		$seen  = array();
+		foreach ( (array) $links as $l ) {
+			$k = strtolower( trim( (string) $l->kind ) );
+			$u = trim( (string) $l->url );
+			if ( ! isset( $names[ $k ] ) || isset( $seen[ $k ] ) || ! preg_match( '#^https?://#i', $u ) ) {
+				continue;
+			}
+			$seen[ $k ] = 1;
+			/* translators: %s: streaming service */
+			$t  = sprintf( __( 'Open on %s', 'songpress' ), $names[ $k ] );
+			$o .= '<a class="spe-st" href="' . esc_url( $u ) . '" target="_blank" rel="noopener" style="background:' . esc_attr( $cols[ $k ] ) . '" title="' . esc_attr( $t ) . '" aria-label="' . esc_attr( $t ) . '"><b>' . esc_html( $names[ $k ][0] ) . '</b></a>';
+		}
+		return '' === $o ? '' : '<div class="spe-streams" aria-label="' . esc_attr__( 'Listen on', 'songpress' ) . '">' . $o . '</div>';
+	}
+
 	/** Streaming icons above the player, built from this version's Links rows and kept current as they change. Tapping one opens that service (its app, on a phone). */
 	private static function stream_widget() {
 		$names = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'itunes' => 'iTunes', 'amazon' => 'Amazon Music', 'youtube' => 'YouTube', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'tiktok' => 'TikTok', 'bandcamp' => 'Bandcamp', 'soundcloud' => 'SoundCloud' );

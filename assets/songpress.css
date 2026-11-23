@@ -688,7 +688,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-authors{display:flex;flex-wrap:nowrap;gap:6px;margin:8px 0 0;overflow-x:auto;scrollbar-width:none}
 .songpress-authors::-webkit-scrollbar{display:none}
 .songpress-authors .songpress-icon{flex:none;display:inline-flex}
-.songpress-authors .sp-face{width:32px!important;height:32px!important;font-size:12px!important;margin:0!important}
+.songpress-authors .sp-face{width:48px!important;height:48px!important;font-size:18px!important;margin:0!important}
 
 .songpress-userbar{justify-content:space-between}
 .songpress-sharebtn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-left:auto;border:0;border-radius:50%;background:transparent;color:var(--sp-text);cursor:pointer}
@@ -1039,3 +1039,5 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .spe-st{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;text-decoration:none;font-weight:700;font-size:17px;box-shadow:0 1px 3px rgba(0,0,0,.25)}.spe-st b{font-weight:700}.spe-st:active{transform:scale(.94)}
 .spe-who .sp-face,.spe-artchip .sp-face{width:44px!important;height:44px!important;font-size:17px!important}
 .sp-app .spe-artchip{min-width:44px}
+.songpress-band .sp-face{width:48px!important;height:48px!important;font-size:18px!important}.songpress-band{display:flex;align-items:center;gap:4px}
+.songpress-header .spe-streams,.songpress .spe-streams{margin:10px 0}
