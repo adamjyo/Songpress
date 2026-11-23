@@ -187,57 +187,10 @@ class Songpress_Money {
 		}
 
 		if ( $has( 'paid_entry' ) || $has( 'pay_board' ) ) {
-			$p = self::t( 'payments' );
-			$put = function ( $y, $q, $kind, $party, $amount, $paid, $on, $notes ) use ( $wpdb, $p ) {
-				$key = self::person_key( $party );
-				if ( '' === $key || $y < 2000 || $q < 1 || $q > 4 ) {
-					return 0;
-				}
-				$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, paid FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s", $y, $q, $kind, $key ) ); // phpcs:ignore WordPress.DB
-				if ( $have ) {
-					return 0; // keep what was already entered here
-				}
-				$wpdb->insert( $p, array(
-					'pay_year' => $y, 'pay_quarter' => $q, 'kind' => $kind, 'party' => trim( $party ), 'party_key' => $key,
-					'amount' => (float) $amount, 'paid' => $paid ? 1 : 0, 'paid_on' => $on ? substr( $on, 0, 10 ) : null,
-					'notes' => (string) $notes, 'updated_at' => current_time( 'mysql' ),
-				) );
-				return 1;
-			};
-			if ( $has( 'paid_entry' ) ) {
-				// Every paid_entry line is money that was actually paid out, so it comes across as paid (a zero line has nothing to count and waits for the pay board).
-				foreach ( $pdo->query( 'SELECT y, q, party, kind, amount, notes, updated_at FROM paid_entry' ) as $r ) {
-					if ( 5 === (int) $r['q'] ) { // the old "Q4 correction" line (a plain amount, often negative) belongs to that year's Q4
-						$r['q']     = 4;
-						$r['notes'] = trim( 'Correction ' . $r['notes'] );
-					}
-					$amt  = (float) $r['amount'];
-					$on   = 0.0 !== $amt ? substr( (string) $r['updated_at'], 0, 10 ) : '';
-					$kind = $r['kind'] ?: 'writer';
-					$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $kind, $r['party'], $amt, 0.0 !== $amt, $on, $r['notes'] );
-					if ( 0.0 !== $amt ) {
-						// an earlier load left these as unpaid, untouched: mark them paid now (an amount changed here is left alone)
-						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s AND paid = 0 AND ABS(amount - %d / 100) < 0.005", $on ?: null, (int) $r['y'], (int) $r['q'], $kind, self::person_key( $r['party'] ), (int) round( $amt * 100 ) ) ); // phpcs:ignore WordPress.DB
-					}
-				}
-			}
-			if ( $has( 'pay_board' ) ) {
-				foreach ( $pdo->query( 'SELECT y, q, kind, party, paid, paid_on FROM pay_board' ) as $r ) {
-					$key = self::person_key( $r['party'] );
-					$row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s", (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $key ) ); // phpcs:ignore WordPress.DB
-					if ( $row ) {
-						if ( (int) $r['paid'] ) {
-							// the old board only flagged "paid"; when no amount was recorded, the amount is what they earned that quarter
-							$pe = self::t( 'person_earnings' );
-							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET amount = COALESCE((SELECT SUM(amount) FROM {$pe} WHERE person_key = %s AND quarter = %s), 0) WHERE id = %d AND paid = 0 AND amount = 0", $key, (int) $r['y'] . '-Q' . (int) $r['q'], (int) $row->id ) ); // phpcs:ignore WordPress.DB
-							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE id = %d AND paid = 0", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
-							$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid_on = %s WHERE id = %d AND paid = 1 AND paid_on IS NULL", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
-						}
-					} else {
-						$out['payments'] += $put( (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $r['party'], 0, (int) $r['paid'], (string) $r['paid_on'], '' );
-					}
-				}
-			}
+			$out['payments'] += self::import_payments(
+				$has( 'paid_entry' ) ? $pdo->query( 'SELECT y, q, party, kind, amount, notes, updated_at FROM paid_entry' )->fetchAll( PDO::FETCH_ASSOC ) : array(),
+				$has( 'pay_board' ) ? $pdo->query( 'SELECT y, q, kind, party, paid, paid_on FROM pay_board' )->fetchAll( PDO::FETCH_ASSOC ) : array()
+			);
 		}
 
 		if ( $has( 'dk_daily_estimates' ) ) {
@@ -350,6 +303,67 @@ class Songpress_Money {
 		$e = self::t( 'earnings' );
 		$s = self::t( 'songs' );
 		return $wpdb->get_results( $wpdb->prepare( "SELECT s.id, s.serial, s.title, SUM(e.amount) AS total FROM {$e} e JOIN {$s} s ON s.id = e.song_id GROUP BY s.id, s.serial, s.title ORDER BY total DESC LIMIT %d", (int) $limit ) ); // phpcs:ignore WordPress.DB
+	}
+
+	/**
+	 * Bring the old catalog's payment lines across: paid_entry (money actually paid) and pay_board (paid flags). Safe to run again.
+	 * Returns how many new payment rows were made.
+	 */
+	public static function import_payments( array $entries, array $boards ) {
+		global $wpdb;
+		$count = 0;
+		$p = self::t( 'payments' );
+		$put = function ( $y, $q, $kind, $party, $amount, $paid, $on, $notes ) use ( $wpdb, $p ) {
+			$key = self::person_key( $party );
+			if ( '' === $key || $y < 2000 || $q < 1 || $q > 4 ) {
+				return 0;
+			}
+			$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, paid FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s", $y, $q, $kind, $key ) ); // phpcs:ignore WordPress.DB
+			if ( $have ) {
+				return 0; // keep what was already entered here
+			}
+			$wpdb->insert( $p, array(
+				'pay_year' => $y, 'pay_quarter' => $q, 'kind' => $kind, 'party' => trim( $party ), 'party_key' => $key,
+				'amount' => (float) $amount, 'paid' => $paid ? 1 : 0, 'paid_on' => $on ? substr( $on, 0, 10 ) : null,
+				'notes' => (string) $notes, 'updated_at' => current_time( 'mysql' ),
+			) );
+			return 1;
+		};
+		if ( $entries ) {
+			// Every paid_entry line is money that was actually paid out, so it comes across as paid (a zero line has nothing to count and waits for the pay board).
+			foreach ( $entries as $r ) {
+				if ( 5 === (int) $r['q'] ) { // the old "Q4 correction" line (a plain amount, often negative) belongs to that year's Q4
+					$r['q']     = 4;
+					$r['notes'] = trim( 'Correction ' . $r['notes'] );
+				}
+				$amt  = (float) $r['amount'];
+				$on   = 0.0 !== $amt ? substr( (string) $r['updated_at'], 0, 10 ) : '';
+				$kind = $r['kind'] ?: 'writer';
+				$count += $put( (int) $r['y'], (int) $r['q'], $kind, $r['party'], $amt, 0.0 !== $amt, $on, $r['notes'] );
+				if ( 0.0 !== $amt ) {
+					// an earlier load left these as unpaid, untouched: mark them paid now (an amount changed here is left alone)
+					$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s AND paid = 0 AND ABS(amount - %d / 100) < 0.005", $on ?: null, (int) $r['y'], (int) $r['q'], $kind, self::person_key( $r['party'] ), (int) round( $amt * 100 ) ) ); // phpcs:ignore WordPress.DB
+				}
+			}
+		}
+		if ( $boards ) {
+			foreach ( $boards as $r ) {
+				$key = self::person_key( $r['party'] );
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s", (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $key ) ); // phpcs:ignore WordPress.DB
+				if ( $row ) {
+					if ( (int) $r['paid'] ) {
+						// the old board only flagged "paid"; when no amount was recorded, the amount is what they earned that quarter
+						$pe = self::t( 'person_earnings' );
+						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET amount = COALESCE((SELECT SUM(amount) FROM {$pe} WHERE person_key = %s AND quarter = %s), 0) WHERE id = %d AND paid = 0 AND amount = 0", $key, (int) $r['y'] . '-Q' . (int) $r['q'], (int) $row->id ) ); // phpcs:ignore WordPress.DB
+						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid = 1, paid_on = %s WHERE id = %d AND paid = 0", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
+						$wpdb->query( $wpdb->prepare( "UPDATE {$p} SET paid_on = %s WHERE id = %d AND paid = 1 AND paid_on IS NULL", substr( (string) $r['paid_on'], 0, 10 ), (int) $row->id ) ); // phpcs:ignore WordPress.DB
+					}
+				} else {
+					$count += $put( (int) $r['y'], (int) $r['q'], $r['kind'] ?: 'writer', $r['party'], 0, (int) $r['paid'], (string) $r['paid_on'], '' );
+				}
+			}
+		}
+		return $count;
 	}
 
 	/** What each person earned in a quarter. */
@@ -790,6 +804,37 @@ class Songpress_Money {
 	}
 
 	/**
+	 * Which quarters the Money page shows, oldest to newest: the last 8 by default, one chosen year (qy), or every quarter (allq).
+	 */
+	private static function quarter_cols( array $qs ) {
+		$qs = array_values( array_unique( $qs ) );
+		rsort( $qs );
+		$y  = isset( $_GET['qy'] ) ? absint( $_GET['qy'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $y >= 2000 && $y <= 2100 ) {
+			return array( $y . '-Q1', $y . '-Q2', $y . '-Q3', $y . '-Q4' );
+		}
+		return array_reverse( ! empty( $_GET['allq'] ) ? $qs : array_slice( $qs, 0, 8 ) ); // phpcs:ignore WordPress.Security.NonceVerification
+	}
+
+	/** The "which quarters" picker: last 8, each year with money in it, or every quarter. Keeps the other view choices. */
+	private static function quarter_picker( array $qs, $totals ) {
+		$years = array();
+		foreach ( $qs as $q ) {
+			$years[ (int) substr( $q, 0, 4 ) ] = 1;
+		}
+		krsort( $years );
+		$y   = isset( $_GET['qy'] ) ? absint( $_GET['qy'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification
+		$all = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$o   = '<form method="get" class="spm-qpick" action="' . esc_url( Songpress_Editor::list_url() ) . '"><input type="hidden" name="sp_page" value="money">' . ( $totals ? '<input type="hidden" name="totals" value="1">' : '' )
+			. '<label>' . esc_html__( 'Quarters', 'songpress' ) . ' <select name="qv" onchange="var v=this.value,f=this.form;f.querySelectorAll(\'[data-q]\').forEach(function(x){x.remove()});if(v===\'all\'){f.insertAdjacentHTML(\'beforeend\',\'<input type=hidden name=allq value=1 data-q>\')}else if(v!==\'8\'){f.insertAdjacentHTML(\'beforeend\',\'<input type=hidden name=qy value=\'+v+\' data-q>\')}f.querySelector(\'[name=qv]\').disabled=true;f.submit()">'
+			. '<option value="8"' . selected( ! $all && ! $y, true, false ) . '>' . esc_html__( 'Last 8', 'songpress' ) . '</option>';
+		foreach ( array_keys( $years ) as $yy ) {
+			$o .= '<option value="' . (int) $yy . '"' . selected( $y, $yy, false ) . '>' . (int) $yy . '</option>';
+		}
+		return $o . '<option value="all"' . selected( $all && ! $y, true, false ) . '>' . esc_html__( 'Every quarter', 'songpress' ) . '</option></select></label></form>';
+	}
+
+	/**
 	 * Income and accounting together: one block per person. The header carries what they are owed; below it come their quarters by income stream,
 	 * a Total row (green check = paid in full, amber = partly), what was Paid and what is Left each quarter, then the Record a payment button and history.
 	 */
@@ -799,8 +844,7 @@ class Songpress_Money {
 			return '';
 		}
 		$totals = ! empty( $_GET['totals'] ); // phpcs:ignore WordPress.Security.NonceVerification
-		$all    = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
-		$cols   = array_reverse( $all ? $qs : array_slice( $qs, 0, 8 ) ); // oldest to newest, left to right
+		$cols   = self::quarter_cols( $qs ); // oldest to newest, left to right
 		$grid   = array();
 		$names  = array();
 		$earned = array();
@@ -834,11 +878,11 @@ class Songpress_Money {
 		$base = Songpress_Editor::list_url();
 		$o  = '<h3>' . esc_html__( 'Income and accounting', 'songpress' ) . '</h3>';
 		$o .= '<ul class="spm-sum"><li><span>' . esc_html__( 'Earned to date', 'songpress' ) . '</span><b>' . esc_html( self::money( $te ) ) . '</b></li><li><span>' . esc_html__( 'Paid', 'songpress' ) . '</span><b>' . esc_html( self::money( $tp ) ) . '</b></li><li class="spm-due"><span>' . esc_html__( 'Still owed', 'songpress' ) . '</span><b>' . esc_html( self::money( $to ) ) . '</b></li></ul>';
-		$o .= '<p class="spe-help spm-tools"><input type="search" class="spm-find" placeholder="' . esc_attr__( 'Find a person', 'songpress' ) . '" aria-label="' . esc_attr__( 'Find a person', 'songpress' ) . '"> '
-			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'totals' => $totals ? '' : '1', 'allq' => $all ? '1' : '' ), $base ) ) . '">' . esc_html( $totals ? __( 'Break down by stream', 'songpress' ) : __( 'Totals only', 'songpress' ) ) . '</a> · '
-			. '<a href="' . esc_url( add_query_arg( array( 'sp_page' => 'money', 'totals' => $totals ? '1' : '', 'allq' => $all ? '' : '1' ), $base ) ) . '">' . esc_html( $all ? __( 'Last 8 quarters', 'songpress' ) : __( 'Every quarter', 'songpress' ) ) . '</a> · '
-			. '<span class="spm-ok">&#10003;</span> ' . esc_html__( 'paid in full', 'songpress' ) . ' <span class="spm-part">&#10003;</span> ' . esc_html__( 'partly paid', 'songpress' ) . '</p>';
-		$o .= '<div class="spm-blocks">';
+		$keep = array_filter( array( 'allq' => ! empty( $_GET['allq'] ) ? '1' : '', 'qy' => isset( $_GET['qy'] ) ? absint( $_GET['qy'] ) : '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		$o .= '<div class="spe-help spm-tools"><input type="search" class="spm-find" placeholder="' . esc_attr__( 'Find a person', 'songpress' ) . '" aria-label="' . esc_attr__( 'Find a person', 'songpress' ) . '"> '
+			. self::quarter_picker( $qs, $totals ) . ' '
+			. '<a href="' . esc_url( add_query_arg( array_merge( array( 'sp_page' => 'money', 'totals' => $totals ? '' : '1' ), $keep ), $base ) ) . '">' . esc_html( $totals ? __( 'Break down by stream', 'songpress' ) : __( 'Totals only', 'songpress' ) ) . '</a> · '
+			. '<span class="spm-ok">&#10003;</span> ' . esc_html__( 'paid in full', 'songpress' ) . ' <span class="spm-part">&#10003;</span> ' . esc_html__( 'partly paid', 'songpress' ) . '</div>';
 		foreach ( $owed as $k => $ow ) {
 			$pd   = $paid[ $k ] ?? 0;
 			$pct  = $earned[ $k ] > 0 ? max( 0, min( 100, (int) round( 100 * $pd / $earned[ $k ] ) ) ) : 0;
@@ -1053,10 +1097,8 @@ class Songpress_Money {
 		}
 		$outq = self::outflow_by_quarter();
 		if ( $grid || $outq ) {
-			$all  = ! empty( $_GET['allq'] ); // phpcs:ignore WordPress.Security.NonceVerification
 			$qall = array_unique( array_merge( $qs, array_keys( $outq ) ) );
-			rsort( $qall );
-			$cols = array_reverse( $all ? $qall : array_slice( $qall, 0, 8 ) );
+			$cols = self::quarter_cols( $qall );
 			$o   .= '<h3>' . esc_html__( 'Money in and out by quarter', 'songpress' ) . '</h3>' . self::quarter_chart( $grid, $cols, $outq );
 		}
 

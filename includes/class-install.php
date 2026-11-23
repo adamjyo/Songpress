@@ -55,6 +55,11 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
+		// Old payment lines from the stored catalog come across as paid, once, with no new upload.
+		if ( '1' !== get_option( 'songpress_paid_fix' ) ) {
+			Songpress_Legacy::payments_from_stored();
+			update_option( 'songpress_paid_fix', '1' );
+		}
 		// DistroKid was crediting the whole statement among performers; redo those quarters with performer shares, once.
 		if ( '1' !== get_option( 'songpress_dk_shares' ) ) {
 			Songpress_Uploads::rebuild_dk_people();

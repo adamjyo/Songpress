@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.63.56
+Stable tag: 0.63.57
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.63.57 =
+* Money: old payment lines are brought across from the rows already stored when you update (no new upload needed), so Paid and Left on the person blocks fill in.
+* Money: a Quarters picker on the person blocks and the chart: last 8, any single year, or every quarter.
 
 = 0.63.56 =
 * Works list: the sort you chose is remembered with your account, so the list, Back to Works and Previous / Next in the editor all use it. Click the active heading a third time to go back to the default order.

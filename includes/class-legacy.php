@@ -174,6 +174,37 @@ class Songpress_Legacy {
 		return $out;
 	}
 
+	/** The rows stored for one old table, as arrays. */
+	public static function stored_rows( $name ) {
+		global $wpdb;
+		$out  = array();
+		$last = 0;
+		$t    = self::table();
+		while ( true ) {
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, row_data FROM {$t} WHERE source_table = %s AND id > %d ORDER BY id LIMIT 1000", $name, $last ) ); // phpcs:ignore WordPress.DB
+			if ( ! $rows ) {
+				break;
+			}
+			foreach ( $rows as $r ) {
+				$last = (int) $r->id;
+				$d    = json_decode( $r->row_data, true );
+				if ( is_array( $d ) ) {
+					$out[] = $d;
+				}
+			}
+		}
+		return $out;
+	}
+
+	/** Bring the old payment lines across from the rows already stored, with no new upload. Returns new payment rows made. */
+	public static function payments_from_stored() {
+		$st = self::stored();
+		if ( empty( $st['paid_entry'] ) && empty( $st['pay_board'] ) ) {
+			return 0;
+		}
+		return Songpress_Money::import_payments( self::stored_rows( 'paid_entry' ), self::stored_rows( 'pay_board' ) );
+	}
+
 	/** What is stored so far: source table => rows. */
 	public static function stored() {
 		global $wpdb;

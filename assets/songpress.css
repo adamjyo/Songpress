@@ -878,3 +878,4 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-app button.spe-topsave{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;font-size:14px}
 .spe-top .sp-total{font-size:12px;color:var(--sp-mute);white-space:nowrap}
 @media(max-width:900px){.spe-back span,.spe-topsave span{display:none}.spe-steppos em{display:none}}
+.spm-tools .spm-qpick{display:inline-block;margin:0 10px 0 0}.spm-tools select{height:32px}
