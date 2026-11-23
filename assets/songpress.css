@@ -1047,3 +1047,6 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .songpress-top>.spe-streams{grid-column:1/-1;grid-row:2;justify-content:center;flex-wrap:nowrap;overflow-x:auto;gap:12px;margin:10px 0 0;scrollbar-width:none}.songpress-top>.spe-streams::-webkit-scrollbar{display:none}
 .songpress-top>.spe-streams .spe-st{flex:none;width:56px;height:56px}.songpress-top>.spe-streams .spe-st img{width:34px;height:34px}
 .songpress-top>.spe-streams~.songpress-audio{grid-row:3}
+.spe-st,.sp-app .spe-st{background:transparent!important;box-shadow:none!important;border-radius:12px}
+.spe-st img{width:100%;height:100%;border-radius:12px}
+.songpress-top>.spe-streams .spe-st img,.songpress-topl .spe-st img{width:100%;height:100%}
