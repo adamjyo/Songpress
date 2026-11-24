@@ -160,5 +160,16 @@ check( 'nothing usable', Songpress_People::username_for( '???' ), '' );
 check( 'same person, same key', Songpress_People::key_for( 'Adam  Yoo' ) === Songpress_People::key_for( 'adam yoo' ), true );
 check( 'different people, different key', Songpress_People::key_for( 'Adam Yoo' ) === Songpress_People::key_for( 'Adam Young' ), false );
 
+// transcriber: the pure parts of the timing service call
+if ( ! defined( 'ABSPATH' ) ) { define( 'ABSPATH', '/' ); }
+require_once __DIR__ . '/../includes/class-transcriber.php';
+$body = Songpress_Transcriber::multipart( 'BND', array( array( 'model', 'whisper-large-v3' ), array( 'timestamp_granularities[]', 'word' ) ), 'r.wav', 'RIFFdata' );
+check( 'multipart has the model field', false !== strpos( $body, "name=\"model\"\r\n\r\nwhisper-large-v3\r\n" ), true );
+check( 'multipart has the word granularity', false !== strpos( $body, 'name="timestamp_granularities[]"' ), true );
+check( 'multipart carries the file and closes', false !== strpos( $body, "filename=\"r.wav\"\r\nContent-Type: audio/wav\r\n\r\nRIFFdata\r\n--BND--\r\n" ), true );
+check( 'words from a good answer', Songpress_Transcriber::words_from( '{"text":"a b","words":[{"word":"a","start":0.5,"end":0.9},{"word":"b","start":1,"end":1.4}]}' ), array( array( 'word' => 'a', 'start' => 0.5, 'end' => 0.9 ), array( 'word' => 'b', 'start' => 1.0, 'end' => 1.4 ) ) );
+check( 'words from an answer with none', Songpress_Transcriber::words_from( '{"text":"x"}' ), null );
+check( 'words from junk', Songpress_Transcriber::words_from( 'not json' ), null );
+
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

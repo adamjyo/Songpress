@@ -93,6 +93,7 @@ class Songpress_Install {
 		return array(
 			'songpress_page_catalog' => array( 'title' => __( 'SongPress', 'songpress' ), 'slug' => 'desktop', 'code' => '[songpress_catalog]' ),
 			'songpress_page_profile' => array( 'title' => __( 'My songs', 'songpress' ), 'slug' => 'my-songs', 'code' => '[songpress_profile]' ),
+			'songpress_page_transcriber' => array( 'title' => __( 'Transcriber', 'songpress' ), 'slug' => 'transcriber', 'code' => '[songpress_transcriber]' ),
 			'songpress_page_app'     => array( 'title' => __( 'SongPress', 'songpress' ), 'slug' => 'app', 'code' => '[songpress_catalog]' ),
 		);
 	}
