@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.74
+Stable tag: 0.72.75
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.75 =
+* Profile picture zoom can shrink the photo (down to half) so the name shows.
 
 = 0.72.74 =
 * Profile picture maker rebuilt on the old catalog's Make icon tool: upload a photo, remove the background, set it in a colored circle (swatches or any color) over the person's name. The name is in the tool and can be edited.

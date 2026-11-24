@@ -151,7 +151,7 @@ class Songpress_Profiles {
 			. '<div class="sp-av-sw" role="group" aria-label="' . esc_attr__( 'Circle color', 'songpress' ) . '"></div>'
 			. '<label class="sp-av-cl"><span>' . esc_html__( 'Pick any color', 'songpress' ) . '</span><input class="sp-av-color" type="color" value="#e9a847"></label>'
 			. '<label class="sp-av-nl"><span>' . esc_html__( 'Name on the picture', 'songpress' ) . '</span><input class="sp-av-name" type="text" maxlength="24" autocomplete="off"></label>'
-			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="1" max="3" step="0.01" value="1"></label>'
+			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="0.5" max="3" step="0.01" value="1"></label>'
 			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The photo sits over the name, so move or shrink it to show more of the name.', 'songpress' ) . '</p>'
 			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html( '' !== (string) $person ? __( 'Use as their profile picture', 'songpress' ) : __( 'Use as my profile picture', 'songpress' ) ) . '</button> <span class="sp-av-msg" role="status"></span>'
 			. '</div></details>';
