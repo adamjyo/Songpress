@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.70.0
+Stable tag: 0.70.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.70.1 =
+* Work page: the Share button beside the player is gone for signed-in people (Share is in the top corner). Visitors on a shared link keep it.
 
 = 0.70.0 =
 * Work page: the album art and the song info (serial and status, title, genre) are now one card. The band, the writers and the performers sit centered under it, each in its own labelled group with names under the icons.

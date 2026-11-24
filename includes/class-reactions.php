@@ -206,7 +206,9 @@ class Songpress_Reactions {
 			return '<button type="button" class="sp-rx-b" data-rx="' . $act . '">' . $svg . '<span class="l">' . esc_html( $label ) . '</span></button>';
 		};
 		$o   = '<div class="sp-rx-bar"' . self::attrs( $s, $r ) . ( $in ? '' : ' data-rx-t="' . esc_attr( $token ) . '"' ) . ' role="group" aria-label="' . esc_attr__( 'Actions', 'songpress' ) . '">';
-		$o  .= $b( 'share', __( 'Share', 'songpress' ), self::ico( self::I_SHARE ) );
+		if ( ! $in ) { // signed-in people have Share in the top corner; a visitor on a shared link has no top bar
+			$o .= $b( 'share', __( 'Share', 'songpress' ), self::ico( self::I_SHARE ) );
+		}
 		if ( $in ) {
 			$o .= $b( 'fav', __( 'Favorite', 'songpress' ), self::ico( self::I_HEART ) );
 		}
