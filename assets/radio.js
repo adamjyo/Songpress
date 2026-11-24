@@ -120,7 +120,7 @@
     alive = false; window.SPRD_SNAP = Q.pos >= 0 ? { key: Q.key, base: Q.base, order: Q.order, pos: Q.pos, shuffle: Q.shuffle, repeat: Q.repeat } : null;
     clearTimeout(awayT); try { mini.remove(); pull.remove(); np.remove(); } catch (e) {} document.documentElement.classList.remove('sp-np-open', 'sp-rd-has-mini');
   };
-  window.SPRD_YIELD = function () { if (!alive) return; Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' }; hideNP(); ui(); }; // a track was started on the Works list
+  window.SPRD_YIELD = function () { if (!alive) return; Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' }; neutral(); hideNP(); ui(); }; // a track was started on the Works list
 
   function cover(ids, big) {
     var c = el('span', 'sp-rd-cover' + (big ? ' big' : '')); c.setAttribute('aria-hidden', 'true');
@@ -318,7 +318,9 @@
     if (Q.pos < 0) return; np.hidden = false; document.documentElement.classList.add('sp-np-open'); ui(true); nHandle.focus();
     if (!npPushed) { try { history.pushState({ spnp: 1 }, '', location.href); npPushed = true; } catch (e) {} }
   }
-  function closeNP() { hideNP(); if (npPushed) { npPushed = false; try { history.back(); } catch (e) {} } }
+  // the player's own history step: closing pops it only if it is really the current one; leaving the player any other way turns it into a plain Radio step, so a later back never lands on a ghost player
+  function neutral() { if (npPushed) { npPushed = false; try { if (history.state && history.state.spnp) history.replaceState({ sp: 1 }, '', location.href); } catch (e) {} } }
+  function closeNP() { var pop = npPushed && history.state && history.state.spnp; npPushed = false; hideNP(); if (pop) { try { history.back(); } catch (e) {} } }
   window.addEventListener('popstate', function () { if (alive && !np.hidden) { npPushed = false; hideNP(); } });
   (function () { // a swipe in from the left edge closes the player too
     var s = null;
@@ -333,7 +335,7 @@
   })();
   nHandle.addEventListener('click', closeNP);
   // going to another screen (a bottom tab, a link) leaves the full-screen player behind; the music carries on
-  function leaveNP() { if (!alive || np.hidden) return; npPushed = false; hideNP(); }
+  function leaveNP() { if (!alive || np.hidden) return; neutral(); hideNP(); }
   document.addEventListener('click', function (e) { if (alive && !np.hidden && e.target.closest && e.target.closest('.songpress-tabs a, .songpress-userbar a')) leaveNP(); }, true);
   document.addEventListener('sp:swapped', leaveNP);
   document.addEventListener('keydown', function (e) { if (alive && e.key === 'Escape' && !np.hidden && !document.querySelector('.sp-rx-wrap')) closeNP(); });
