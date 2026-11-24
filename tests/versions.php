@@ -117,6 +117,7 @@ require __DIR__ . '/../includes/class-earnings.php';
 require __DIR__ . '/../includes/class-access.php';
 require __DIR__ . '/../includes/class-push.php';
 require __DIR__ . '/../includes/class-legacy.php';
+require __DIR__ . '/../includes/class-export.php';
 require __DIR__ . '/../includes/class-pitch.php';
 require __DIR__ . '/../includes/class-journal.php';
 require __DIR__ . '/../includes/class-art.php';
@@ -1096,6 +1097,12 @@ $ts = array( '2026-03-04' => '3/4', '2025-06-08' => '6/8', '4-Apr' => '4/4', '12
 foreach ( $ts as $in => $want ) {
 	check( 'time_from_date ' . $in, Songpress_Songs::time_from_date( $in ), $want );
 }
+
+// export helpers
+$ex = (object) array( 'lyrics' => '', 'chords_lyrics' => '', 'chordpro' => "{title: X}\n# note\n{start_of_chorus}\n[G]Hello [D]world\n{end_of_chorus}\n" );
+check( 'export: lyrics from ChordPro drop chords and directives', Songpress_Export::lyrics_of( $ex ), 'Hello world' );
+$ex2 = (object) array( 'lyrics' => 'Plain words', 'chords_lyrics' => 'G Plain', 'chordpro' => '' );
+check( 'export: the lyrics level wins', Songpress_Export::lyrics_of( $ex2 ), 'Plain words' );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";

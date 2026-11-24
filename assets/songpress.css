@@ -1309,3 +1309,6 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 /* desktop works list: a small Released tag under the title when the song has an ISRC */
 .songpress-title .songpress-tag{display:block;width:max-content;margin-top:3px;padding:1px 7px;border-radius:999px;border:1px solid var(--sp-accent,#e8a33d);color:var(--sp-accent,#e8a33d);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;line-height:1.5}
 .spe-sheet[hidden]{display:none!important}
+.songpress-export,.songpress-exportlink{font-size:13px;text-decoration:none;white-space:nowrap}
+.songpress-searchbar .songpress-export{padding:7px 12px;border:1px solid var(--sp-line,#2a2d33);border-radius:8px;color:var(--sp-text,inherit);align-self:center}
+.songpress-searchbar .songpress-export:hover{border-color:var(--sp-accent,#e8a33d)}

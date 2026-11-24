@@ -295,8 +295,9 @@ class Songpress_Frontend {
 			$ov .= '</form>';
 			$lenbox = $ov;
 		}
+		$exp    = $desktop ? '<a class="songpress-export" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'list', array_filter( array( 'sp_q' => $q, 'sp_status' => $status, 'sp_sort' => $order, 'sp_dir' => $dir ), 'strlen' ) ) ) . '" title="' . esc_attr__( 'Export this list as a PDF', 'songpress' ) . '">' . esc_html__( 'Export PDF', 'songpress' ) . '</a>' : '';
 		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
-		$out   .= '<div class="songpress-searchbar">' . $lenbox . '<form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $add . '</div>';
+		$out   .= '<div class="songpress-searchbar">' . $lenbox . '<form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $exp . $add . '</div>';
 		$bulk = $desktop && ( Songpress_Caps::can( 'edit_any' ) || Songpress_Caps::can( 'edit_own' ) );
 		if ( $bulk ) {
 			$out .= self::bulk_open();
@@ -426,7 +427,8 @@ class Songpress_Frontend {
 		foreach ( Songpress_Songs::genres() as $l ) {
 			$o .= '<option value="' . esc_attr( $l ) . '">';
 		}
-		$o .= '</datalist> <button type="submit" name="do" value="set" class="spe-save">' . esc_html__( 'Apply to selected', 'songpress' ) . '</button>';
+		$o .= '</datalist> <button type="submit" name="do" value="set" class="spe-save">' . esc_html__( 'Apply to selected', 'songpress' ) . '</button>' . ' <button type="button" class="spe-save songpress-bulkexport" data-url="' . esc_url( Songpress_Export::url( 'list' ) ) . '">' . esc_html__( 'Export selected PDF', 'songpress' ) . '</button>';
+		$o .= '<script>(function(){var b=document.querySelector(".songpress-bulkexport");if(!b)return;b.addEventListener("click",function(){var ids=[].map.call(document.querySelectorAll(".songpress-pick:checked"),function(c){return c.value});if(!ids.length)return;window.open(b.getAttribute("data-url")+"&ids="+ids.join(","),"_blank")})})()</script>';
 		if ( Songpress_Caps::can( 'delete' ) ) {
 			$o .= ' <label class="songpress-bulkshowdel"><input type="checkbox" class="songpress-bulkdelon"> ' . esc_html__( 'Show delete', 'songpress' ) . '</label>';
 			$o .= ' <button type="submit" name="do" value="delete" hidden class="spe-btn danger songpress-bulkdel"">' . esc_html__( 'Delete selected', 'songpress' ) . '</button>';
@@ -492,6 +494,7 @@ class Songpress_Frontend {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
 		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
+		$edit .= wp_is_mobile() ? '' : '<a class="songpress-editlink songpress-exportlink" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'work', array( 'song' => (int) $id ) ) ) . '">' . esc_html__( 'Export PDF', 'songpress' ) . '</a>';
 		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
