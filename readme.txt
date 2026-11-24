@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.66
+Stable tag: 0.72.67
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.67 =
+* Phone Radio: the player no longer has its own edge-swipe code. The phone's back swipe (iPhone edge swipe, Android back) is one history step and the player owns it, so back always lands on the Radio playlist view; the in-app swipe gesture elsewhere now starts just inside the screen edge so the two never both fire.
 
 = 0.72.66 =
 * Phone: the last tap always wins. Tapping Works while Radio was still loading used to be ignored and then the slow Radio page landed on top of it. An earlier page is now cancelled when you tap again.

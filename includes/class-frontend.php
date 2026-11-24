@@ -411,7 +411,7 @@ class Songpress_Frontend {
 		}
 		$done = true;
 		return '<script>(function(){if(window.__spSwipe)return;window.__spSwipe=1;var s=null;function app(){return document.querySelector(".songpress.sp-app")}function tgt(){var b=document.querySelector(".songpress-userbar[data-back]");return b?b.getAttribute("data-back"):""}'
-			. 'document.addEventListener("touchstart",function(e){s=null;if(e.touches.length!==1||!tgt())return;var t=e.touches[0];if(t.clientX>36)return;if(e.target.closest&&e.target.closest("input,textarea,select,iframe"))return;s={x:t.clientX,y:t.clientY,m:""}},{passive:true});'
+			. 'document.addEventListener("touchstart",function(e){s=null;if(e.touches.length!==1||!tgt())return;var t=e.touches[0];if(t.clientX<22||t.clientX>44)return;if(e.target.closest&&e.target.closest("input,textarea,select,iframe"))return;s={x:t.clientX,y:t.clientY,m:""}},{passive:true});'
 			. 'document.addEventListener("touchmove",function(e){if(!s)return;var t=e.touches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(!s.m){if(Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)){s=null;return}if(dx>10&&dx>Math.abs(dy)*1.5)s.m="h";else return}var a=app();if(a){a.style.transition="none";a.style.transform="translateX("+Math.max(0,Math.min(dx,140))+"px)";a.style.opacity=String(1-Math.min(dx,200)/500)}s.dx=dx;e.preventDefault()},{passive:false});'
 			. 'function reset(){var a=app();if(a){a.style.transition="transform .18s,opacity .18s";a.style.transform="";a.style.opacity="";setTimeout(function(){a.style.transition=""},220)}}'
 			. 'document.addEventListener("touchend",function(){if(!s||s.m!=="h"){s=null;return}var go=s.dx>90,u=tgt();s=null;reset();if(go&&u){var a=app(),l=document.createElement("a");l.href=u;a.appendChild(l);l.click();l.remove()}});'

@@ -322,17 +322,7 @@
   function neutral() { if (npPushed) { npPushed = false; try { if (history.state && history.state.spnp) history.replaceState({ sp: 1 }, '', location.href); } catch (e) {} } }
   function closeNP() { var pop = npPushed && history.state && history.state.spnp; npPushed = false; hideNP(); if (pop) { try { history.back(); } catch (e) {} } }
   window.addEventListener('popstate', function () { if (alive && !np.hidden) { npPushed = false; hideNP(); } });
-  (function () { // a swipe in from the left edge closes the player too
-    var s = null;
-    document.addEventListener('touchstart', function (e) { s = null; if (!alive || np.hidden || e.touches.length !== 1) return; var p = e.touches[0]; if (p.clientX <= 36) s = { x: p.clientX, y: p.clientY, h: false, dx: 0 }; }, { passive: true });
-    document.addEventListener('touchmove', function (e) {
-      if (!s) return; var p = e.touches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
-      if (!s.h) { if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { s = null; return; } if (dx > 10 && dx > Math.abs(dy) * 1.5) s.h = true; else return; }
-      s.dx = dx; np.style.transition = 'none'; np.style.transform = 'translateX(' + Math.max(0, Math.min(dx, 160)) + 'px)'; e.preventDefault();
-    }, { passive: false });
-    function end(go) { if (!s) return; var d = s.dx, h = s.h; s = null; np.style.transition = 'transform .18s'; np.style.transform = ''; if (go && h && d > 90) closeNP(); }
-    document.addEventListener('touchend', function () { end(true); }); document.addEventListener('touchcancel', function () { end(false); });
-  })();
+  // no gesture code of its own: the phone's edge swipe / system back is a history step, and the player owns one (above)
   nHandle.addEventListener('click', closeNP);
   // going to another screen (a bottom tab, a link) leaves the full-screen player behind; the music carries on
   function leaveNP() { if (!alive || np.hidden) return; neutral(); hideNP(); }
