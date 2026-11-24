@@ -67,7 +67,7 @@
       var ic = b.querySelector('svg'); if (ic) ic.setAttribute('fill', m.fav ? 'currentColor' : 'none');
     });
     [].forEach.call(h.querySelectorAll('.sp-rx-bar [data-rx="rate"] .l'), function (l) {
-      l.textContent = m.mine ? (I.yours + ': ' + m.mine) : (m.n >= C.min ? I.rate + ' \u00b7 ' + (+m.avg).toFixed(1) : I.rate);
+      l.textContent = m.mine ? (m.mine + ' / 5') : I.rate;
     });
     [].forEach.call(h.querySelectorAll('[data-rx="rate"]'), function (b) { b.classList.toggle('on', !!m.mine); var ic = b.querySelector('svg'); if (ic) ic.setAttribute('fill', m.mine ? 'currentColor' : 'none'); });
   }
