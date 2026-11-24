@@ -10,8 +10,9 @@ class Songpress_Persons {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
-		add_action( 'wp_ajax_songpress_person_rename', array( __CLASS__, 'handle_rename' ) ); // admin-post.php is blocked on some hosts, so the form posts here
+		add_action( 'wp_ajax_songpress_person_rename', array( __CLASS__, 'handle_rename' ) ); // admin-ajax.php is blocked on some hosts, so the form posts here
 		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
+		add_action( 'wp_ajax_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
 		add_action( 'wp_ajax_songpress_person_adopt', array( __CLASS__, 'ajax_adopt' ) );
 		add_action( 'admin_post_songpress_person_delete', array( __CLASS__, 'handle_delete' ) );
 	}
