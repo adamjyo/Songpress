@@ -127,7 +127,7 @@
       var timing = Promise.resolve(null);
       if (wantWords) {
         if (!C.can) timing = Promise.reject(Object.assign(new Error('Log in to have the words timed automatically.'), { soft: true }));
-        else if (!C.hasKey) timing = Promise.reject(Object.assign(new Error('Word timing needs a free key. Open "Word timing service" below.'), { soft: true, nokey: true }));
+        else if (!C.hasKey) timing = Promise.reject(Object.assign(new Error('Word timing needs a key. A manager adds the free key in Settings (Word timing); the note under "Word timing service" below says how.'), { soft: true, nokey: true }));
         else timing = heardWords(wav16(d.samples, d.sr), lyrics);
       }
       return Promise.all([a, timing.then(function (w) { return { w: w }; }, function (e) { return { err: e }; })]);
@@ -180,34 +180,13 @@
 
   function drawService() {
     var b = $('tr-svcbox'); b.innerHTML = '';
-    function p(h) { var d = document.createElement('p'); d.className = 'msg'; d.innerHTML = h; b.appendChild(d); return d; }
-    p('Word timing uses the free <a href="https://console.groq.com/docs/speech-to-text" target="_blank" rel="noopener">Groq</a> speech service (Whisper). It is free with no card, up to about two hours of audio an hour. Only a small mono copy of the recording is sent, through this site. Nothing is kept.');
+    function p(h) { var d = document.createElement('p'); d.className = 'msg'; d.innerHTML = h; b.appendChild(d); }
+    p('Word timing uses the free <a href="https://console.groq.com/docs/speech-to-text" target="_blank" rel="noopener">Groq</a> speech service (Whisper). Only a small mono copy of the recording is sent, through this site. Nothing is kept.');
     if (!C.can) { p('<a href="' + C.login + '">Log in</a> to use it.'); return; }
-    if (C.hasKey) p('A key is saved for this site.');
-    if (!C.canKey) { if (!C.hasKey) p('Ask a manager to add the key.'); return; }
-    p('Get a key at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a> (sign in, press Create API Key) and paste it here.');
-    var row = document.createElement('div'); row.className = 'row';
-    var i = document.createElement('input'); i.type = 'password'; i.placeholder = 'gsk_…'; i.size = 36; i.autocomplete = 'off';
-    var s = document.createElement('button'); s.type = 'button'; s.className = 'ct-b ct-go'; s.textContent = 'Save key';
-    var r = document.createElement('button'); r.type = 'button'; r.className = 'ct-b'; r.textContent = 'Remove key'; r.hidden = !C.hasKey;
-    row.appendChild(i); row.appendChild(s); row.appendChild(r); b.appendChild(row);
-    function send(v) {
-      var fd = new FormData(); fd.append('action', 'songpress_tr_key'); fd.append('n', C.nonce); fd.append('key', v);
-      fetch(C.ajax, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (x) { return x.json(); }).then(function (j) {
-        if (!j.success) { say((j.data && j.data.msg) || 'Failed', 'err'); return; }
-        C.hasKey = j.data.hasKey; say(C.hasKey ? 'Key saved.' : 'Key removed.', 'ok'); drawService();
-      }).catch(function () { say('Could not save the key.', 'err'); });
-    }
-    s.addEventListener('click', function () { if (i.value.trim()) send(i.value.trim()); });
-    r.addEventListener('click', function () { send(''); });
+    if (C.hasKey) { p('A key is saved for this site.'); return; }
+    p(C.settings ? 'No key is saved yet. Add the free key in <a href="' + C.settings + '">Settings</a> (Word timing).' : 'No key is saved yet. Ask a manager to add it in Settings.');
   }
   drawService();
-  if (!C.hasKey) { // first visit: the setup step goes to the top, open, so it cannot be missed
-    var svc = $('tr-svc'), top = $('ct-tr');
-    svc.open = true; svc.style.cssText = 'margin:0 0 10px;padding:10px 12px;border:1px solid #f5c04a;border-radius:10px';
-    svc.querySelector('summary').textContent = C.canKey ? 'Set up word timing (one time, free): paste your key here' : 'Word timing needs a key';
-    top.insertBefore(svc, top.firstChild);
-  }
 
   /* ---------- inside the work editor: take its text and give the chart back ---------- */
 

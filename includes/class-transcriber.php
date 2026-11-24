@@ -87,7 +87,7 @@ class Songpress_Transcriber {
 			'nonce'  => wp_create_nonce( 'songpress_tr' ),
 			'can'    => self::can_use(),
 			'hasKey' => self::has_key(),
-			'canKey' => is_user_logged_in() && Songpress_Caps::can( 'settings' ),
+			'settings' => Songpress_Caps::can( 'settings' ) ? Songpress_Screens::url( 'settings' ) : '',
 			'login'  => wp_login_url( self::url() ),
 		);
 	}
