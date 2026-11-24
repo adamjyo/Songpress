@@ -123,7 +123,11 @@
     return a;
   }
 
-  function go(v) { view = v; draw(); window.scrollTo(0, 0); }
+  var VK = 'sp_rd_view';
+  function keep() { try { if (view.name === 'list' && !view.edit) localStorage.setItem(VK, view.k); else if (view.name === 'index') localStorage.removeItem(VK); } catch (e) {} }
+  function go(v) { view = v; keep(); draw(); window.scrollTo(0, 0); }
+  try { var kv = localStorage.getItem(VK); if (kv) view = { name: 'list', k: kv, edit: false }; } catch (e) {}
+  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('.songpress-tabs a.on'); if (a) { try { localStorage.removeItem(VK); } catch (x) {} } });
   function draw() {
     main.innerHTML = '';
     if (view.name === 'list' && byK(view.k)) drawList(byK(view.k)); else { view = { name: 'index', k: '', edit: false }; drawIndex(); }

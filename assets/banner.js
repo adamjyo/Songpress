@@ -12,11 +12,18 @@
     play: '<svg viewBox="0 0 24 32" width="30" height="36" fill="currentColor" aria-hidden="true"><path d="M5 3l17 13L5 29z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>',
     pause: '<svg viewBox="0 0 24 32" width="30" height="36" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="6.5" height="26" rx="2"/><rect x="14.5" y="3" width="6.5" height="26" rx="2"/></svg>'
   };
+  function accent(el) {
+    var c = '', a = document.querySelector('.sp-app');
+    try { c = getComputedStyle(a || document.body).getPropertyValue('--sp-accent').trim(); } catch (e) {}
+    if (!/^#[0-9a-f]{6}$/i.test(c)) c = '#f5a524';
+    var r = parseInt(c.substr(1, 2), 16), g = parseInt(c.substr(3, 2), 16), b = parseInt(c.substr(5, 2), 16);
+    el.style.setProperty('--bn', c); el.classList.toggle('lt', (0.299 * r + 0.587 * g + 0.114 * b) > 150);
+  }
   function build() {
     if (bar) return;
     bar = mk('div', 'sp-ban'); bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', I.player || 'Player'); bar.hidden = true;
     bar.innerHTML = '<div class="bn-top"><span class="bn-art"></span><span class="bn-tx"><b class="bn-t"></b><span class="bn-a"></span></span><img class="bn-logo" alt="" src="' + (C.logo || '') + '"></div><hr class="bn-hr"><div class="bn-ctl"><button type="button" class="bn-prev"></button><button type="button" class="bn-pp"></button><button type="button" class="bn-next"></button></div><button type="button" class="bn-hide">' + (I.hide || 'Hide player') + '</button>';
-    document.body.appendChild(bar);
+    accent(bar); document.body.appendChild(bar);
     bar.querySelector('.bn-prev').innerHTML = SVG.prev; bar.querySelector('.bn-next').innerHTML = SVG.next;
     bar.querySelector('.bn-pp').addEventListener('click', function () { if (!au) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause(); });
     bar.querySelector('.bn-prev').addEventListener('click', function () { move(-1); });

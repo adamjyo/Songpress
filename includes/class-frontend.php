@@ -154,7 +154,7 @@ class Songpress_Frontend {
 	 */
 	private static function nav_memory() {
 		return '<script>(function(){var s=document.currentScript,n=s&&s.closest("nav");if(!n)return;var K="spnav:' . (int) get_current_user_id() . ':",on=n.querySelector("a.on");'
-			. 'function key(a){var u=new URL(a.href);return(u.searchParams.get("sp_page")||"")+"|"+u.pathname}'
+			. 'function key(a){var u=new URL(a.href);return(u.searchParams.get("sp_page")||"")+(u.searchParams.get("sp_radio")?"|radio":"")+"|"+u.pathname}'
 			. 'function clean(h){var u=new URL(h);["sp_deleted","sp_bulk","sp_bskip","sp_err","sp_saved","m_ok","m_err","nj_go"].forEach(function(k){u.searchParams.delete(k)});return u.toString()}'
 			. 'function save(){if(!on)return;try{localStorage.setItem(K+key(on),clean(location.href))}catch(e){}}'
 			. 'save();window.addEventListener("pagehide",save);'
@@ -465,7 +465,13 @@ class Songpress_Frontend {
 			}
 			$o .= '<a class="' . ( $k === $on ? 'on' : '' ) . '"' . ( $k === $on ? ' aria-current="page"' : '' ) . ' href="' . esc_url( $it[0] ) . '">' . $it[2] . '<span>' . esc_html( $it[1] ) . '</span></a>';
 		}
-		return $o . '</nav>' . Songpress_Tour::boot();
+		return $o . ( 'bottom' === $pos ? self::nav_memory() : '' ) . '</nav>' . Songpress_Tour::boot();
+	}
+
+	/** A "back" link for phone pages that sit one level down: goes where you came from, else to Works. */
+	private static function back_link() {
+		$c = self::main_id( 'catalog' );
+		return '<a class="songpress-back" href="' . esc_url( $c ? get_permalink( $c ) : home_url( '/' ) ) . '" onclick="if(history.length>1&&document.referrer.indexOf(location.origin)===0){history.back();return false}">&lsaquo; ' . esc_html__( 'Back', 'songpress' ) . '</a>';
 	}
 
 	private static function song_view( $id, $uid ) {
@@ -477,7 +483,7 @@ class Songpress_Frontend {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
 		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
-		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
+		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) . self::back_link() : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The ChordPro level as the printable chord sheet (the PDF layout), with print and share icons above it. */

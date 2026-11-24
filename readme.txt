@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.68.0
+Stable tag: 0.68.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.68.1 =
+* The player banner is now a flat card in the app accent color, closer to the reference design.
+* On phones, each bottom tab remembers where you were in it (a search, an open work, the playlist you were viewing in Radio), like the desktop menu does. Tapping the tab you are already on starts it over.
+* A Back link sits at the top of a work page on phones.
 
 = 0.68.0 =
 * New Help tab on the phone: an animated, ten-step walk-through (search, play, swipe, press and hold, rate, Radio, the player, add to Home Screen, alerts) with Next, Previous and a close button. It opens once the first time someone opens the app after this update, and any time from the Help tab. Starts, finishes and skips are counted in the usage log.
