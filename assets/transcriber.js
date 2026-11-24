@@ -202,6 +202,12 @@
     r.addEventListener('click', function () { send(''); });
   }
   drawService();
+  if (!C.hasKey) { // first visit: the setup step goes to the top, open, so it cannot be missed
+    var svc = $('tr-svc'), top = $('ct-tr');
+    svc.open = true; svc.style.cssText = 'margin:0 0 10px;padding:10px 12px;border:1px solid #f5c04a;border-radius:10px';
+    svc.querySelector('summary').textContent = C.canKey ? 'Set up word timing (one time, free): paste your key here' : 'Word timing needs a key';
+    top.insertBefore(svc, top.firstChild);
+  }
 
   /* ---------- inside the work editor: take its text and give the chart back ---------- */
 
