@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.32
+Stable tag: 0.72.33
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.33 =
+* Works list PDF: more publishing and release detail. Writers and publishers show their splits, and every code (ISWC, CCLI, MLC, ISRC, UPC and the rest) is listed, with band, album, type, key and time signature.
 
 = 0.72.32 =
 * Export PDF. On a work (desktop): an Export PDF link opens a clean page with the title, writers and splits, publishers, codes, lyrics and a Releases table. On the Works list: Export PDF for the current list (search, status and sort kept, up to 500), and Export selected PDF for ticked songs. Both open a page with a Print / Save PDF button.

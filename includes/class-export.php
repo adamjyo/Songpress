@@ -215,16 +215,25 @@ class Songpress_Export {
 			$total = (int) $res['total'];
 		}
 		$o  = '<header class="lh"><div><h1>' . esc_html( get_bloginfo( 'name' ) ) . '</h1><div class="meta">' . esc_html( sprintf( /* translators: 1: songs shown, 2: songs in the list, 3: date */ __( 'Works list · %1$s of %2$s works · exported %3$s', 'songpress' ), number_format_i18n( count( $rows ) ), number_format_i18n( $total ), wp_date( get_option( 'date_format' ) ) ) ) . '</div></div></header>';
-		$o .= '<table class="grid list"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Title', 'songpress' ) . '</th><th>' . esc_html__( 'Genre', 'songpress' ) . '</th><th>' . esc_html__( 'Writers', 'songpress' ) . '</th><th>' . esc_html__( 'Publishers', 'songpress' ) . '</th><th>' . esc_html__( 'Band', 'songpress' ) . '</th><th>' . esc_html__( 'Release date', 'songpress' ) . '</th><th>ISRC</th><th>' . esc_html__( 'Status', 'songpress' ) . '</th></tr></thead><tbody>';
+		$o .= '<table class="grid list"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Title', 'songpress' ) . '</th><th>' . esc_html__( 'Writers', 'songpress' ) . '</th><th>' . esc_html__( 'Publishers', 'songpress' ) . '</th><th>' . esc_html__( 'Band and album', 'songpress' ) . '</th><th>' . esc_html__( 'Release date', 'songpress' ) . '</th><th>' . esc_html__( 'Codes', 'songpress' ) . '</th><th>' . esc_html__( 'Status', 'songpress' ) . '</th></tr></thead><tbody>';
+		$people = function ( $song_id, $role ) {
+			$l = array();
+			foreach ( self::credit_lines( $song_id, $role ) as $c ) {
+				$l[] = esc_html( $c[0] ) . ( '' !== $c[1] ? ' <span class="mut">' . esc_html( $c[1] ) . '</span>' : '' );
+			}
+			return implode( '<br>', $l );
+		};
 		foreach ( $rows as $s ) {
-			$wr = implode( ', ', wp_list_pluck( array_map( function ( $c ) {
-				return array( 'n' => $c[0] );
-			}, self::credit_lines( $s->id, 'writer' ) ), 'n' ) );
-			$pu = implode( ', ', wp_list_pluck( array_map( function ( $c ) {
-				return array( 'n' => $c[0] );
-			}, self::credit_lines( $s->id, 'publisher' ) ), 'n' ) );
 			$title = '' !== trim( (string) $s->release_title ) ? $s->release_title : Songpress_Songs::display_title( $s );
-			$o .= '<tr><td class="num">' . esc_html( $s->serial ) . '</td><td class="b">' . esc_html( $title ) . '</td><td>' . esc_html( $s->genre ) . '</td><td>' . esc_html( $wr ) . '</td><td>' . esc_html( $pu ) . '</td><td>' . esc_html( $s->artist ) . '</td><td>' . esc_html( $s->release_date ) . '</td><td>' . esc_html( self::code( $s->id, 'isrc' ) ) . '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td></tr>';
+			$sub   = implode( ' · ', array_filter( array( trim( (string) $s->genre ), trim( (string) ( $s->work_type ?? '' ) ), trim( (string) $s->musical_key ) ? sprintf( /* translators: %s: musical key */ __( 'Key of %s', 'songpress' ), trim( (string) $s->musical_key ) ) : '', trim( (string) $s->time_signature ) ), 'strlen' ) );
+			$codes = array();
+			foreach ( Songpress_Songs::identifiers( (int) $s->id ) as $i ) {
+				if ( '' !== trim( (string) $i->value ) ) {
+					$codes[] = '<span class="mut">' . esc_html( strtoupper( $i->kind ) ) . '</span> ' . esc_html( $i->value );
+				}
+			}
+			$band = esc_html( $s->artist ) . ( '' !== trim( (string) $s->album ) ? ( '' !== trim( (string) $s->artist ) ? '<br>' : '' ) . '<span class="mut">' . esc_html( $s->album ) . '</span>' : '' );
+			$o .= '<tr><td class="num">' . esc_html( $s->serial ) . '</td><td><span class="b">' . esc_html( $title ) . '</span>' . ( '' !== $sub ? '<br><span class="mut">' . esc_html( $sub ) . '</span>' : '' ) . '</td><td>' . $people( $s->id, 'writer' ) . '</td><td>' . $people( $s->id, 'publisher' ) . '</td><td>' . $band . '</td><td class="num">' . esc_html( $s->release_date ) . '</td><td class="codes">' . implode( '<br>', $codes ) . '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td></tr>';
 		}
 		$o .= '</tbody></table>';
 		if ( $total > count( $rows ) && ! $ids ) {
@@ -243,7 +252,7 @@ class Songpress_Export {
 			. '.cols{display:grid;grid-template-columns:200px 1fr;gap:30px;margin-top:20px}.lab{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin:14px 0 5px}.cols aside .lab:first-child,.main .lab:first-child{margin-top:0}'
 			. 'table{border-collapse:collapse;width:100%}.kv td{padding:2px 0;vertical-align:top}.r{text-align:right}.mut{color:#777}.ly{font-size:12px;line-height:1.65}'
 			. '.rel{margin-top:26px;border-top:1px solid #e6e6e6;padding-top:6px}.grid{font-size:10.5px}.grid th{text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:500;border-bottom:1px solid #ddd;padding:5px 6px}.grid td{padding:5px 6px;vertical-align:top}.grid tbody tr:nth-child(even){background:#f6f6f4}.grid tr.me td{font-weight:600}'
-			. '.list{margin-top:12px}.num{color:#666;font-variant-numeric:tabular-nums;white-space:nowrap}.b{font-weight:600}.note{margin-top:12px}'
+			. '.list{margin-top:12px}.list td{font-size:10px}.codes{font-variant-numeric:tabular-nums;white-space:nowrap}.num{color:#666;font-variant-numeric:tabular-nums;white-space:nowrap}.b{font-weight:600}.note{margin-top:12px}'
 			. '@page{size:' . ( 'landscape' === $orient ? 'letter landscape' : 'letter' ) . ';margin:14mm}@media print{body{background:#fff}.bar{display:none}.sheet{margin:0;padding:0;box-shadow:none;max-width:none}.grid thead{display:table-header-group}tr{break-inside:avoid}}';
 		return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html( $title . ' · ' . get_bloginfo( 'name' ) ) . '</title><style>' . $css . '</style></head><body>'
 			. '<div class="bar"><button type="button" onclick="window.print()">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span>' . esc_html__( 'Choose Save as PDF in the print window.', 'songpress' ) . '</span></div><div class="sheet">' . $body . '</div></body></html>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above and in the builders.
