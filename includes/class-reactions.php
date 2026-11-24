@@ -222,11 +222,12 @@ class Songpress_Reactions {
 	/** The player banner that slides down when a song plays from the Works list or a work page. */
 	public static function banner() {
 		static $done = false;
-		if ( $done || ! wp_is_mobile() ) { // phone app only
+		if ( $done ) {
 			return '';
 		}
 		$done = true;
 		$cfg  = array(
+			'quiet' => ! wp_is_mobile(), // the desktop plays the song with no drop-down player
 			'logo' => SONGPRESS_URL . 'assets/icon-sp.svg',
 			'i'    => array( 'player' => __( 'Player', 'songpress' ), 'prev' => __( 'Previous', 'songpress' ), 'next' => __( 'Next', 'songpress' ), 'play' => __( 'Play', 'songpress' ), 'pause' => __( 'Pause', 'songpress' ), 'hide' => __( 'Hide player', 'songpress' ), 'show' => __( 'Show player', 'songpress' ), 'back15' => __( 'Back 15 seconds', 'songpress' ), 'fwd15' => __( 'Forward 15 seconds', 'songpress' ) ),
 		);

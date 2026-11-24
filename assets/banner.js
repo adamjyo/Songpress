@@ -46,9 +46,9 @@
     bar.classList.remove('in'); var pb = pullBtn(); pb.style.setProperty('--bn', bar.style.getPropertyValue('--bn')); pb.classList.toggle('lt', bar.classList.contains('lt')); pb.hidden = false;
     setTimeout(function () { if (bar && !bar.classList.contains('in')) bar.hidden = true; }, 300);
   }
-  function showBar() { build(); if (pull) pull.hidden = true; bar.hidden = false; requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('in'); }); }); arm(); }
+  function showBar() { if (C.quiet) return; build(); if (pull) pull.hidden = true; bar.hidden = false; requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('in'); }); }); arm(); }
   function fill(m) {
-    current = m; build();
+    current = m; if (C.quiet) { if ('mediaSession' in navigator && window.MediaMetadata) navigator.mediaSession.metadata = new MediaMetadata({ title: m.title || '', artist: m.artist || '', artwork: m.art ? [{ src: m.art }] : [] }); return; } build();
     bar.querySelector('.bn-t').textContent = m.title || ''; bar.querySelector('.bn-a').textContent = m.artist || '';
     var a = bar.querySelector('.bn-art'); a.innerHTML = '';
     if (m.art) { var im = document.createElement('img'); im.src = m.art; im.alt = ''; a.appendChild(im); } else { a.textContent = '♫'; }
