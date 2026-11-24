@@ -404,6 +404,35 @@ class Songpress_Songs {
 	}
 
 	/**
+	 * A version that became a work of its own should look like one: its release name becomes the work's title and the release-only
+	 * details (release name, band, album, release date) are cleared, with a line in the private notes so nothing is lost.
+	 */
+	public static function become_root( $song_id ) {
+		global $wpdb;
+		$t = self::table_songs();
+		$s = self::get( (int) $song_id );
+		if ( ! $s || 0 !== (int) $s->version_no ) {
+			return false;
+		}
+		$bits = array();
+		foreach ( array( 'release_title' => 'Release title', 'artist' => 'Band', 'album' => 'Album', 'release_date' => 'Release date' ) as $f => $label ) {
+			if ( '' !== trim( (string) $s->$f ) ) {
+				$bits[] = $label . ': ' . trim( (string) $s->$f );
+			}
+		}
+		if ( ! $bits ) {
+			return false;
+		}
+		$set = array( 'release_title' => '', 'artist' => '', 'album' => '', 'release_date' => '' );
+		if ( '' !== trim( (string) $s->release_title ) ) {
+			$set['title'] = trim( (string) $s->release_title );
+		}
+		$set['notes'] = trim( (string) $s->notes . "\nWas a version. " . implode( '; ', $bits ) );
+		$wpdb->update( $t, $set, array( 'id' => (int) $s->id ) );
+		return true;
+	}
+
+	/**
 	 * Changes a serial number: 0012 (a work) or 0012-03 (a version of it). The song moves into the family with that number
 	 * (a new family is made if there is none). A work that has versions can only be renumbered to a free number, and its versions follow.
 	 * Returns the new serial, or a WP_Error.
@@ -455,6 +484,9 @@ class Songpress_Songs {
 			}
 		} finally {
 			$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+		}
+		if ( 0 === $p['version'] && (int) $song->version_no > 0 ) {
+			self::become_root( (int) $song_id );
 		}
 		Songpress_History::log( (int) $song_id, 'serial_changed', array( 'from' => $song->serial, 'serial' => $new ) );
 		return $new;

@@ -1082,6 +1082,15 @@ check( 'a new version starts with no type', (string) Songpress_Songs::get( $dv )
 Songpress_Songs::update( $v1, array( 'work_type' => '' ) );
 check( 'type can be cleared', Songpress_Songs::get( $v1 )->work_type, '' );
 
+// a version turned into a work looks like a work
+$wpdb_->update( 'wp_songpress_songs', array( 'release_title' => 'My Release', 'album' => 'Alb', 'artist' => 'Band' ), array( 'id' => $v3 ) );
+$tv = Songpress_Songs::create_version( $v1, 1 );
+$wpdb_->update( 'wp_songpress_songs', array( 'release_title' => 'Made Root', 'album' => 'Alb2', 'artist' => 'Band2', 'release_date' => '2026-03-03' ), array( 'id' => $tv ) );
+Songpress_Songs::set_serial( $tv, '0888' );
+$gr = Songpress_Songs::get( $tv );
+check( 'become_root: release name is now the title, release details cleared', array( $gr->title, $gr->release_title, $gr->album, $gr->artist, $gr->release_date ), array( 'Made Root', '', '', '', '' ) );
+check( 'become_root: the old details are kept in the notes', strpos( (string) $gr->notes, 'Album: Alb2' ) !== false, true );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
