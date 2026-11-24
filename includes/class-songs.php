@@ -106,6 +106,42 @@ class Songpress_Songs {
 		return 'starter' === strtolower( trim( (string) ( $s->stage ?? '' ) ) ) ? __( 'Starter', 'songpress' ) : self::display_title( $s );
 	}
 
+	/** The one Status a work shows: its writing stage when it has one, else the older status. */
+	public static function effective_status( $s ) {
+		$st = trim( (string) ( $s->stage ?? '' ) );
+		if ( '' !== $st ) {
+			return $st;
+		}
+		$k = (string) ( $s->status ?? '' );
+		return self::statuses()[ $k ] ?? $k;
+	}
+
+	/** Every choice for the merged Status field: the writing stages first, then the statuses they do not already cover. */
+	public static function status_choices( $version_no, array $extra = array() ) {
+		$all = self::merge_options( self::stages(), array_values( self::statuses_for( $version_no ) ) );
+		$all = self::merge_options( $all, $extra );
+		if ( 0 === (int) $version_no ) { // the original work can never be released
+			$all = array_values( array_filter( $all, function ( $l ) {
+				return 'released' !== strtolower( (string) $l );
+			} ) );
+		}
+		return $all;
+	}
+
+	/** The status key a Status choice stands for ('' when it matches none; the old status is then kept). */
+	public static function status_key_for( $label ) {
+		$l = strtolower( trim( (string) $label ) );
+		if ( 'taken down' === $l ) {
+			return 'retired';
+		}
+		foreach ( self::statuses() as $k => $name ) {
+			if ( $l === strtolower( $k ) || $l === strtolower( $name ) ) {
+				return $k;
+			}
+		}
+		return '';
+	}
+
 	/** The statuses a song may have. The original work can never be released. */
 	public static function statuses_for( $version_no ) {
 		$s = self::statuses();
@@ -504,6 +540,14 @@ class Songpress_Songs {
 		$t    = Songpress_Install::table( 'songs' );
 		$data = array_intersect_key( $data, array_flip( self::FIELDS ) );
 		$was  = self::get( $id );
+		if ( array_key_exists( 'stage', $data ) && ! array_key_exists( 'status', $data ) ) { // the editor has one Status field, kept in the writing stage; the older status follows it
+			$st = trim( (string) $data['stage'] );
+			if ( '' === $st ) {
+				$data['status'] = '';
+			} elseif ( '' !== self::status_key_for( $st ) ) {
+				$data['status'] = self::status_key_for( $st );
+			}
+		}
 		$data['updated_at'] = current_time( 'mysql', true );
 		$ok = false !== $wpdb->update( $t, $data, array( 'id' => (int) $id ) );
 		self::reset_lists();

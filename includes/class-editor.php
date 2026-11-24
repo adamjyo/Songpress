@@ -104,15 +104,6 @@ class Songpress_Editor {
 		}
 
 		/* Basics */
-		$statuses = Songpress_Songs::statuses_for( $version );
-		if ( $song && isset( Songpress_Songs::statuses()[ $song->status ] ) ) {
-			$statuses[ $song->status ] = Songpress_Songs::statuses()[ $song->status ];
-		}
-		$opts = '';
-		$opts .= '<option value=""' . selected( $song ? (string) self::f( $song, 'status' ) : 'idea', '', false ) . '></option>'; // blank clears it
-		foreach ( $statuses as $k => $label ) {
-			$opts .= '<option value="' . esc_attr( $k ) . '"' . selected( $song ? (string) self::f( $song, 'status' ) : 'idea', $k, false ) . '>' . esc_html( $label ) . '</option>';
-		}
 		$cur_artist  = $song ? (int) $song->artist_id : ( isset( $_GET['sp_artist'] ) ? absint( $_GET['sp_artist'] ) : Songpress_Artists::default_id() );
 		$all_artists = Songpress_Artists::all();
 		$artist_hidden = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
@@ -133,13 +124,13 @@ class Songpress_Editor {
 			$o .= '<input type="hidden" name="title" value="' . esc_attr( self::f( $song, 'title' ) ) . '">';
 			$o .= '<label class="spe-field wide spe-own"><span>' . esc_html__( 'Release title', 'songpress' ) . '</span><input name="release_title" value="' . esc_attr( self::f( $song, 'release_title' ) ) . '" placeholder="' . esc_attr( self::f( $song, 'title' ) ) . '"><small class="spe-help">' . esc_html( sprintf( /* translators: %s: the work title */ __( 'The name of this release, which is often different from the work title. The work title, "%s", is set on the original work.', 'songpress' ), self::f( $song, 'title' ) ) ) . '</small></label>';
 		}
-		$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="status">' . $opts . '</select></label>' . ( $root ? $artist_hidden : '' );
-			$cur_stage = trim( (string) self::f( $song, 'stage' ) );
+		$o .= ( $root ? $artist_hidden : '' );
+			$cur_stage = $song ? Songpress_Songs::effective_status( $song ) : 'Idea';
 			$so        = '<option value=""></option>';
-			foreach ( Songpress_Songs::merge_options( Songpress_Songs::stages(), array( $cur_stage ) ) as $st ) {
+			foreach ( Songpress_Songs::status_choices( $version, array( $cur_stage ) ) as $st ) {
 				$so .= '<option value="' . esc_attr( $st ) . '"' . selected( strtolower( $cur_stage ), strtolower( $st ), false ) . '>' . esc_html( $st ) . '</option>';
 			}
-			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Writing stage', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
+			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
 		$o .= '<script>(function(){var s=document.getElementById("spe-stage"),t=document.querySelector("input[name=title]");if(!s||!t)return;function f(){t.required=s.value.toLowerCase()!=="starter"}s.addEventListener("change",f);f()})()</script>';
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );

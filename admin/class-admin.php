@@ -195,7 +195,7 @@ class Songpress_Admin {
 				$ao = Songpress_Artists::get( (int) $s->artist_id );
 				echo $ao ? '<br><span class="sp-help">' . esc_html( $ao->name ) . '</span>' : '';
 			}
-			echo '</td><td>' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</td></tr>';
+			echo '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td></tr>';
 		}
 		echo '</tbody></table>';
 		echo '<div class="tablenav"><div class="tablenav-pages">' . wp_kses_post( paginate_links( array(

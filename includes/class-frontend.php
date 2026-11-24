@@ -359,7 +359,7 @@ class Songpress_Frontend {
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'
 				. '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>'
-				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</span>'
+				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</span>'
 				. '</a></li>';
 		}
 		if ( ! $res['rows'] ) {
@@ -519,7 +519,7 @@ class Songpress_Frontend {
 		$is_root = 0 === (int) $s->version_no;
 		$name    = $is_root ? $s->title : $s->release_title; // only an original work shows the work name; a version shows its release title
 		$out  = '<article class="songpress-song">' . $top . '<header class="songpress-top"><div class="songpress-card2">' . self::art( $s, 'songpress-cover' ) . '<div class="songpress-topl">';
-		$out .= '<p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</p>';
+		$out .= '<p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</p>';
 		if ( '' !== trim( (string) $name ) ) {
 			$out .= '<h2>' . esc_html( $name ) . '</h2>';
 		} elseif ( '' !== trim( (string) Songpress_Songs::display_title( $s ) ) ) {

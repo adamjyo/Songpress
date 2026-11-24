@@ -1062,6 +1062,18 @@ Songpress_Songs::update( $v1, array( 'album' => '', 'status' => '', 'release_dat
 $gc = Songpress_Songs::get( $v1 );
 check( 'clear: album, status, release date, genre and performing artist can be emptied', array( $gc->album, $gc->status, $gc->release_date, $gc->genre, $gc->artist ), array( '', '', '', '', '' ) );
 
+// one merged Status: the writing stage wins, and the older status follows it
+Songpress_Songs::update( $v1, array( 'stage' => 'Finished' ) );
+$gs = Songpress_Songs::get( $v1 );
+check( 'status: choosing Finished sets the stage and the status', array( $gs->stage, $gs->status, Songpress_Songs::effective_status( $gs ) ), array( 'Finished', 'finished', 'Finished' ) );
+Songpress_Songs::update( $v1, array( 'stage' => 'Taken down!' ) );
+$gs = Songpress_Songs::get( $v1 );
+check( 'status: a stage with no matching status keeps the old one, and shows the stage', array( $gs->status, Songpress_Songs::effective_status( $gs ) ), array( 'finished', 'Taken down!' ) );
+Songpress_Songs::update( $v1, array( 'stage' => '' ) );
+check( 'status: clearing it clears both', array( Songpress_Songs::get( $v1 )->stage, Songpress_Songs::get( $v1 )->status ), array( '', '' ) );
+check( 'status: the original work is never offered Released', in_array( 'Released', Songpress_Songs::status_choices( 0 ), true ), false );
+check( 'status: a version is offered Released', in_array( 'Released', Songpress_Songs::status_choices( 1 ), true ), true );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
