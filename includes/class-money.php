@@ -1475,7 +1475,7 @@ JS;
 		$o     .= self::chart_html();
 		$o     .= '<p class="spe-help"><a href="' . esc_url( Songpress_Screens::url( 'uploads', array( 'type' => 'dk_stats' ) ) ) . '">' . esc_html__( 'Import the DistroKid stats page on the Upload / Download page.', 'songpress' ) . '</a></p>';
 		if ( ! $months && ! self::daily( 1 ) ) {
-			return $o . '</div>';
+			return $o . Songpress_Usage::panel() . '</div>';
 		}
 		if ( $months ) {
 			$items = array();
@@ -1524,7 +1524,7 @@ JS;
 			}
 			$o .= '</tbody></table></div>';
 		}
-		return $o . '</div>';
+		return $o . Songpress_Usage::panel() . '</div>';
 	}
 
 	/** The writer's own earnings, shown on their Profile. Empty when nothing is recorded for them. */

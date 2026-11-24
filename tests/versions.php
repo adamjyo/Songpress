@@ -54,6 +54,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, song_key TEXT DEFAULT \'\', tempo TEXT DEFAULT \'\', authors TEXT DEFAULT \'\', latitude TEXT DEFAULT \'\', longitude TEXT DEFAULT \'\', source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT, user_id INT DEFAULT 0, kind TEXT, song_id INT DEFAULT 0, detail TEXT DEFAULT \'\', device TEXT DEFAULT \'\')' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, song_id INT, created_at TEXT, UNIQUE(user_id,song_id))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
@@ -988,6 +989,16 @@ check( 'a work with no votes', array( $rx[902]['n'], $rx[902]['avg'] ), array( 0
 check( 'visitor id must look right', array( Songpress_Reactions::voter( 'abc' ), Songpress_Reactions::voter( 'x' ) ), array( 'u:7', 'u:7' ) );
 check( 'average shows from two votes', array( Songpress_Reactions::avg_text( 4.0, 1 ), Songpress_Reactions::avg_text( 4.0, 0 ) ), array( '1 vote so far', 'No votes yet' ) );
 check( 'average text with votes', false !== strpos( Songpress_Reactions::avg_text( 4.0, 3 ), 'from 3 votes' ), true );
+
+
+// usage log
+require_once SONGPRESS_DIR . 'includes/class-usage.php';
+if ( ! function_exists( 'wp_is_mobile' ) ) { function wp_is_mobile() { return true; } }
+if ( ! defined( 'DAY_IN_SECONDS' ) ) { define( 'DAY_IN_SECONDS', 86400 ); }
+Songpress_Usage::log( 'play', 900, 'radio', 7 ); Songpress_Usage::log( 'play', 900, 'list', 7 ); Songpress_Usage::log( 'rate', 900, '4', 7 ); Songpress_Usage::log( 'bogus', 900, '', 7 );
+$ut = Songpress_Usage::totals();
+check( 'usage counts by kind', array( $ut['play'][0] ?? 0, $ut['rate'][0] ?? 0, isset( $ut['bogus'] ) ), array( 2, 1, false ) );
+check( 'usage knows the device', $wpdb->get_var( 'SELECT device FROM wp_songpress_usage LIMIT 1' ), 'phone' );
 
 // a numbered placeholder must not be escaped in a single-quoted string ('%1\\$s' makes sprintf throw and the page go blank)
 $bad = array();

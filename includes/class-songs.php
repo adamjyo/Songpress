@@ -246,6 +246,7 @@ class Songpress_Songs {
 			'genre'  => 's.genre',
 			'artist' => 's.artist',
 			'status' => 's.status',
+			'release' => 's.release_date',
 			'label'  => "(SELECT MIN(l.name) FROM {$c} l WHERE l.song_id = s.id AND l.role = 'label')",
 			'writer' => "(SELECT MIN(w.name) FROM {$c} w WHERE w.song_id = s.id AND w.role = 'writer')",
 		);

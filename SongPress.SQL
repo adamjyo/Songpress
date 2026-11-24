@@ -291,6 +291,20 @@ CREATE TABLE {prefix}songpress_ratings (
   UNIQUE KEY song_voter (song_id,voter)
 ) {charset};
 
+-- Usage log: what people do in the phone app (plays, ratings, favorites, playlists, the tutorial). Shown at the bottom of Stats.
+CREATE TABLE {prefix}songpress_usage (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  created_at datetime NOT NULL,
+  user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  kind varchar(24) NOT NULL,
+  song_id bigint(20) unsigned NOT NULL DEFAULT 0,
+  detail varchar(60) NOT NULL DEFAULT '',
+  device varchar(8) NOT NULL DEFAULT '',
+  PRIMARY KEY  (id),
+  KEY kind_time (kind,created_at),
+  KEY song_id (song_id)
+) {charset};
+
 -- Favorites: one row per person and song.
 CREATE TABLE {prefix}songpress_favorites (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

@@ -41,6 +41,7 @@
     Object.keys(extra || {}).forEach(function (k) { d[k] = extra[k]; });
     return post('songpress_react', d, C.n);
   }
+  function use(kind, id, detail) { if (!C['in'] || !C.un) return; try { post('songpress_use', { kind: kind, song: id || 0, detail: detail || '' }, C.un).catch(function () {}); } catch (e) {} }
   function votes(avg, n) {
     if (n >= C.min) return (I.avg || '').replace('%1', (+avg).toFixed(1)).replace('%2', n);
     return n === 1 ? I.votes1 : I.votes0;
@@ -57,6 +58,7 @@
     var h = m.h;
     h.setAttribute('data-rx-fav', m.fav ? 1 : 0); h.setAttribute('data-rx-avg', m.avg); h.setAttribute('data-rx-n', m.n); h.setAttribute('data-rx-mine', m.mine);
     paint(h, m);
+    try { document.dispatchEvent(new CustomEvent('sprx:change', { detail: { id: m.id, fav: m.fav, avg: m.avg, n: m.n, mine: m.mine } })); } catch (e) {}
   }
   function paint(h, m) {
     var hs = h.querySelector('.sp-rx-heart'); if (hs) hs.hidden = !m.fav;
@@ -77,7 +79,7 @@
     setTimeout(function () { e.classList.add('out'); setTimeout(function () { e.remove(); }, 400); }, 1800);
   }
   function doShare(m) {
-    var url = m.share || location.href;
+    var url = m.share || location.href; use('share', m.id, '');
     if (navigator.share) { navigator.share({ title: m.title, url: url }).catch(function () {}); return; }
     if (navigator.clipboard) { navigator.clipboard.writeText(url).then(function () { toast(I.copied); }, function () { window.prompt('', url); }); return; }
     window.prompt('', url);
@@ -150,7 +152,7 @@
       head(I.list, m.title, true);
       var wrap = el('div', 'sp-rx-lists'); box.appendChild(wrap);
       var msg = el('p', 'sp-rx-sub'); box.appendChild(msg);
-      wrap.appendChild(el('p', 'sp-rx-sub', '…'));
+      wrap.appendChild(el('p', 'sp-rx-sub', '\u2026'));
       react('lists', m).then(function (d) {
         wrap.innerHTML = '';
         if (!d.audio) { msg.textContent = I.noaudio; }
@@ -183,6 +185,19 @@
     draw(view || 'menu');
   }
 
+  window.SPRX = { open: function (o, view) { var h = document.createElement('div'); var m = { h: h, id: +o.id, title: o.title || '', fav: !!o.fav, avg: +o.avg || 0, n: +o.n || 0, mine: +o.mine || 0, share: o.share || '', t: '' }; sheet(m, view || 'menu'); } };
+
+  /* ---------- plays from the list and the work page are logged ---------- */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.songpress-play[data-src]');
+    if (b && !b.classList.contains('on')) { var h = host(b); use('play', h ? +h.getAttribute('data-rx-song') : 0, 'list'); }
+  });
+  document.addEventListener('play', function (e) {
+    var a = e.target; if (!a || !a.classList || !a.classList.contains('songpress-audio') || a.getAttribute('data-sp-logged')) return;
+    a.setAttribute('data-sp-logged', '1'); var bar = document.querySelector('.sp-rx-bar'); use('play', bar ? +bar.getAttribute('data-rx-song') : 0, 'work');
+  }, true);
+  document.addEventListener('ended', function (e) { if (e.target && e.target.removeAttribute) e.target.removeAttribute('data-sp-logged'); }, true);
+
   /* ---------- taps on buttons: the tray and the work page bar ---------- */
   document.addEventListener('click', function (e) {
     if (holding || suppressUntil > Date.now()) { e.preventDefault(); e.stopPropagation(); return; } // the click that follows a swipe or a hold
@@ -211,7 +226,7 @@
       st = { li: li, x: t.clientX, y: t.clientY, base: li === openRow ? -TRAY : 0, mode: '', dx: 0 };
       clearTimeout(timer);
       timer = setTimeout(function () {
-        if (st && !st.mode) { st.mode = 'hold'; holding = true; if (navigator.vibrate) { try { navigator.vibrate(12); } catch (x) {} } sheet(meta(st.li), 'menu'); }
+        if (st && !st.mode) { st.mode = 'hold'; holding = true; if (navigator.vibrate) { try { navigator.vibrate(12); } catch (x) {} } use('menu', +st.li.getAttribute('data-rx-song'), 'hold'); sheet(meta(st.li), 'menu'); }
       }, 550);
     }, { passive: true });
     list.addEventListener('touchmove', function (e) {
@@ -235,6 +250,7 @@
         var x = Math.min(0, st.base + st.dx), open = x < -TRAY / 2;
         setX(st.li, open ? -TRAY : 0, true); st.li.classList.toggle('sp-rx-open', open); openRow = open ? st.li : null;
         suppressUntil = Date.now() + 350;
+        if (open) use('menu', +st.li.getAttribute('data-rx-song'), 'swipe');
         try { localStorage.setItem('sp_rx_hint', '1'); } catch (x2) {} var h = document.querySelector('.sp-rx-hint'); if (h) h.remove();
       }
       st = null;

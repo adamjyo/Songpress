@@ -143,6 +143,7 @@ class Songpress_Reactions {
 					$wpdb->delete( $rt, array( 'song_id' => $sid, 'voter' => $voter ) );
 				} else {
 					$wpdb->query( $wpdb->prepare( "REPLACE INTO {$rt} (song_id, voter, stars, created_at) VALUES (%d, %s, %d, %s)", $sid, $voter, $stars, current_time( 'mysql' ) ) ); // phpcs:ignore WordPress.DB
+					Songpress_Usage::log( 'rate', $sid, $stars . ( $in ? '' : ' visitor' ) );
 				}
 				break;
 			case 'fav':
@@ -150,7 +151,9 @@ class Songpress_Reactions {
 				$on = ! empty( $_POST['on'] );
 				if ( $on ) {
 					$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$ft} (user_id, song_id, created_at) VALUES (%d, %d, %s)", get_current_user_id(), $sid, current_time( 'mysql' ) ) ); // phpcs:ignore WordPress.DB
+					Songpress_Usage::log( 'fav', $sid );
 				} else {
+					Songpress_Usage::log( 'unfav', $sid );
 					$wpdb->delete( $ft, array( 'user_id' => get_current_user_id(), 'song_id' => $sid ) );
 				}
 				break;
@@ -224,6 +227,7 @@ class Songpress_Reactions {
 		$cfg  = array(
 			'ajax'   => admin_url( 'admin-ajax.php' ),
 			'n'      => wp_create_nonce( 'songpress_react' ),
+			'un'     => is_user_logged_in() ? wp_create_nonce( 'songpress_use' ) : '',
 			'radioN' => is_user_logged_in() ? wp_create_nonce( 'songpress_radio' ) : '',
 			'in'     => is_user_logged_in(),
 			'min'    => self::MIN_VOTES,

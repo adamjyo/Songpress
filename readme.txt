@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.66.0
+Stable tag: 0.67.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.67.0 =
+* Radio redesigned. A list of playlists (Everything, Recent releases, Favorites, yours, and ones shared with you), a playlist page that looks like Works with Play, Shuffle and Edit (add, remove, drag to reorder, rename, share, delete), a mini player, and a Now Playing page with shuffle, repeat, a heart to favorite, a star to rate, volume and an Up next list. Favorites is a playlist of the songs you hearted. Recent releases is the 25 newest released songs. The music keeps playing while you move between lists. New: a usage log (plays, ratings, favorites, playlists, shares) shown at the bottom of Stats.
 
 = 0.66.0 =
 * Rate any work with stars, including visitors on a public share link. Favorite works. Swipe a song to the left (or press and hold) for Favorite, Rate, Add to playlist and Share. The same buttons sit above the streaming links on a work page.

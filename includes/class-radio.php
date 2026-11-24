@@ -108,6 +108,7 @@ class Songpress_Radio {
 				wp_send_json_error( array( 'msg' => __( 'Give the playlist a name.', 'songpress' ) ) );
 			}
 			$wpdb->insert( $pt, array( 'user_id' => get_current_user_id(), 'name' => $name, 'shared' => 0, 'created_at' => current_time( 'mysql' ) ) );
+			Songpress_Usage::log( 'playlist_new' );
 			wp_send_json_success( array( 'id' => (int) $wpdb->insert_id ) );
 		}
 		if ( ! $pl || ! self::can_edit( $pl ) ) {
@@ -135,9 +136,17 @@ class Songpress_Radio {
 				}
 				$pos = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COALESCE(MAX(position), 0) FROM {$st} WHERE playlist_id = %d", $id ) ) + 1; // phpcs:ignore WordPress.DB
 				$wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$st} (playlist_id, song_id, position) VALUES (%d, %d, %d)", $id, $sid, $pos ) ); // phpcs:ignore WordPress.DB
+				Songpress_Usage::log( 'playlist_add', $sid );
 				break;
 			case 'remove':
 				$wpdb->delete( $st, array( 'playlist_id' => $id, 'song_id' => $sid ) );
+				break;
+			case 'order': // the whole order at once, after a drag
+				$ids = array_values( array_unique( array_filter( array_map( 'intval', explode( ',', (string) wp_unslash( $_POST['ids'] ?? '' ) ) ) ) ) );
+				$own = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT song_id FROM {$st} WHERE playlist_id = %d", $id ) ) ); // phpcs:ignore WordPress.DB
+				foreach ( array_values( array_intersect( $ids, $own ) ) as $k => $one ) {
+					$wpdb->update( $st, array( 'position' => $k + 1 ), array( 'playlist_id' => $id, 'song_id' => $one ) );
+				}
 				break;
 			case 'move':
 				$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT song_id FROM {$st} WHERE playlist_id = %d ORDER BY position ASC, id ASC", $id ) ) ); // phpcs:ignore WordPress.DB
@@ -156,99 +165,105 @@ class Songpress_Radio {
 		wp_send_json_success( array( 'ok' => 1 ) );
 	}
 
-	/* ---------- screens ---------- */
+	/* ---------- built-in playlists ---------- */
 
-	private static function ico( $d ) {
-		return '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
-	}
-
-	public static function render() {
-		$pid = isset( $_GET['sp_pl'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_pl'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-		$o   = '<div class="sp-radio" data-n="' . esc_attr( wp_create_nonce( 'songpress_radio' ) ) . '" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '">';
-		if ( 'all' === $pid ) {
-			$o .= self::playlist_view( null, self::everything(), true );
-		} elseif ( '' !== $pid ) {
-			$pl = self::get( absint( $pid ) );
-			if ( ! self::visible( $pl ) ) {
-				$o .= '<p class="songpress-note">' . esc_html__( 'That playlist is not available.', 'songpress' ) . '</p><p><a class="sp-rad-btn" href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'Radio', 'songpress' ) . '</a></p>';
-			} else {
-				$o .= self::playlist_view( $pl, self::tracks( $pl->id ), false );
-			}
-		} else {
-			$o .= self::index();
-		}
-		return $o . '</div>' . self::script();
-	}
-
-	private static function index() {
-		$o  = '<h2 class="sp-rad-h">' . esc_html__( 'Radio', 'songpress' ) . '</h2>';
-		$o .= '<ul class="sp-rad-lists"><li><a href="' . esc_url( self::url( array( 'sp_pl' => 'all' ) ) ) . '"><span class="ico">' . self::ico( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ) . '</span><span><b>' . esc_html__( 'Everything', 'songpress' ) . '</b><small>' . esc_html__( 'Every work with audio, shuffled', 'songpress' ) . '</small></span></a></li>';
-		foreach ( self::lists() as $p ) {
-			$mine = (int) $p->user_id === get_current_user_id();
-			$who  = $mine ? '' : ' · ' . esc_html( (string) get_the_author_meta( 'display_name', (int) $p->user_id ) );
-			$o   .= '<li><a href="' . esc_url( self::url( array( 'sp_pl' => (int) $p->id ) ) ) . '"><span class="ico">' . self::ico( '<path d="M4 6h12M4 12h12M4 18h8M18 15V5l3 1"/><circle cx="16" cy="18" r="2"/>' ) . '</span><span><b>' . esc_html( $p->name ) . '</b><small>' . esc_html( sprintf( /* translators: %d: number of works */ _n( '%d work', '%d works', (int) $p->n, 'songpress' ), (int) $p->n ) ) . ( (int) $p->shared && $mine ? ' · ' . esc_html__( 'shared', 'songpress' ) : '' ) . $who . '</small></span></a></li>';
-		}
-		$o .= '</ul>';
-		$o .= '<form class="sp-rad-new" data-op="create"><input type="text" name="name" maxlength="' . self::NAME_MAX . '" placeholder="' . esc_attr__( 'New playlist name', 'songpress' ) . '" aria-label="' . esc_attr__( 'New playlist name', 'songpress' ) . '"><button type="submit" class="sp-rad-btn pri">' . esc_html__( 'Make playlist', 'songpress' ) . '</button></form><p class="sp-rad-msg" aria-live="polite"></p>';
-		return $o;
-	}
-
-	private static function playlist_view( $pl, array $tracks, $shuffle ) {
-		$edit = $pl && self::can_edit( $pl );
-		$name = $pl ? $pl->name : __( 'Everything', 'songpress' );
-		$o    = '<p class="sp-rad-back"><a href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'Radio', 'songpress' ) . '</a></p><h2 class="sp-rad-h">' . esc_html( $name ) . '</h2>';
-		$o   .= '<div class="sp-rad-player" data-shuffle="' . ( $shuffle ? '1' : '0' ) . '"><div class="np"><span class="art">&#9835;</span><span class="tx"><b class="t">' . esc_html__( 'Pick a work to play', 'songpress' ) . '</b><small class="s"></small></span></div>'
-			. '<div class="bar"><input type="range" class="seek" min="0" max="1000" value="0" aria-label="' . esc_attr__( 'Position', 'songpress' ) . '"><span class="time">0:00</span></div>'
-			. '<div class="ctl"><button type="button" class="sh" aria-label="' . esc_attr__( 'Shuffle', 'songpress' ) . '" aria-pressed="' . ( $shuffle ? 'true' : 'false' ) . '">' . self::ico( '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>' ) . '</button><button type="button" class="pv" aria-label="' . esc_attr__( 'Previous', 'songpress' ) . '">' . self::ico( '<path d="M6 5v14M19 5l-9 7 9 7z"/>' ) . '</button><button type="button" class="pp" aria-label="' . esc_attr__( 'Play', 'songpress' ) . '">' . self::ico( '<path d="M7 4l13 8-13 8z"/>' ) . '</button><button type="button" class="nx" aria-label="' . esc_attr__( 'Next', 'songpress' ) . '">' . self::ico( '<path d="M18 5v14M5 5l9 7-9 7z"/>' ) . '</button></div><audio preload="none"></audio></div>';
-		if ( ! $tracks ) {
-			$o .= '<p class="songpress-note">' . esc_html( $edit ? __( 'No works here yet. Add some below.', 'songpress' ) : __( 'Nothing to play here yet.', 'songpress' ) ) . '</p>';
-		}
-		$o .= '<ol class="sp-rad-tracks">';
-		$last = count( $tracks ) - 1;
-		foreach ( $tracks as $i => $s ) {
-			$art = Songpress_Media::art_url( $s, 'thumbnail' );
-			$o  .= '<li data-src="' . esc_url( Songpress_Media::audio_url( $s ) ) . '" data-title="' . esc_attr( Songpress_Songs::display_title( $s ) ) . '" data-by="' . esc_attr( self::by( $s ) ) . '" data-art="' . esc_url( $art ) . '" data-id="' . (int) $s->id . '"><button type="button" class="go">' . ( '' !== $art ? '<img src="' . esc_url( $art ) . '" alt="" loading="lazy">' : '<span class="noart">&#9835;</span>' ) . '<span class="tx"><b>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</b><small>' . esc_html( self::by( $s ) ) . '</small></span></button>';
-			if ( $edit ) {
-				$o .= '<span class="ed"><button type="button" class="mv" data-d="-1" aria-label="' . esc_attr__( 'Move up', 'songpress' ) . '"' . ( 0 === $i ? ' disabled' : '' ) . '>&uarr;</button><button type="button" class="mv" data-d="1" aria-label="' . esc_attr__( 'Move down', 'songpress' ) . '"' . ( $i === $last ? ' disabled' : '' ) . '>&darr;</button><button type="button" class="rm" aria-label="' . esc_attr__( 'Remove from playlist', 'songpress' ) . '">&times;</button></span>';
-			}
-			$o .= '</li>';
-		}
-		$o .= '</ol><p class="sp-rad-msg" aria-live="polite"></p>';
-		if ( $edit ) {
-			$o .= '<div class="sp-rad-edit" data-id="' . (int) $pl->id . '"><h3>' . esc_html__( 'This playlist', 'songpress' ) . '</h3>'
-				. '<form class="sp-rad-rename" data-op="rename"><input type="text" name="name" maxlength="' . self::NAME_MAX . '" value="' . esc_attr( $pl->name ) . '" aria-label="' . esc_attr__( 'Name', 'songpress' ) . '"><button class="sp-rad-btn" type="submit">' . esc_html__( 'Rename', 'songpress' ) . '</button></form>'
-				. '<label class="sp-rad-share"><input type="checkbox" class="share"' . ( (int) $pl->shared ? ' checked' : '' ) . '> ' . esc_html__( 'Share with everyone who can see these works', 'songpress' ) . '</label>'
-				. '<h3>' . esc_html__( 'Add works', 'songpress' ) . '</h3>' . self::picker( $pl )
-				. '<p><button type="button" class="sp-rad-btn danger del" data-arm="' . esc_attr__( 'Tap again to delete the playlist', 'songpress' ) . '">' . esc_html__( 'Delete playlist', 'songpress' ) . '</button></p></div>';
-		}
-		return $o;
-	}
-
-	/** A search box and a short list of works with audio that are not in the playlist yet. */
-	private static function picker( $pl ) {
-		global $wpdb;
-		$q   = isset( $_GET['sp_q'] ) ? sanitize_text_field( wp_unslash( $_GET['sp_q'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
-		$res = Songpress_Songs::query( array( 'search' => $q, 'per_page' => 60, 'order' => 'title', 'dir' => 'asc', 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : get_current_user_id() ) );
-		$in  = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( 'SELECT song_id FROM ' . self::t( 'playlist_songs' ) . ' WHERE playlist_id = %d', (int) $pl->id ) ) ); // phpcs:ignore WordPress.DB
-		$o   = '<form method="get" class="sp-rad-find"><input type="hidden" name="sp_radio" value="1"><input type="hidden" name="sp_pl" value="' . (int) $pl->id . '"><input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search works', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search works', 'songpress' ) . '"><button class="sp-rad-btn" type="submit">' . esc_html__( 'Search', 'songpress' ) . '</button></form><ul class="sp-rad-pick">';
-		$n   = 0;
+	/** The 25 most recently released works this person can see that have audio. */
+	public static function recent() {
+		$res = Songpress_Songs::query( array( 'per_page' => 300, 'order' => 'release', 'dir' => 'desc', 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : get_current_user_id() ) );
+		$today = current_time( 'Y-m-d' );
+		$out   = array();
 		foreach ( $res['rows'] as $s ) {
-			if ( in_array( (int) $s->id, $in, true ) || '' === Songpress_Media::audio_url( $s ) ) {
+			$d = trim( (string) $s->release_date );
+			if ( '' === $d || $d > $today || '' === Songpress_Media::audio_url( $s ) ) {
 				continue;
 			}
-			$o .= '<li><span class="tx"><b>' . esc_html( Songpress_Songs::display_title( $s ) ) . '</b><small>' . esc_html( self::by( $s ) ) . '</small></span><button type="button" class="sp-rad-btn add" data-song="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: title */ __( 'Add %s', 'songpress' ), $s->title ) ) . '">+</button></li>';
-			++$n;
+			$out[] = $s;
+			if ( count( $out ) >= 25 ) {
+				break;
+			}
 		}
-		return $o . '</ul>' . ( 0 === $n ? '<p class="songpress-note">' . esc_html__( 'No more works with audio match.', 'songpress' ) . '</p>' : '' );
+		return $out;
 	}
 
-	/** The player and the buttons. Printed once. */
-	private static function script() {
-		static $done = false;
-		if ( $done ) {
-			return '';
+	/** The works this person favorited that they can still play, newest favorite first. */
+	public static function favorites() {
+		$out = array();
+		foreach ( Songpress_Reactions::favorite_ids() as $sid ) {
+			$s = Songpress_Songs::get( $sid );
+			if ( $s && Songpress_Caps::can_see_song( $sid ) && '' !== Songpress_Media::audio_url( $s ) ) {
+				$out[] = $s;
+			}
 		}
-		$done = true;
-		return '<script src="' . esc_url( SONGPRESS_URL . 'assets/radio.js?v=' . SONGPRESS_VERSION ) . '"></script>';
+		return $out;
+	}
+
+	/* ---------- the screen ---------- */
+
+	/** One page holds every list, so the music keeps playing while you move between lists and the player. */
+	public static function render() {
+		$me     = get_current_user_id();
+		$tracks = array();
+		$add    = function ( $s ) use ( &$tracks ) {
+			$id = (int) $s->id;
+			if ( ! isset( $tracks[ $id ] ) ) {
+				$tok = (string) $s->share_token;
+				$tracks[ $id ] = array(
+					't'  => Songpress_Songs::display_title( $s ),
+					'b'  => self::by( $s ),
+					'a'  => Songpress_Media::art_url( $s, 'medium' ),
+					's'  => Songpress_Media::audio_url( $s ),
+					'sh' => '' !== $tok ? add_query_arg( 'sp_share', $tok, home_url( '/' ) ) : '',
+					'u'  => add_query_arg( 'sp_song', $id, Songpress_Editor::list_url() ),
+				);
+			}
+			return $id;
+		};
+		$ids   = function ( array $rows ) use ( $add ) {
+			return array_map( $add, $rows );
+		};
+		$lists   = array();
+		$lists[] = array( 'k' => 'all', 'name' => __( 'Everything', 'songpress' ), 'ids' => $ids( self::everything() ), 'b' => 'all' );
+		$lists[] = array( 'k' => 'new', 'name' => __( 'Recent releases', 'songpress' ), 'ids' => $ids( self::recent() ), 'b' => 'new' );
+		$lists[] = array( 'k' => 'fav', 'name' => __( 'Favorites', 'songpress' ), 'ids' => $ids( self::favorites() ), 'b' => 'fav' );
+		foreach ( self::lists() as $p ) {
+			$lists[] = array(
+				'k'      => 'p' . (int) $p->id,
+				'id'     => (int) $p->id,
+				'name'   => (string) $p->name,
+				'shared' => (int) $p->shared,
+				'mine'   => (int) $p->user_id === $me,
+				'by'     => (int) $p->user_id === $me ? '' : (string) get_the_author_meta( 'display_name', (int) $p->user_id ),
+				'edit'   => self::can_edit( $p ),
+				'ids'    => $ids( self::tracks( $p->id ) ),
+			);
+		}
+		$state = Songpress_Reactions::bulk( array_keys( $tracks ) );
+		$cfg   = array(
+			'ajax'   => admin_url( 'admin-ajax.php' ),
+			'n'      => wp_create_nonce( 'songpress_radio' ),
+			'un'     => wp_create_nonce( 'songpress_use' ),
+			'rn'     => wp_create_nonce( 'songpress_react' ),
+			'tracks' => (object) $tracks,
+			'st'     => (object) $state,
+			'lists'  => $lists,
+			'max'    => self::NAME_MAX,
+			'i'      => self::strings(),
+		);
+		return '<div class="sp-rd" id="sp-rd"><noscript><p class="songpress-note">' . esc_html__( 'Radio needs JavaScript.', 'songpress' ) . '</p></noscript></div><script>window.SP_RADIO=' . wp_json_encode( $cfg ) . ';</script>' . Songpress_Reactions::boot() . '<script src="' . esc_url( SONGPRESS_URL . 'assets/radio.js?v=' . SONGPRESS_VERSION ) . '" defer></script>';
+	}
+
+	private static function strings() {
+		return array(
+			'radio' => __( 'Radio', 'songpress' ), 'builtin' => __( 'Playlists', 'songpress' ), 'mine' => __( 'My playlists', 'songpress' ), 'shared' => __( 'Shared with you', 'songpress' ), 'sharedtag' => __( 'Shared', 'songpress' ),
+			'songs' => __( 'songs', 'songpress' ), 'song1' => __( '1 song', 'songpress' ), 'by' => __( 'by', 'songpress' ), 'play' => __( 'Play', 'songpress' ), 'pause' => __( 'Pause', 'songpress' ), 'shuffle' => __( 'Shuffle', 'songpress' ), 'edit' => __( 'Edit', 'songpress' ), 'done' => __( 'Done', 'songpress' ),
+			'newpl' => __( 'New playlist', 'songpress' ), 'name' => __( 'Name', 'songpress' ), 'create' => __( 'Create', 'songpress' ), 'share' => __( 'Share with everyone who can see these works', 'songpress' ),
+			'remove' => __( 'Remove', 'songpress' ), 'drag' => __( 'Drag to reorder', 'songpress' ), 'addworks' => __( 'Add works', 'songpress' ), 'search' => __( 'Search works', 'songpress' ), 'nomore' => __( 'No more works with audio match.', 'songpress' ),
+			'del' => __( 'Delete playlist', 'songpress' ), 'delarm' => __( 'Tap again to delete the playlist', 'songpress' ), 'empty' => __( 'Nothing here yet.', 'songpress' ), 'emptyfav' => __( 'Tap the heart on a song and it lands here.', 'songpress' ), 'emptyedit' => __( 'No works yet. Add some below.', 'songpress' ),
+			'allsub' => __( 'Every work with audio', 'songpress' ), 'newsub' => __( 'The 25 newest releases', 'songpress' ), 'favsub' => __( 'Songs you hearted', 'songpress' ),
+			'prev' => __( 'Previous', 'songpress' ), 'next' => __( 'Next', 'songpress' ), 'close' => __( 'Close player', 'songpress' ), 'open' => __( 'Open player', 'songpress' ),
+			'fav' => __( 'Favorite', 'songpress' ), 'unfav' => __( 'Remove favorite', 'songpress' ), 'rate' => __( 'Rate', 'songpress' ), 'more' => __( 'More', 'songpress' ), 'vol' => __( 'Volume', 'songpress' ), 'pos' => __( 'Position', 'songpress' ),
+			'shon' => __( 'Shuffle on', 'songpress' ), 'shoff' => __( 'Shuffle off', 'songpress' ), 'rpoff' => __( 'Repeat off', 'songpress' ), 'rpall' => __( 'Repeat all', 'songpress' ), 'rpone' => __( 'Repeat one', 'songpress' ), 'queue' => __( 'Up next', 'songpress' ), 'nothing' => __( 'Nothing playing', 'songpress' ),
+			'err' => __( 'Could not save that.', 'songpress' ), 'skip' => __( 'Could not play that one. Skipping.', 'songpress' ), 'tap' => __( 'Tap play to start.', 'songpress' ), 'back' => __( 'Back', 'songpress' ),
+		);
 	}
 }
