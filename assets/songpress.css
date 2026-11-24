@@ -1359,3 +1359,5 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .sp-rd-mini.away{transform:translateY(calc(-100% - 24px));opacity:0;pointer-events:none}
 .sp-rd-pull{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9990;width:56px;height:28px;border:0;border-radius:0 0 14px 14px;background:#1b1d22;color:#eceef1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .sp-rd-pull[hidden]{display:none}
+/* 0.72.56: no down-arrow at the top of the full-screen Radio player; a back swipe closes it */
+.sp-np-handle{display:none!important}
