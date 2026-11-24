@@ -1304,3 +1304,5 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .sp-av-bg button.on { border-color: var(--sp-accent, #e9a847); color: var(--sp-accent, #e9a847); }
 .sp-av-zl { display: grid; gap: 4px; width: min(100%, 320px); font-size: 13px; }
 .sp-av-msg { font-size: 13px; text-align: center; }
+/* works editor: show the whole cover art in its square box, never crop it */
+.spe-prev img,.spe-hero [data-field=art] .spe-prev.spe-dz img,.spe-hero [data-panel=media] .spe-prev img{object-fit:contain!important;background:var(--sp-card,#1b1d22)}
