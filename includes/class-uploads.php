@@ -357,6 +357,7 @@ class Songpress_Uploads {
 					continue;
 				}
 				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND song_id = %d AND quarter = %s", $r->src, $id, $r->quarter ) ); // phpcs:ignore WordPress.DB
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND (song_id = 0 OR song_id IS NULL) AND quarter = %s AND LOWER(work_title) = LOWER(%s)", $r->src, $r->quarter, (string) $rows[0][2] ) ); // phpcs:ignore WordPress.DB -- old-catalog lines that never got matched to the song
 				Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
 				$n++;
 			}
@@ -377,6 +378,28 @@ class Songpress_Uploads {
 			}
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = 'distrokid' AND song_id = %d AND quarter = %s", (int) $song_id, $r->quarter ) ); // phpcs:ignore WordPress.DB
 			Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+			$n++;
+		}
+		return $n;
+	}
+
+	/** Every song with money from any source, worked out again for its people. Returns the number of works. */
+	public static function rebuild_all_people() {
+		global $wpdb;
+		$e    = Songpress_Install::table( 'earnings' );
+		$ids  = $wpdb->get_col( "SELECT DISTINCT song_id FROM {$e} WHERE song_id > 0" ); // phpcs:ignore WordPress.DB
+		$done = array();
+		$n    = 0;
+		$sg   = Songpress_Install::table( 'songs' );
+		foreach ( (array) $ids as $id ) {
+			if ( isset( $done[ (int) $id ] ) ) {
+				continue;
+			}
+			$fam = (int) $wpdb->get_var( $wpdb->prepare( "SELECT family_id FROM {$sg} WHERE id = %d", (int) $id ) ); // phpcs:ignore WordPress.DB
+			foreach ( $fam ? (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$sg} WHERE family_id = %d", $fam ) ) : array( $id ) as $m ) { // phpcs:ignore WordPress.DB
+				$done[ (int) $m ] = 1;
+			}
+			self::rebuild_song_people( (int) $id );
 			$n++;
 		}
 		return $n;

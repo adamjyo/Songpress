@@ -623,7 +623,10 @@ class Songpress_Songs {
 		if ( $after !== $before ) {
 			Songpress_History::log( $song_id, 'people', array( 'after' => $after ) );
 			if ( self::$auto_users && class_exists( 'Songpress_Uploads' ) ) { // a change of people or shares works the money out again at once (an import turns this off)
-				Songpress_Uploads::rebuild_song_people( (int) $song_id );
+				$n = Songpress_Uploads::rebuild_song_people( (int) $song_id );
+				if ( class_exists( 'Songpress_Audit' ) ) {
+					Songpress_Audit::log( 'money', 'Worked out earnings again after a credit change', (string) ( self::get( (int) $song_id )->serial ?? $song_id ), array( 'quarter lines redone' => $n ) );
+				}
 			}
 		}
 	}

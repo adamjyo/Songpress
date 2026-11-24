@@ -78,9 +78,9 @@ class Songpress_Earnings {
 
 	public static function handle_rebuild() {
 		self::guard( 'songpress_earnings_rebuild' );
-		$n = Songpress_Uploads::rebuild_all_dk();
-		Songpress_Audit::log( 'money', 'Recalculated DistroKid splits', '', array( 'songs' => $n ) );
-		self::go( array( 'm_ok' => sprintf( /* translators: %d: songs */ _n( 'Worked out DistroKid money again for %d song.', 'Worked out DistroKid money again for %d songs.', $n, 'songpress' ), $n ) ) );
+		$n = Songpress_Uploads::rebuild_all_people();
+		Songpress_Audit::log( 'money', 'Recalculated splits', '', array( 'works' => $n ) );
+		self::go( array( 'm_ok' => sprintf( /* translators: %d: songs */ _n( 'Worked out money again for %d work, every source and release.', 'Worked out money again for %d works, every source and release.', $n, 'songpress' ), $n ) ) );
 	}
 
 	/* ---------- the trace ---------- */
@@ -153,7 +153,7 @@ class Songpress_Earnings {
 			. '<li>' . esc_html( $r['band_less_performers'] ? __( 'Bands: the band’s DistroKid money less its performers’ shares goes to the band’s payee, shown as Band.', 'songpress' ) : __( 'Bands: all of the band’s DistroKid money goes to the band’s payee, shown as Band.', 'songpress' ) ) . '</li>'
 			. '<li>' . esc_html__( 'Paid: payments you record add up per person. A negative payment, such as a correction, lowers what counts as paid.', 'songpress' ) . '</li>'
 			. '<li>' . esc_html__( 'Owed = earned − paid.', 'songpress' ) . '</li></ol>'
-			. $f( 'songpress_earnings_rebuild', 'spm-rules' ) . '<p class="spe-help">' . esc_html__( 'Work out every song’s DistroKid money for each performer again with the rules and shares above. Songs with no performers are left alone.', 'songpress' ) . '</p><button class="spe-btn" type="submit">' . esc_html__( 'Recalculate DistroKid splits', 'songpress' ) . '</button></form>';
+			. $f( 'songpress_earnings_rebuild', 'spm-rules' ) . '<p class="spe-help">' . esc_html__( 'Work out every work’s money again for its writers and performers (DistroKid, ASCAP, MLC and CCLI, every release) with the shares as they are now. Works with nobody credited are left alone.', 'songpress' ) . '</p><button class="spe-btn" type="submit">' . esc_html__( 'Recalculate DistroKid splits', 'songpress' ) . '</button></form>';
 
 		// people for the picker
 		global $wpdb;
