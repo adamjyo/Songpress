@@ -784,6 +784,15 @@ Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' 
 Songpress_Songs::sync_shared( $ra );
 $lw = function ( $n ) use ( $rb ) { return (float) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT amount FROM wp_songpress_person_earnings WHERE song_id = %d AND person = %s AND src = 'mlc'", $rb, $n ) ); };
 check( 'a change on the original updates earnings booked to its release', array( $lw( 'Ann' ), $lw( 'Bo' ) ), array( 180.0, 20.0 ) );
+// a share of 0 removes the person's money at once
+$rc = Songpress_Songs::create( array( 'title' => 'Zero Share', 'status' => 'released' ), 1 );
+Songpress_Songs::replace_credits( $rc, array( array( 'role' => 'performer', 'name' => 'Zed', 'share' => 25 ) ) );
+put( 'earnings', array( 'song_id' => $rc, 'quarter' => '2026-Q3', 'src' => 'distrokid', 'amount' => 10 ) );
+Songpress_Songs::replace_credits( $rc, array( array( 'role' => 'performer', 'name' => 'Zed', 'share' => 30 ) ) );
+$zc = function () use ( $rc ) { return (float) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT COALESCE(SUM(amount),0) FROM wp_songpress_person_earnings WHERE song_id = %d AND person = 'Zed'", $rc ) ); };
+check( 'a performer share changed to 30 gives 3.00', $zc(), 3.0 );
+Songpress_Songs::replace_credits( $rc, array( array( 'role' => 'performer', 'name' => 'Zed', 'share' => 0 ) ) );
+check( 'a share of 0 removes the earnings at once', $zc(), 0.0 );
 Songpress_Songs::update( $sb, array( 'story' => 'from version' ) );
 Songpress_Songs::sync_shared( $sb );
 check( 'editing a version also updates the original', Songpress_Songs::get( $sa )->story, 'from version' );

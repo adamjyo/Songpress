@@ -260,6 +260,17 @@ class Songpress_Uploads {
 		return $res;
 	}
 
+	/** True when the song has anyone credited in the role that is paid from this source (performers for DistroKid, writers for the rest). */
+	public static function has_payees( $id, $src ) {
+		$role = 'distrokid' === $src ? 'performer' : 'writer';
+		foreach ( Songpress_Songs::credits( (int) $id ) as $c ) {
+			if ( $role === $c->role && '' !== trim( (string) $c->name ) ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
 	 * What each credited person earned from one song's amount in a quarter. Writers split ASCAP, MLC and CCLI by their writer shares.
 	 * DistroKid pays performers: each gets their performer share of the song's amount (25% when none is stored, as the old catalog did;
@@ -353,12 +364,15 @@ class Songpress_Uploads {
 		foreach ( $ids as $id ) {
 			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT quarter, src, SUM(amount) AS amt FROM {$e} WHERE song_id = %d AND src IN ('distrokid','mlc','ascap','ccli') GROUP BY quarter, src", $id ) ) as $r ) { // phpcs:ignore WordPress.DB
 				$rows = self::people_rows( $id, $r->quarter, $r->src, (float) $r->amt );
-				if ( ! $rows ) {
-					continue;
+				if ( ! $rows && ! self::has_payees( $id, $r->src ) ) {
+					continue; // nobody is credited for this source: leave what the old catalog had
 				}
 				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND song_id = %d AND quarter = %s", $r->src, $id, $r->quarter ) ); // phpcs:ignore WordPress.DB
-				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND (song_id = 0 OR song_id IS NULL) AND quarter = %s AND LOWER(work_title) = LOWER(%s)", $r->src, $r->quarter, (string) $rows[0][2] ) ); // phpcs:ignore WordPress.DB -- old-catalog lines that never got matched to the song
-				Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+				$title = (string) ( Songpress_Songs::get( $id )->title ?? '' );
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND (song_id = 0 OR song_id IS NULL) AND quarter = %s AND LOWER(work_title) = LOWER(%s)", $r->src, $r->quarter, $title ) ); // phpcs:ignore WordPress.DB -- old-catalog lines that never got matched to the song
+				if ( $rows ) { // a share of 0, or everyone taken off, leaves nothing to insert
+					Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+				}
 				$n++;
 			}
 		}
@@ -373,11 +387,13 @@ class Songpress_Uploads {
 		$n = 0;
 		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT quarter, SUM(amount) AS amt FROM {$e} WHERE src = 'distrokid' AND song_id = %d GROUP BY quarter", (int) $song_id ) ) as $r ) { // phpcs:ignore WordPress.DB
 			$rows = self::people_rows( (int) $song_id, $r->quarter, 'distrokid', (float) $r->amt );
-			if ( ! $rows ) {
+			if ( ! $rows && ! self::has_payees( (int) $song_id, 'distrokid' ) ) {
 				continue;
 			}
 			$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = 'distrokid' AND song_id = %d AND quarter = %s", (int) $song_id, $r->quarter ) ); // phpcs:ignore WordPress.DB
-			Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+			if ( $rows ) {
+				Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+			}
 			$n++;
 		}
 		return $n;
