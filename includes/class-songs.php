@@ -425,6 +425,33 @@ class Songpress_Songs {
 		return $new;
 	}
 
+	/** A copy of a version, as the next version of the same work: every field, the audio and art, and everyone credited (performers and producers too). Status starts at Writing, and the ISRC, UPC and streaming links are left off. */
+	public static function duplicate_version( $from_id, $owner_id ) {
+		global $wpdb;
+		$from = self::get( (int) $from_id );
+		if ( ! $from ) {
+			return new WP_Error( 'songpress_missing', __( 'That song does not exist.', 'songpress' ) );
+		}
+		$data = array();
+		foreach ( self::FIELDS as $f ) {
+			$data[ $f ] = $from->$f;
+		}
+		$data['status'] = 'writing';
+		$new = self::insert( false, (int) $from->family_id, $data, $owner_id );
+		if ( is_wp_error( $new ) ) {
+			return $new;
+		}
+		$cr = Songpress_Install::table( 'credits' );
+		$wpdb->query( $wpdb->prepare( "INSERT INTO {$cr} (song_id, role, name, ipi, share, user_id, position) SELECT %d, role, name, ipi, share, user_id, position FROM {$cr} WHERE song_id = %d", (int) $new, (int) $from->id ) );
+		$id = Songpress_Install::table( 'identifiers' );
+		$in = implode( ',', array_fill( 0, count( self::RELEASE_IDENTIFIERS ), '%s' ) );
+		$wpdb->query( $wpdb->prepare( "INSERT INTO {$id} (song_id, kind, value) SELECT %d, kind, value FROM {$id} WHERE song_id = %d AND kind NOT IN ({$in})", array_merge( array( (int) $new, (int) $from->id ), self::RELEASE_IDENTIFIERS ) ) );
+		$made = self::get( $new );
+		Songpress_History::log( (int) $new, 'duplicated', array( 'from' => $from->serial ) );
+		Songpress_History::log( (int) $from->id, 'version_made', array( 'serial' => $made ? $made->serial : '' ) );
+		return $new;
+	}
+
 	/** Copy of an existing song as the next version of its family. @return int|WP_Error song id */
 	public static function create_version( $from_id, $owner_id ) {
 		$from = self::get( $from_id );

@@ -59,6 +59,8 @@ class Songpress_History {
 				return __( 'Created as a version of an earlier song', 'songpress' );
 			case 'serial_changed':
 				return sprintf( /* translators: 1: old serial, 2: new serial */ __( 'Serial number changed from %1$s to %2$s', 'songpress' ), (string) ( $d['from'] ?? '' ), (string) ( $d['serial'] ?? '' ) );
+			case 'duplicated':
+				return sprintf( /* translators: %s: serial number */ __( 'Duplicated from %s', 'songpress' ), (string) ( $d['from'] ?? '' ) );
 			case 'version_made':
 				return sprintf( /* translators: %s: serial number */ __( 'New version %s created', 'songpress' ), (string) ( $d['serial'] ?? '' ) );
 			case 'scheduled':

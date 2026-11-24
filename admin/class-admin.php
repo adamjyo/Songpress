@@ -9,6 +9,7 @@ class Songpress_Admin {
 		add_action( 'wp_ajax_songpress_autosave', array( __CLASS__, 'handle_autosave' ) );
 		add_action( 'wp_ajax_songpress_sheet', array( __CLASS__, 'handle_sheet_ajax' ) );
 		add_action( 'admin_post_songpress_new_version', array( __CLASS__, 'handle_new_version' ) );
+		add_action( 'admin_post_songpress_dup_version', array( __CLASS__, 'handle_dup_version' ) );
 		add_action( 'admin_post_songpress_set_serial', array( __CLASS__, 'handle_set_serial' ) );
 		add_action( 'admin_post_songpress_import_check', array( __CLASS__, 'handle_import_check' ) );
 		add_action( 'admin_post_songpress_import_run', array( __CLASS__, 'handle_import_run' ) );
@@ -715,6 +716,18 @@ class Songpress_Admin {
 			self::back( 'songpress-song', array( 'song' => $id, 'err' => rawurlencode( $r->get_error_message() ) ) );
 		}
 		self::back( 'songpress-song', array( 'song' => $id, 'saved' => 1 ) );
+	}
+
+	public static function handle_dup_version() {
+		check_admin_referer( 'songpress_dup_version' );
+		if ( ! Songpress_Caps::can( 'create' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$new = Songpress_Songs::duplicate_version( absint( $_POST['song_id'] ?? 0 ), get_current_user_id() );
+		if ( is_wp_error( $new ) ) {
+			self::back( 'songpress-song', array( 'song' => absint( $_POST['song_id'] ?? 0 ), 'err' => rawurlencode( $new->get_error_message() ) ) );
+		}
+		self::back( 'songpress-song', array( 'song' => $new, 'saved' => 1 ) );
 	}
 
 	public static function handle_new_version() {

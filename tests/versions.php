@@ -1048,6 +1048,14 @@ $gm2 = Songpress_Songs::get( $v3 );
 check( 'set_serial: a work becomes a version of another', array( $mr2, (int) $gm2->version_no, (int) $gm2->family_id === (int) Songpress_Songs::get( $v1 )->family_id ), array( '0001-09', 9, true ) );
 check( 'set_serial: a work with versions keeps its family when renumbered', is_wp_error( Songpress_Songs::set_serial( $v0, '0001-08' ) ), true );
 
+// duplicate a version
+$wpdb_ = $GLOBALS['wpdb'];
+$wpdb_->update( 'wp_songpress_songs', array( 'album' => 'Dup Album', 'status' => 'released' ), array( 'id' => $v1 ) );
+$d1 = Songpress_Songs::duplicate_version( $v1, 1 );
+$gd = Songpress_Songs::get( $d1 );
+check( 'duplicate: next version of the same work', array( (int) $gd->family_id === (int) Songpress_Songs::get( $v1 )->family_id, (int) $gd->version_no > 1 ), array( true, true ) );
+check( 'duplicate: copies release details, status starts at writing', array( $gd->album, $gd->status ), array( 'Dup Album', 'writing' ) );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

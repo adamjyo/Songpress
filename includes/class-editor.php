@@ -697,6 +697,7 @@ class Songpress_Editor {
 		if ( Songpress_Caps::can( 'create' ) ) {
 			$o .= '<p class="spe-help">' . esc_html__( 'A version is a new recording, arrangement or release of this song. It gets the next number, like 0012-01. Writers and splits start as a copy of this one. Performers and producers start empty. Nothing you change on a version affects the original or the other versions.', 'songpress' ) . '</p>';
 			$o .= self::post_form( 'songpress_new_version', 'songpress_new_version', $id, array(), __( 'Add a version', 'songpress' ) );
+			$o .= '<p class="spe-help">' . esc_html__( 'Duplicate version makes a full copy of this one as the next version: release details, art, audio and everyone credited. The ISRC, UPC and streaming links are left off.', 'songpress' ) . '</p>' . self::post_form( 'songpress_dup_version', 'songpress_dup_version', $id, array(), __( 'Duplicate version', 'songpress' ) );
 		}
 		if ( Songpress_Caps::can( 'edit_any' ) ) {
 			$o .= '<h4>' . esc_html__( 'Serial number', 'songpress' ) . '</h4><p class="spe-help">' . esc_html__( 'A work is 0012 and its versions are 0012-01, 0012-02. Change the number to move this song: give a version a plain number like 0300 to make it a work of its own, or 0012-04 to make it a version of 0012.', 'songpress' ) . '</p>';
