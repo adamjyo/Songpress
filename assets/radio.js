@@ -294,8 +294,26 @@
     np.appendChild(wrap); np.appendChild(qBox);
   })();
   function optFill(b, iconName, label, on) { b.innerHTML = ''; var c = el('span', 'c' + (on ? ' on' : '')); c.appendChild(ico(iconName, 22)); b.appendChild(c); b.appendChild(el('small', '', label)); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.setAttribute('aria-label', label); }
-  function openNP() { if (Q.pos < 0) return; np.hidden = false; document.documentElement.classList.add('sp-np-open'); ui(true); nHandle.focus(); }
-  function closeNP() { np.hidden = true; qBox.hidden = true; document.documentElement.classList.remove('sp-np-open'); }
+  /* the full-screen player is a layer over the Radio page: it gets its own history step, so a back swipe (or the system back) closes it and lands on Radio, not on the view before */
+  var npPushed = false;
+  function hideNP() { np.hidden = true; qBox.hidden = true; document.documentElement.classList.remove('sp-np-open'); }
+  function openNP() {
+    if (Q.pos < 0) return; np.hidden = false; document.documentElement.classList.add('sp-np-open'); ui(true); nHandle.focus();
+    if (!npPushed) { try { history.pushState({ spnp: 1 }, '', location.href); npPushed = true; } catch (e) {} }
+  }
+  function closeNP() { hideNP(); if (npPushed) { npPushed = false; try { history.back(); } catch (e) {} } }
+  window.addEventListener('popstate', function () { if (!np.hidden) { npPushed = false; hideNP(); } });
+  (function () { // a swipe in from the left edge closes the player too
+    var s = null;
+    document.addEventListener('touchstart', function (e) { s = null; if (np.hidden || e.touches.length !== 1) return; var p = e.touches[0]; if (p.clientX <= 36) s = { x: p.clientX, y: p.clientY, h: false, dx: 0 }; }, { passive: true });
+    document.addEventListener('touchmove', function (e) {
+      if (!s) return; var p = e.touches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
+      if (!s.h) { if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { s = null; return; } if (dx > 10 && dx > Math.abs(dy) * 1.5) s.h = true; else return; }
+      s.dx = dx; np.style.transition = 'none'; np.style.transform = 'translateX(' + Math.max(0, Math.min(dx, 160)) + 'px)'; e.preventDefault();
+    }, { passive: false });
+    function end(go) { if (!s) return; var d = s.dx, h = s.h; s = null; np.style.transition = 'transform .18s'; np.style.transform = ''; if (go && h && d > 90) closeNP(); }
+    document.addEventListener('touchend', function () { end(true); }); document.addEventListener('touchcancel', function () { end(false); });
+  })();
   nHandle.addEventListener('click', closeNP);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !np.hidden && !document.querySelector('.sp-rx-wrap')) closeNP(); });
   cPP.addEventListener('click', toggle); cPrev.addEventListener('click', function () { step(-1); }); cNext.addEventListener('click', function () { step(1); });
