@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.62
+Stable tag: 0.72.63
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.63 =
+* Phone Radio: song rows no longer show the genre; the band (the Artist on the work) shows under the title instead.
 
 = 0.72.62 =
 * Phone Radio: a back swipe from the full-screen player always closes just the player and lands on the playlist view, with the music still playing. The player's own back step is only popped when it really is the current one, and leaving it another way (a tab, another track source) no longer leaves a ghost step behind.

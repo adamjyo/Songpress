@@ -82,6 +82,9 @@ class Songpress_Radio {
 	}
 
 	private static function by( $s ) {
+		if ( '' !== trim( (string) $s->artist ) ) { // the band or act on the work
+			return (string) $s->artist;
+		}
 		foreach ( Songpress_Songs::credits( (int) $s->id ) as $c ) {
 			if ( in_array( $c->role, array( 'band', 'artist' ), true ) && '' !== trim( (string) $c->name ) ) {
 				return (string) $c->name;

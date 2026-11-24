@@ -183,7 +183,7 @@
     var go = el('button', 'sp-rd-go'); go.type = 'button'; go.setAttribute('aria-label', I.play + ' ' + T[id].t);
     go.appendChild(art(id)); var tx = el('span', 'tx');
     if (T[id].n) tx.appendChild(el('em', 'sn', T[id].n));
-    var tl = el('span', 'tl'); tl.appendChild(el('b', '', T[id].t || 'Untitled')); if (T[id].g) tl.appendChild(el('i', 'gn', '- ' + T[id].g)); tx.appendChild(tl);
+    var tl = el('span', 'tl'); tl.appendChild(el('b', '', T[id].t || 'Untitled')); tx.appendChild(tl);
     if (T[id].b) tx.appendChild(el('small', '', T[id].b)); go.appendChild(tx);
     var eq = el('span', 'sp-rd-eq'); eq.setAttribute('aria-hidden', 'true'); eq.innerHTML = '<i></i><i></i><i></i>'; go.appendChild(eq);
     if (st(id).fav) { var hh = el('span', 'sp-rd-h', '\u2665'); hh.setAttribute('aria-label', I.fav); go.appendChild(hh); }
