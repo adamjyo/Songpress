@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.69.0
+Stable tag: 0.69.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.69.1 =
+* The slide-down player hides itself after a few seconds (any touch on it keeps it open). A small tab in the top middle, in the accent color, brings it back.
 
 = 0.69.0 =
 * Transcriber: a new step, "Put the chart in a work". Search your works, pick one and the ChordPro is saved into it (a work that already has a chart is only replaced after a second press). Opening the Transcriber with ?song=ID preselects that work.

@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var C = window.SP_BAN || {}, I = C.i || {};
-  var bar = null, au = null, list = [], idx = -1, btn = null, own = null, single = false, current = {};
+  var bar = null, pull = null, hideT = 0, au = null, list = [], idx = -1, btn = null, own = null, single = false, current = {};
 
   function mk(tag, cls) { var e = document.createElement(tag); if (cls) e.className = cls; return e; }
   var SVG = {
@@ -24,6 +24,7 @@
     bar = mk('div', 'sp-ban'); bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', I.player || 'Player'); bar.hidden = true;
     bar.innerHTML = '<div class="bn-top"><span class="bn-art"></span><span class="bn-tx"><b class="bn-t"></b><span class="bn-a"></span></span><img class="bn-logo" alt="" src="' + (C.logo || '') + '"></div><hr class="bn-hr"><div class="bn-ctl"><button type="button" class="bn-prev"></button><button type="button" class="bn-pp"></button><button type="button" class="bn-next"></button></div><button type="button" class="bn-hide">' + (I.hide || 'Hide player') + '</button>';
     accent(bar); document.body.appendChild(bar);
+    ['touchstart', 'click'].forEach(function (n) { bar.addEventListener(n, function () { if (bar.classList.contains('in')) arm(); }, { passive: true }); });
     bar.querySelector('.bn-prev').innerHTML = SVG.prev; bar.querySelector('.bn-next').innerHTML = SVG.next;
     bar.querySelector('.bn-pp').addEventListener('click', function () { if (!au) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause(); });
     bar.querySelector('.bn-prev').addEventListener('click', function () { move(-1); });
@@ -32,8 +33,20 @@
     var y0 = null; bar.addEventListener('touchstart', function (e) { y0 = e.touches[0].clientY; }, { passive: true });
     bar.addEventListener('touchend', function (e) { if (y0 != null && e.changedTouches[0].clientY - y0 < -28) hide(); y0 = null; }, { passive: true });
   }
-  function hide() { if (bar) { bar.classList.remove('in'); setTimeout(function () { if (bar && !bar.classList.contains('in')) bar.hidden = true; }, 300); } }
-  function showBar() { build(); bar.hidden = false; requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('in'); }); }); }
+  function arm() { clearTimeout(hideT); hideT = setTimeout(hide, 4500); }
+  function pullBtn() {
+    if (pull) return pull;
+    pull = mk('button', 'sp-ban-pull'); pull.type = 'button'; pull.hidden = true; pull.setAttribute('aria-label', I.show || 'Show player');
+    pull.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+    pull.addEventListener('click', showBar); document.body.appendChild(pull); return pull;
+  }
+  function hide() {
+    clearTimeout(hideT);
+    if (!bar) return;
+    bar.classList.remove('in'); var pb = pullBtn(); pb.style.setProperty('--bn', bar.style.getPropertyValue('--bn')); pb.classList.toggle('lt', bar.classList.contains('lt')); pb.hidden = false;
+    setTimeout(function () { if (bar && !bar.classList.contains('in')) bar.hidden = true; }, 300);
+  }
+  function showBar() { build(); if (pull) pull.hidden = true; bar.hidden = false; requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('in'); }); }); arm(); }
   function fill(m) {
     current = m; build();
     bar.querySelector('.bn-t').textContent = m.title || ''; bar.querySelector('.bn-a').textContent = m.artist || '';
