@@ -117,13 +117,6 @@ class Songpress_Editor {
 		$all_artists = Songpress_Artists::all();
 		$artist_hidden = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
 		$artist_html   = $artist_hidden;
-		if ( count( $all_artists ) > 1 ) {
-			$ao = '<option value="0"' . selected( $cur_artist, 0, false ) . '></option>';
-			foreach ( $all_artists as $a ) {
-				$ao .= '<option value="' . (int) $a->id . '"' . selected( $cur_artist, (int) $a->id, false ) . '>' . esc_html( $a->name ) . '</option>';
-			}
-			$artist_html = Songpress_Caps::can( 'create' ) ? '<label class="spe-field"><span>' . esc_html__( 'Artist', 'songpress' ) . '</span><select name="artist_id">' . $ao . '</select></label>' : $artist_html;
-		}
 		// The original work holds only what every version shares. Everything else is entered on a version.
 		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		// Cover art and an audio player sit beside Basics on every work, the original included.

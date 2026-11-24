@@ -1056,6 +1056,12 @@ $gd = Songpress_Songs::get( $d1 );
 check( 'duplicate: next version of the same work', array( (int) $gd->family_id === (int) Songpress_Songs::get( $v1 )->family_id, (int) $gd->version_no > 1 ), array( true, true ) );
 check( 'duplicate: copies release details, status starts at writing', array( $gd->album, $gd->status ), array( 'Dup Album', 'writing' ) );
 
+// every field can be cleared
+Songpress_Songs::update( $v1, array( 'album' => 'Keep', 'status' => 'recorded', 'release_date' => '2026-01-01', 'genre' => 'Rock', 'artist' => 'Band X' ) );
+Songpress_Songs::update( $v1, array( 'album' => '', 'status' => '', 'release_date' => '', 'genre' => '', 'artist' => '' ) );
+$gc = Songpress_Songs::get( $v1 );
+check( 'clear: album, status, release date, genre and performing artist can be emptied', array( $gc->album, $gc->status, $gc->release_date, $gc->genre, $gc->artist ), array( '', '', '', '', '' ) );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
