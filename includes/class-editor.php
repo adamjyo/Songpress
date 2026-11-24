@@ -429,7 +429,11 @@ class Songpress_Editor {
 			global $wpdb;
 			$t   = Songpress_Install::table( 'profiles' );
 			$out = array();
-			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT name, ipi FROM {$t} WHERE kind = %s ORDER BY name", $kind ) ) as $r ) {
+			$bands = 'band' === $kind ? array() : array_flip( (array) $wpdb->get_col( "SELECT name_key FROM {$t} WHERE kind = 'band'" ) ); // phpcs:ignore WordPress.DB -- bands are not writers or performers
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT name, name_key, ipi FROM {$t} WHERE kind = %s ORDER BY name", $kind ) ) as $r ) {
+				if ( isset( $bands[ $r->name_key ] ) ) {
+					continue;
+				}
 				$out[ $r->name ] = array( $r->name, (string) $r->ipi );
 			}
 			uksort( $out, 'strnatcasecmp' );

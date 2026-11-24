@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.70
+Stable tag: 0.72.71
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.71 =
+* Writer, publisher and performer drop-downs no longer list bands.
 
 = 0.72.70 =
 * Nikki Sanders and Nikki Braby were the same person: on update, Sanders is merged into Braby (credits, earnings, payments, profile) once, and the Audit log records it.
