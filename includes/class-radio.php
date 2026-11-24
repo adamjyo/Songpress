@@ -81,14 +81,8 @@ class Songpress_Radio {
 		return $out;
 	}
 
-	/** Released: it has a release date that is today or earlier. */
-	private static function is_release( $s ) {
-		$d = trim( (string) $s->release_date );
-		return '' !== $d && $d <= current_time( 'Y-m-d' );
-	}
-
 	private static function by( $s ) {
-		if ( self::is_release( $s ) && '' !== trim( (string) $s->artist ) ) { // a release shows its band or act
+		if ( '' !== trim( (string) $s->artist ) ) { // the band or act on the work
 			return (string) $s->artist;
 		}
 		foreach ( Songpress_Songs::credits( (int) $s->id ) as $c ) {
@@ -221,7 +215,7 @@ class Songpress_Radio {
 				$tracks[ $id ] = array(
 					't'  => Songpress_Songs::display_title( $s ),
 					'n'  => (string) $s->serial,
-					'g'  => self::is_release( $s ) ? '' : (string) $s->genre, // a release shows its band under the title; anything else keeps its genre
+					'g'  => (string) $s->genre,
 					'b'  => self::by( $s ),
 					'a'  => Songpress_Media::art_url( $s, 'medium' ),
 					's'  => Songpress_Media::audio_url( $s ),
