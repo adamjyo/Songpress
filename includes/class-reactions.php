@@ -214,7 +214,21 @@ class Songpress_Reactions {
 		if ( $in ) {
 			$o .= $b( 'list', __( 'Playlist', 'songpress' ), self::ico( self::I_LIST ) );
 		}
-		return $o . '</div>' . self::boot( $in ? '' : $token );
+		return $o . '</div>' . self::boot( $in ? '' : $token ) . self::banner();
+	}
+
+	/** The player banner that slides down when a song plays from the Works list or a work page. */
+	public static function banner() {
+		static $done = false;
+		if ( $done ) {
+			return '';
+		}
+		$done = true;
+		$cfg  = array(
+			'logo' => SONGPRESS_URL . 'assets/icon.svg',
+			'i'    => array( 'player' => __( 'Player', 'songpress' ), 'prev' => __( 'Previous', 'songpress' ), 'next' => __( 'Next', 'songpress' ), 'play' => __( 'Play', 'songpress' ), 'pause' => __( 'Pause', 'songpress' ), 'hide' => __( 'Hide player', 'songpress' ), 'back15' => __( 'Back 15 seconds', 'songpress' ), 'fwd15' => __( 'Forward 15 seconds', 'songpress' ) ),
+		);
+		return '<script>window.SP_BAN=' . wp_json_encode( $cfg ) . ';</script><script src="' . esc_url( SONGPRESS_URL . 'assets/banner.js?v=' . SONGPRESS_VERSION ) . '" defer></script>';
 	}
 
 	/** The settings and the script, printed once per page. */

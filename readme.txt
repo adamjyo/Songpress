@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.67.0
+Stable tag: 0.68.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,11 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.68.0 =
+* New Help tab on the phone: an animated, ten-step walk-through (search, play, swipe, press and hold, rate, Radio, the player, add to Home Screen, alerts) with Next, Previous and a close button. It opens once the first time someone opens the app after this update, and any time from the Help tab. Starts, finishes and skips are counted in the usage log.
+* Songs played from Works or a work page now play in a banner that slides down from the top: art, title, artist, our logo, and back, pause and forward. Swipe it up to hide it.
+* The phone Works list and work page now show the bottom tab bar.
 
 = 0.67.0 =
 * Radio redesigned. A list of playlists (Everything, Recent releases, Favorites, yours, and ones shared with you), a playlist page that looks like Works with Play, Shuffle and Edit (add, remove, drag to reorder, rename, share, delete), a mini player, and a Now Playing page with shuffle, repeat, a heart to favorite, a star to rate, volume and an Up next list. Favorites is a playlist of the songs you hearted. Recent releases is the 25 newest released songs. The music keeps playing while you move between lists. New: a usage log (plays, ratings, favorites, playlists, shares) shown at the bottom of Stats.

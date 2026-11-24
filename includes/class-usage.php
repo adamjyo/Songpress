@@ -63,6 +63,9 @@ class Songpress_Usage {
 		if ( $sid && ! Songpress_Caps::can_see_song( $sid ) ) {
 			$sid = 0;
 		}
+		if ( 0 === strpos( $kind, 'tour_' ) ) {
+			Songpress_Tour::mark_seen(); // shown once per person, not on every open
+		}
 		self::log( $kind, $sid, wp_unslash( $_POST['detail'] ?? '' ) );
 		wp_send_json_success();
 	}

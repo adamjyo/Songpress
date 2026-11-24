@@ -363,7 +363,7 @@ class Songpress_Frontend {
 		if ( ! $res['rows'] ) {
 			$out .= '<li class="songpress-empty">' . esc_html__( 'No songs found.', 'songpress' ) . '</li>';
 		}
-		return $out . '</ul>' . ( $bulk ? '</form>' : '' ) . ( $desktop ? '' : Songpress_Reactions::boot() ) . '<script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . ( $desktop ? self::tabs( 'catalog' ) : '' ) . '</div>';
+		return $out . '</ul>' . ( $bulk ? '</form>' : '' ) . Songpress_Reactions::boot() . Songpress_Reactions::banner() . wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/**
@@ -458,11 +458,14 @@ class Songpress_Frontend {
 			'radio'   => array( add_query_arg( 'sp_radio', '1', get_permalink( $c ) ), __( 'Radio', 'songpress' ), $ic( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ) ),
 			'profile' => array( get_permalink( $p ), __( 'Profile', 'songpress' ), $ic( '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' ) ),
 		);
-		$o = '<nav class="songpress-tabs songpress-tabs-' . $pos . '" aria-label="SongPress">';
+		$o = '<nav class="songpress-tabs songpress-tabs-' . $pos . ( wp_is_mobile() && 'bottom' === $pos ? ' songpress-tabs-fixed' : '' ) . '" aria-label="SongPress">';
 		foreach ( $items as $k => $it ) {
+			if ( 'profile' === $k ) { // Help sits before Profile; it opens the tour over whatever you were looking at
+				$o .= '<button type="button" class="songpress-tabhelp" data-sp-tour>' . $ic( '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5M12 17.2v.1"/>' ) . '<span>' . esc_html__( 'Help', 'songpress' ) . '</span></button>';
+			}
 			$o .= '<a class="' . ( $k === $on ? 'on' : '' ) . '"' . ( $k === $on ? ' aria-current="page"' : '' ) . ' href="' . esc_url( $it[0] ) . '">' . $it[2] . '<span>' . esc_html( $it[1] ) . '</span></a>';
 		}
-		return $o . '</nav>';
+		return $o . '</nav>' . Songpress_Tour::boot();
 	}
 
 	private static function song_view( $id, $uid ) {
@@ -474,7 +477,7 @@ class Songpress_Frontend {
 			return '<p class="songpress-note">' . esc_html__( 'That song does not exist.', 'songpress' ) . '</p>';
 		}
 		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
-		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . ( wp_is_mobile() ? '' : self::tabs( 'catalog' ) ) . '</div>';
+		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The ChordPro level as the printable chord sheet (the PDF layout), with print and share icons above it. */

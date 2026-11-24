@@ -185,13 +185,9 @@
     draw(view || 'menu');
   }
 
-  window.SPRX = { open: function (o, view) { var h = document.createElement('div'); var m = { h: h, id: +o.id, title: o.title || '', fav: !!o.fav, avg: +o.avg || 0, n: +o.n || 0, mine: +o.mine || 0, share: o.share || '', t: '' }; sheet(m, view || 'menu'); } };
+  window.SPRX = { use: use, open: function (o, view) { var h = document.createElement('div'); var m = { h: h, id: +o.id, title: o.title || '', fav: !!o.fav, avg: +o.avg || 0, n: +o.n || 0, mine: +o.mine || 0, share: o.share || '', t: '' }; sheet(m, view || 'menu'); } };
 
   /* ---------- plays from the list and the work page are logged ---------- */
-  document.addEventListener('click', function (e) {
-    var b = e.target.closest && e.target.closest('.songpress-play[data-src]');
-    if (b && !b.classList.contains('on')) { var h = host(b); use('play', h ? +h.getAttribute('data-rx-song') : 0, 'list'); }
-  });
   document.addEventListener('play', function (e) {
     var a = e.target; if (!a || !a.classList || !a.classList.contains('songpress-audio') || a.getAttribute('data-sp-logged')) return;
     a.setAttribute('data-sp-logged', '1'); var bar = document.querySelector('.sp-rx-bar'); use('play', bar ? +bar.getAttribute('data-rx-song') : 0, 'work');
