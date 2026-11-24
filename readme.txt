@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.85
+Stable tag: 0.72.86
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.86 =
+* Desktop Works list: the Status column is gone. The status now shows as a chip in the Registered column, in place of Released (green finished or released, gold still being worked on, red taken down). People who do not manage registrations see just the status chip.
 
 = 0.72.85 =
 * Desktop Works list: a Registered column (registry chips, Released, ChPro) to the left of Status, for those who manage registrations. ChordPro is shortened to ChPro. Fixed the column alignment after the Label column was removed.

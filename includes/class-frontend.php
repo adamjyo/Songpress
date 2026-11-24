@@ -310,9 +310,9 @@ class Songpress_Frontend {
 		if ( $desktop ) { // phones show the list with no column headings
 			$regs = Songpress_Caps::can( 'registrations' );
 			$out .= '<div class="songpress-colhead" role="row">' . ( $bulk ? '<input type="checkbox" class="songpress-pickall" aria-label="' . esc_attr__( 'Select all', 'songpress' ) . '">' : '' ) . '<span class="songpress-ch-play"></span><span class="songpress-ch-main">';
-			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'regs' => __( 'Registered', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
+			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'regs' => __( 'Registered', 'songpress' ) ) as $k => $label ) {
 				if ( 'regs' === $k ) { // not sortable: the registry chips, for those who manage registrations
-					$out .= '<span class="songpress-ch-regs">' . ( $regs ? esc_html( $label ) : '' ) . '</span>';
+					$out .= '<span class="songpress-ch-regs">' . esc_html( $regs ? $label : __( 'Status', 'songpress' ) ) . '</span>';
 					continue;
 				}
 				$on   = ( $k === $order );
@@ -376,8 +376,7 @@ class Songpress_Frontend {
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'
-				. ( $desktop ? '<span class="songpress-regs">' . ( $regs ? Songpress_Registrations::strip( (int) $s->id ) : '' ) . '</span>' : '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>' )
-				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</span>'
+				. ( $desktop ? '<span class="songpress-regs">' . Songpress_Registrations::strip( $s, $regs ) . '</span>' : '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>' )
 				. '</a></li>';
 		}
 		if ( ! $res['rows'] ) {

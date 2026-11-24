@@ -110,20 +110,33 @@ class Songpress_Registrations {
 		return $by[ (int) $song_id ] ?? null;
 	}
 
-	/** One compact line of chips for the Works list: the registries, then Released and ChPro. */
-	public static function strip( $song_id ) {
-		$w = self::work_of( $song_id );
+	/** The chip color for a writing stage: finished or out is green, taken down is red, anything still being worked on is gold. */
+	public static function stage_color( $stage ) {
+		$k = strtolower( trim( (string) $stage ) );
+		if ( in_array( $k, array( 'finished', 'released' ), true ) ) {
+			return 'green';
+		}
+		return 'taken down' === $k ? 'red' : 'gold';
+	}
+
+	/** One compact line of chips for the Works list: the registries, this song's status, then ChPro. */
+	public static function strip( $song, $registries = true ) {
+		$w = self::work_of( (int) $song->id );
 		if ( ! $w ) {
 			return '';
 		}
 		$now = time();
 		$o   = '';
-		foreach ( self::SOCIETIES as $k => $d ) {
+		foreach ( $registries ? self::SOCIETIES : array() as $k => $d ) {
 			$st = self::status( $w, $k, $now );
 			$o .= '<span class="spr-chip ' . esc_attr( $st['state'] ) . '" title="' . esc_attr( $d[0] . ( '' !== $st['code'] ? ': ' . $st['code'] : '' ) ) . '">' . esc_html( $d[0] ) . '</span>';
 		}
-		foreach ( self::facts( $w ) as $fv ) {
-			$o .= '<span class="spr-chip ' . ( $fv[1] ? 'green' : 'red' ) . '">' . esc_html( $fv[0] ) . '</span>';
+		$stage = Songpress_Songs::effective_status( $song );
+		if ( '' !== trim( (string) $stage ) ) {
+			$o .= '<span class="spr-chip ' . self::stage_color( $stage ) . '" title="' . esc_attr__( 'Status', 'songpress' ) . '">' . esc_html( $stage ) . '</span>';
+		}
+		if ( $registries ) {
+			$o .= '<span class="spr-chip ' . ( ! empty( $w->has_cp ) ? 'green' : 'red' ) . '">ChPro</span>';
 		}
 		return $o;
 	}
