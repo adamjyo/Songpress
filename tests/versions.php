@@ -1091,6 +1091,12 @@ $gr = Songpress_Songs::get( $tv );
 check( 'become_root: release name is now the title, release details cleared', array( $gr->title, $gr->release_title, $gr->album, $gr->artist, $gr->release_date ), array( 'Made Root', '', '', '', '' ) );
 check( 'become_root: the old details are kept in the notes', strpos( (string) $gr->notes, 'Album: Alb2' ) !== false, true );
 
+// time signatures that became dates
+$ts = array( '2026-03-04' => '3/4', '2025-06-08' => '6/8', '4-Apr' => '4/4', '12-Dec' => null, 'Dec 8' => '12/8', '9/8/2026' => '9/8', 'Sep 8, 2026' => '9/8', '4/4' => null, '3-Feb' => null, '2026-07-04' => '7/4', '5-May' => null, 'abc' => null );
+foreach ( $ts as $in => $want ) {
+	check( 'time_from_date ' . $in, Songpress_Songs::time_from_date( $in ), $want );
+}
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );

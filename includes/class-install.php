@@ -74,6 +74,26 @@ class Songpress_Install {
 			}
 			update_option( 'songpress_roots_fixed3', '1' );
 		}
+		// Time signatures a spreadsheet turned into dates (3/4 became March 4) are put back, once.
+		if ( '1' !== get_option( 'songpress_timesig_fixed' ) ) {
+			global $wpdb;
+			$tb = self::table( 'songs' );
+			$fixed = 0;
+			$left  = array();
+			foreach ( (array) $wpdb->get_results( "SELECT id, time_signature FROM {$tb} WHERE time_signature <> ''" ) as $r ) { // phpcs:ignore WordPress.DB
+				$to = Songpress_Songs::time_from_date( $r->time_signature );
+				if ( null !== $to && $to !== $r->time_signature ) {
+					$wpdb->update( $tb, array( 'time_signature' => $to ), array( 'id' => (int) $r->id ) );
+					++$fixed;
+				} elseif ( ! in_array( $r->time_signature, Songpress_Songs::TIME_SIGNATURES, true ) ) {
+					$left[ $r->time_signature ] = 1;
+				}
+			}
+			update_option( 'songpress_timesig_fixed', '1' );
+			if ( class_exists( 'Songpress_Audit' ) ) {
+				Songpress_Audit::log( 'catalog', 'Fixed time signatures', $fixed . ' put back from dates', array( 'after' => implode( ', ', array_slice( array_keys( $left ), 0, 30 ) ) ) );
+			}
+		}
 		// Record label credits were removed on request: delete every label credit, once.
 		if ( '1' !== get_option( 'songpress_labels_removed' ) ) {
 			global $wpdb;

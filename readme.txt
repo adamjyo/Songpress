@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.30
+Stable tag: 0.72.31
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.31 =
+* Time signatures that a spreadsheet had turned into dates (3/4 became March 4) are put back once on update (March 4 -> 3/4). The Audit log shows how many, and any others left.
 
 = 0.72.30 =
 * Works editor: Time signature is a dropdown (4/4, 3/4, 2/4, 2/2, 6/8, 12/8, 9/8, 3/8, 5/4, 7/4, 5/8, 7/8, 6/4, 3/2). A value a work already has is kept in the list.

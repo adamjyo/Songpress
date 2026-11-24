@@ -930,6 +930,33 @@ class Songpress_Songs {
 	}
 
 	/** What kind of recording or version a work is. */
+	/**
+	 * A time signature a spreadsheet turned into a date ("3/4" became March 4: 2026-03-04, 4-Mar, 3/4/2026, Mar 4). The month was the top number
+	 * and the day the bottom one. Returns the signature ("3/4") when the value is such a date and the result is a sensible one, else null.
+	 */
+	public static function time_from_date( $v ) {
+		$v = trim( (string) $v );
+		$mon = array( 'jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'may' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12 );
+		$m = $d = 0;
+		if ( preg_match( '~^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T].*)?$~', $v, $x ) ) {
+			$m = (int) $x[2];
+			$d = (int) $x[3];
+		} elseif ( preg_match( '~^(\d{1,2})/(\d{1,2})/(\d{2,4})$~', $v, $x ) ) {
+			$m = (int) $x[1];
+			$d = (int) $x[2];
+		} elseif ( preg_match( '~^(\d{1,2})[- ]([A-Za-z]{3})[a-z]*\.?(?:[- ,]+\d{2,4})?$~', $v, $x ) && isset( $mon[ strtolower( $x[2] ) ] ) ) {
+			$m = $mon[ strtolower( $x[2] ) ];
+			$d = (int) $x[1];
+		} elseif ( preg_match( '~^([A-Za-z]{3})[a-z]*\.? (\d{1,2})(?:,? \d{2,4})?$~', $v, $x ) && isset( $mon[ strtolower( $x[1] ) ] ) ) {
+			$m = $mon[ strtolower( $x[1] ) ];
+			$d = (int) $x[2];
+		}
+		if ( $m < 1 || ! in_array( $d, array( 2, 4, 8 ), true ) ) { // a bottom number is a note value: 2, 4 or 8 (16 is too rare to tell from a date)
+			return null;
+		}
+		return $m . '/' . $d;
+	}
+
 	/** The common time signatures: simple, compound and the usual odd meters. */
 	const TIME_SIGNATURES = array( '4/4', '3/4', '2/4', '2/2', '6/8', '12/8', '9/8', '3/8', '5/4', '7/4', '5/8', '7/8', '6/4', '3/2' );
 	const TYPES = array( 'Raw', 'Studio', 'AI', 'Live', 'Lyrics' );
