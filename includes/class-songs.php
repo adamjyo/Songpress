@@ -505,7 +505,7 @@ class Songpress_Songs {
 		$song   = self::get( (int) $id );
 		$family = (int) $song->family_id;
 		$in     = implode( ',', array_map( 'intval', $ids ) );
-		foreach ( array( 'credits', 'identifiers', 'links', 'history', 'ratings', 'playlist_songs', 'earnings', 'pitch_kits' ) as $name ) {
+		foreach ( array( 'credits', 'identifiers', 'links', 'history', 'ratings', 'favorites', 'playlist_songs', 'earnings', 'pitch_kits' ) as $name ) {
 			$wpdb->query( 'DELETE FROM ' . Songpress_Install::table( $name ) . " WHERE song_id IN ({$in})" ); // phpcs:ignore WordPress.DB
 		}
 		foreach ( array( 'person_earnings', 'stats', 'journal', 'sessions', 'agreements', 'art', 'expenses', 'activity', 'pitches' ) as $name ) {

@@ -54,6 +54,7 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, spent_on TEXT, payee TEXT, category TEXT, amount REAL, song_id INT, person TEXT, notes TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_journal (id INTEGER PRIMARY KEY AUTOINCREMENT, log_date TEXT, kind TEXT, title TEXT, notes TEXT, place TEXT, song_id INT DEFAULT 0, pinned INT DEFAULT 0, archived INT DEFAULT 0, song_key TEXT DEFAULT \'\', tempo TEXT DEFAULT \'\', authors TEXT DEFAULT \'\', latitude TEXT DEFAULT \'\', longitude TEXT DEFAULT \'\', source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_ratings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, voter TEXT, stars INT, created_at TEXT, UNIQUE(song_id,voter))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_favorites (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, song_id INT, created_at TEXT, UNIQUE(user_id,song_id))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_art (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT DEFAULT 0, name TEXT, layers TEXT, preview_id INT DEFAULT 0, preview_url TEXT, source_key TEXT UNIQUE, user_id INT, created_at TEXT, updated_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_agreements (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, serial TEXT, kind TEXT, title TEXT, body TEXT, print_token TEXT UNIQUE, source_key TEXT UNIQUE, user_id INT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_signers (id INTEGER PRIMARY KEY AUTOINCREMENT, agreement_id INT, name TEXT, role TEXT, share TEXT, token TEXT UNIQUE, signed_as TEXT, signed_at TEXT, ip TEXT)' );
@@ -973,6 +974,20 @@ $gone  = Songpress_Songs::get( $last )->serial;
 Songpress_Songs::delete( $last );
 $after = Songpress_Songs::get( Songpress_Songs::create( array( 'title' => 'After The Delete' ), 1 ) )->serial;
 check( 'a deleted serial is not reused', $after !== $gone && (int) $after > (int) $gone, true );
+
+
+// reactions: ratings and favorites
+require_once SONGPRESS_DIR . 'includes/class-reactions.php';
+if ( ! function_exists( 'is_user_logged_in' ) ) { function is_user_logged_in() { return true; } }
+$wpdb->query( "INSERT INTO wp_songpress_ratings (song_id, voter, stars) VALUES (900,'u:7',4),(900,'u:8',5),(900,'v:abcdefghijklmnop',3),(901,'u:8',2)" );
+$wpdb->query( "INSERT INTO wp_songpress_favorites (user_id, song_id) VALUES (7,900)" );
+$rx = Songpress_Reactions::bulk( array( 900, 901, 902 ) );
+check( 'rating average and count', array( $rx[900]['avg'], $rx[900]['n'] ), array( 4.0, 3 ) );
+check( 'my stars and my favorite', array( $rx[900]['mine'], $rx[900]['fav'], $rx[901]['mine'], $rx[901]['fav'] ), array( 4, 1, 0, 0 ) );
+check( 'a work with no votes', array( $rx[902]['n'], $rx[902]['avg'] ), array( 0, 0.0 ) );
+check( 'visitor id must look right', array( Songpress_Reactions::voter( 'abc' ), Songpress_Reactions::voter( 'x' ) ), array( 'u:7', 'u:7' ) );
+check( 'average shows from two votes', array( Songpress_Reactions::avg_text( 4.0, 1 ), Songpress_Reactions::avg_text( 4.0, 0 ) ), array( '1 vote so far', 'No votes yet' ) );
+check( 'average text with votes', false !== strpos( Songpress_Reactions::avg_text( 4.0, 3 ), 'from 3 votes' ), true );
 
 // a numbered placeholder must not be escaped in a single-quoted string ('%1\\$s' makes sprintf throw and the page go blank)
 $bad = array();

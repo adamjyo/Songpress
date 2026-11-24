@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.65.0
+Stable tag: 0.66.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,6 +30,8 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
+= 0.66.0 =
+* Rate any work with stars, including visitors on a public share link. Favorite works. Swipe a song to the left (or press and hold) for Favorite, Rate, Add to playlist and Share. The same buttons sit above the streaming links on a work page.
 = 0.65.0 =
 * New: Radio. Playlists of works that have audio, played one after another with previous/next, shuffle, a seek bar and lock-screen controls. Make a playlist on the phone or the desktop, add and remove works, reorder them, and share it with everyone who can see those works. "Everything" plays every work with audio, shuffled.
 * The phone now has a row of icons along the bottom: Works, Radio, Profile. Radio is also in the desktop rail under Works.

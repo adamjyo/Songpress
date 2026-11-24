@@ -308,6 +308,7 @@ class Songpress_Frontend {
 			}
 			$out .= '</span></div>';
 		}
+		$rx = $desktop ? array() : Songpress_Reactions::bulk( wp_list_pluck( $res['rows'], 'id' ) );
 		$out .= '<ul class="songpress-list">';
 		foreach ( $res['rows'] as $s ) {
 			$link  = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
@@ -345,7 +346,8 @@ class Songpress_Frontend {
 				if ( $none ) {
 					$rel = Songpress_Songs::display_title( $s ); // no release title yet: show the work name (its genre is on the card too)
 				}
-				$out  .= '<li class="songpress-card">' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->genre ) ? '<span class="songpress-cardstyle">' . esc_html( $s->genre ) . '</span>' : '' ) . '</span></span></a></li>';
+				$r     = $rx[ (int) $s->id ];
+				$out  .= '<li class="songpress-card"' . Songpress_Reactions::attrs( $s, $r ) . '>' . $art . '<a class="songpress-cardlink" href="' . $link . '"><span class="songpress-cardtext"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span><span class="songpress-title' . ( $none ? ' songpress-notitle' : '' ) . '">' . esc_html( $rel ) . '</span><span class="songpress-cardline"><span class="songpress-cardartist">' . esc_html( $s->artist ) . '</span>' . ( '' !== trim( (string) $s->genre ) ? '<span class="songpress-cardstyle">' . esc_html( $s->genre ) . '</span>' : '' ) . '</span></span></a>' . ( $r['fav'] ? '<span class="sp-rx-heart" aria-label="' . esc_attr__( 'Favorite', 'songpress' ) . '">&#9829;</span>' : '<span class="sp-rx-heart" hidden>&#9829;</span>' ) . Songpress_Reactions::tray() . '</li>';
 				continue;
 			}
 			$out .= '<li class="songpress-row">' . ( $bulk ? '<input type="checkbox" class="songpress-pick" name="ids[]" value="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Select %s', 'songpress' ), $s->title ) ) . '">' : '' ) . $art . '<a class="songpress-rowlink" href="' . $link . '">'
@@ -361,7 +363,7 @@ class Songpress_Frontend {
 		if ( ! $res['rows'] ) {
 			$out .= '<li class="songpress-empty">' . esc_html__( 'No songs found.', 'songpress' ) . '</li>';
 		}
-		return $out . '</ul>' . ( $bulk ? '</form>' : '' ) . '<script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . ( $desktop ? self::tabs( 'catalog' ) : '' ) . '</div>';
+		return $out . '</ul>' . ( $bulk ? '</form>' : '' ) . ( $desktop ? '' : Songpress_Reactions::boot() ) . '<script>(function(){var a=null,b=null;document.addEventListener(\'click\',function(e){var x=e.target.closest&&e.target.closest(\'.songpress-play[data-src]\');if(!x)return;e.preventDefault();if(b===x&&a&&!a.paused){a.pause();return;}if(a){a.pause();}if(b){b.classList.remove(\'on\');}b=x;a=new Audio(x.getAttribute(\'data-src\'));a.addEventListener(\'play\',function(){x.classList.add(\'on\');});a.addEventListener(\'pause\',function(){x.classList.remove(\'on\');});a.addEventListener(\'ended\',function(){x.classList.remove(\'on\');});a.play();});})();</script>' . wp_kses_post( songpress_public_donate_link() ) . ( $desktop ? self::tabs( 'catalog' ) : '' ) . '</div>';
 	}
 
 	/**
@@ -529,7 +531,7 @@ class Songpress_Frontend {
 		if ( '' !== $icons ) {
 			$out .= '<p class="songpress-authors" aria-label="' . esc_attr__( 'Authors', 'songpress' ) . '">' . $icons . '</p>';
 		}
-		$out  .= '</div>' . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
+		$out  .= '</div>' . Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token ) . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';

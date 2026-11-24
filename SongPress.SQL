@@ -291,6 +291,17 @@ CREATE TABLE {prefix}songpress_ratings (
   UNIQUE KEY song_voter (song_id,voter)
 ) {charset};
 
+-- Favorites: one row per person and song.
+CREATE TABLE {prefix}songpress_favorites (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  user_id bigint(20) unsigned NOT NULL,
+  song_id bigint(20) unsigned NOT NULL,
+  created_at datetime NULL,
+  PRIMARY KEY  (id),
+  UNIQUE KEY user_song (user_id,song_id),
+  KEY song_id (song_id)
+) {charset};
+
 -- Radio: playlists. A playlist belongs to one person; shared ones can be played by everyone who can see the works in them.
 CREATE TABLE {prefix}songpress_playlists (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
