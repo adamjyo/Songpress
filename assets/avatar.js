@@ -120,6 +120,7 @@
       var fd = new FormData();
       fd.append('action', 'songpress_my_photo');
       fd.append('n', C.n);
+      if (C.person) { fd.append('person', C.person); }
       fd.append('file', b, 'profile.png');
       fetch(C.ajax, { method: 'POST', credentials: 'same-origin', body: fd }).then(function (r) { return r.json(); }).then(function (j) {
         btn.disabled = false;

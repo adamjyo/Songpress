@@ -562,6 +562,7 @@ class Songpress_Persons {
 		$o  = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . Songpress_Profiles::chip( $name, 40, 'person' ) . esc_html( $name ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></div>' . self::notes();
 		$o .= '<p>' . self::del_button( $name ) . ' ' . ( $r['profile'] ? '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => (int) $r['profile']->id, 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Edit photo, bio, contact and IPI', 'songpress' ) . '</a>' : '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a profile', 'songpress' ) . '</a>' ) . '</p>';
 
+		$o .= Songpress_Profiles::avatar_tool( (object) array( 'display_name' => $name ), $name );
 		$o .= '<h3>' . esc_html__( 'Name and login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false )
 			. '<input type="hidden" name="action" value="songpress_person_rename"><input type="hidden" name="uid" value="' . (int) ( $u ? $u->ID : 0 ) . '"><input type="hidden" name="old" value="' . esc_attr( $name ) . '">'
 			. '<label class="spe-field"><span>' . esc_html__( 'First name', 'songpress' ) . '</span><input name="first" value="' . esc_attr( $first ) . '" required></label>'

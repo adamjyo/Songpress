@@ -125,11 +125,12 @@ class Songpress_Profiles {
 	}
 
 	/** The picture maker on the Profile screen. */
-	public static function avatar_tool( $user ) {
+	public static function avatar_tool( $user, $person = '' ) {
 		$cfg = array(
 			'label' => self::photo_label( $user->display_name ),
 			'ajax'  => admin_url( 'admin-ajax.php' ),
 			'n'     => wp_create_nonce( 'songpress_my_photo' ),
+			'person' => (string) $person, // set when a manager makes the picture for someone else
 			'lib'   => 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm',
 			't'     => array(
 				'cut'    => __( 'Remove background', 'songpress' ),
@@ -150,7 +151,7 @@ class Songpress_Profiles {
 			. '<div class="sp-av-bg" role="group" aria-label="' . esc_attr__( 'Background', 'songpress' ) . '"><button type="button" data-bg="accent" class="on">' . esc_html__( 'Color', 'songpress' ) . '</button><button type="button" data-bg="dark">' . esc_html__( 'Dark', 'songpress' ) . '</button><button type="button" data-bg="white">' . esc_html__( 'White', 'songpress' ) . '</button><button type="button" data-bg="none">' . esc_html__( 'None', 'songpress' ) . '</button></div>'
 			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="1" max="3" step="0.01" value="1"></label>'
 			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The name strip is added for you.', 'songpress' ) . '</p>'
-			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html__( 'Use as my profile picture', 'songpress' ) . '</button> <span class="sp-av-msg" role="status"></span>'
+			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html( '' !== (string) $person ? __( 'Use as their profile picture', 'songpress' ) : __( 'Use as my profile picture', 'songpress' ) ) . '</button> <span class="sp-av-msg" role="status"></span>'
 			. '</div></details>';
 		wp_enqueue_script( 'songpress-avatar', SONGPRESS_URL . 'assets/avatar.js', array(), SONGPRESS_VERSION, true );
 		wp_add_inline_script( 'songpress-avatar', 'window.SP_AV=' . wp_json_encode( $cfg ) . ';', 'before' );
@@ -172,6 +173,13 @@ class Songpress_Profiles {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		$u    = wp_get_current_user();
+		$who  = isset( $_POST['person'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['person'] ) ) ) : '';
+		if ( '' !== $who ) { // a manager making the picture for someone else
+			if ( ! Songpress_Caps::can( 'members' ) ) {
+				wp_send_json_error( array( 'msg' => __( 'Not allowed.', 'songpress' ) ), 403 );
+			}
+			$u = (object) array( 'user_login' => sanitize_title( $who ), 'display_name' => $who );
+		}
 		$file = array( 'name' => sanitize_file_name( 'profile-' . $u->user_login . '-' . time() . '.png' ), 'type' => 'image/png', 'tmp_name' => $_FILES['file']['tmp_name'], 'error' => 0, 'size' => (int) $_FILES['file']['size'] ); // phpcs:ignore
 		$up   = wp_handle_upload( $file, array( 'test_form' => false, 'mimes' => array( 'png' => 'image/png', 'jpg|jpeg' => 'image/jpeg' ) ) );
 		if ( ! empty( $up['error'] ) ) {
