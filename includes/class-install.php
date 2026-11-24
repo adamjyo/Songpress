@@ -55,6 +55,16 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
+		// Record label credits were removed on request: delete every label credit, once.
+		if ( '1' !== get_option( 'songpress_labels_removed' ) ) {
+			global $wpdb;
+			$cr = self::table( 'credits' );
+			$n  = (int) $wpdb->query( "DELETE FROM {$cr} WHERE role = 'label'" ); // phpcs:ignore WordPress.DB
+			update_option( 'songpress_labels_removed', '1' );
+			if ( class_exists( 'Songpress_Audit' ) && method_exists( 'Songpress_Audit', 'log' ) ) {
+				Songpress_Audit::log( 'catalog', 'Removed label credits', $n . ' deleted' );
+			}
+		}
 		// Old payment lines from the stored catalog come across as paid, once, with no new upload.
 		if ( '1' !== get_option( 'songpress_paid_fix' ) ) {
 			Songpress_Legacy::payments_from_stored();

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.17
+Stable tag: 0.72.18
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.18 =
+* All record label credits are deleted from the database, once, when this version loads (the Audit log shows how many). Take a backup first if you may want them back.
 
 = 0.72.17 =
 * Works editor: the Status choices are just the writing stages (Idea, Starter, Pre-production, Production, Post-production, Finished, Released, Taken down). The older statuses are no longer offered; a work that has one still shows it.
