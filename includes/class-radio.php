@@ -67,12 +67,14 @@ class Songpress_Radio {
 		return $out;
 	}
 
-	/** Every work this person can see that has audio. */
+	/** Every released work this person can see that has audio, newest release first. */
 	public static function everything() {
-		$res = Songpress_Songs::query( array( 'per_page' => self::ALL_MAX, 'order' => 'title', 'dir' => 'asc', 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : get_current_user_id() ) );
-		$out = array();
+		$res   = Songpress_Songs::query( array( 'per_page' => self::ALL_MAX, 'order' => 'release', 'dir' => 'desc', 'user_id' => Songpress_Caps::can( 'view_all' ) ? 0 : get_current_user_id() ) );
+		$today = current_time( 'Y-m-d' );
+		$out   = array();
 		foreach ( $res['rows'] as $s ) {
-			if ( '' !== Songpress_Media::audio_url( $s ) ) {
+			$d = trim( (string) $s->release_date );
+			if ( '' !== $d && $d <= $today && '' !== Songpress_Media::audio_url( $s ) ) { // released works only, newest first
 				$out[] = $s;
 			}
 		}
@@ -222,7 +224,7 @@ class Songpress_Radio {
 			return array_map( $add, $rows );
 		};
 		$lists   = array();
-		$lists[] = array( 'k' => 'all', 'name' => __( 'Everything', 'songpress' ), 'ids' => $ids( self::everything() ), 'b' => 'all' );
+		$lists[] = array( 'k' => 'all', 'name' => __( 'All releases', 'songpress' ), 'ids' => $ids( self::everything() ), 'b' => 'all' );
 		$lists[] = array( 'k' => 'new', 'name' => __( 'Recent releases', 'songpress' ), 'ids' => $ids( self::recent() ), 'b' => 'new' );
 		$lists[] = array( 'k' => 'fav', 'name' => __( 'Favorites', 'songpress' ), 'ids' => $ids( self::favorites() ), 'b' => 'fav' );
 		foreach ( self::lists() as $p ) {
@@ -259,7 +261,7 @@ class Songpress_Radio {
 			'newpl' => __( 'New playlist', 'songpress' ), 'name' => __( 'Name', 'songpress' ), 'create' => __( 'Create', 'songpress' ), 'share' => __( 'Share with everyone who can see these works', 'songpress' ),
 			'remove' => __( 'Remove', 'songpress' ), 'drag' => __( 'Drag to reorder', 'songpress' ), 'addworks' => __( 'Add works', 'songpress' ), 'search' => __( 'Search works', 'songpress' ), 'nomore' => __( 'No more works with audio match.', 'songpress' ),
 			'del' => __( 'Delete playlist', 'songpress' ), 'delarm' => __( 'Tap again to delete the playlist', 'songpress' ), 'empty' => __( 'Nothing here yet.', 'songpress' ), 'emptyfav' => __( 'Tap the heart on a song and it lands here.', 'songpress' ), 'emptyedit' => __( 'No works yet. Add some below.', 'songpress' ),
-			'allsub' => __( 'Every work with audio', 'songpress' ), 'newsub' => __( 'The 25 newest releases', 'songpress' ), 'favsub' => __( 'Songs you hearted', 'songpress' ),
+			'allsub' => __( 'Every released song', 'songpress' ), 'newsub' => __( 'The 25 newest releases', 'songpress' ), 'favsub' => __( 'Songs you hearted', 'songpress' ),
 			'prev' => __( 'Previous', 'songpress' ), 'next' => __( 'Next', 'songpress' ), 'close' => __( 'Close player', 'songpress' ), 'open' => __( 'Open player', 'songpress' ),
 			'fav' => __( 'Favorite', 'songpress' ), 'unfav' => __( 'Remove favorite', 'songpress' ), 'rate' => __( 'Rate', 'songpress' ), 'more' => __( 'More', 'songpress' ), 'vol' => __( 'Volume', 'songpress' ), 'pos' => __( 'Position', 'songpress' ),
 			'shon' => __( 'Shuffle on', 'songpress' ), 'shoff' => __( 'Shuffle off', 'songpress' ), 'rpoff' => __( 'Repeat off', 'songpress' ), 'rpall' => __( 'Repeat all', 'songpress' ), 'rpone' => __( 'Repeat one', 'songpress' ), 'queue' => __( 'Up next', 'songpress' ), 'nothing' => __( 'Nothing playing', 'songpress' ),

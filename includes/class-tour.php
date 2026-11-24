@@ -34,7 +34,7 @@ class Songpress_Tour {
 			array( 'swipe', __( 'Swipe for more', 'songpress' ), __( 'Swipe a song to the left to favorite it, rate it, add it to a playlist or share it.', 'songpress' ) ),
 			array( 'hold', __( 'Or press and hold', 'songpress' ), __( 'Keep your finger on a song for half a second and the same menu pops up.', 'songpress' ) ),
 			array( 'rate', __( 'Stars and hearts', 'songpress' ), __( 'Tap a star to rate a song. Tap the same star again to take your rating back. A heart marks a favorite, and your hearts collect in a playlist called Favorites.', 'songpress' ) ),
-			array( 'radio', __( 'Radio and playlists', 'songpress' ), __( 'Radio plays songs one after another. Everything, Recent releases and Favorites are always there, and you can make playlists of your own.', 'songpress' ) ),
+			array( 'radio', __( 'Radio and playlists', 'songpress' ), __( 'Radio plays songs one after another. All releases, Recent releases and Favorites are always there, and you can make playlists of your own.', 'songpress' ) ),
 			array( 'player', __( 'The player', 'songpress' ), __( 'Open the player for shuffle, repeat and Up next, plus a heart and a star for the song that is playing. The music keeps going while you move around Radio.', 'songpress' ) ),
 			array( 'home', __( 'Put it on your home screen', 'songpress' ), __( 'In Safari tap the Share button, choose Add to Home Screen, then Add. After that, open SongPress from its icon like any other app.', 'songpress' ) ),
 			array( 'alerts', __( 'Turn on alerts', 'songpress' ), __( 'Open Profile, switch on Alerts to your phone and tap Allow. On an iPhone this only works from the home screen icon.', 'songpress' ) ),

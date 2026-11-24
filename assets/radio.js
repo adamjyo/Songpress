@@ -1,5 +1,5 @@
 /* SongPress Radio. One page holds every playlist, so the music keeps playing while you move between lists and the Now Playing page.
-   Lists: Everything, Recent releases, Favorites (built in), then yours and the ones shared with you.
+   Lists: All releases, Recent releases, Favorites (built in), then yours and the ones shared with you.
    Edits (rename, share, add, remove, reorder, delete) save through admin-ajax. */
 (function () {
   'use strict';
