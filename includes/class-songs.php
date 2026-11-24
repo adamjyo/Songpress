@@ -122,11 +122,21 @@ class Songpress_Songs {
 		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
 
+	private static function table_songs() {
+		return Songpress_Install::table( 'songs' );
+	}
+
 	/** Every work this person is credited on: linked to their account, or credited by their name. Newest serial first. */
 	public static function credited_rows( $user_id, $name ) {
 		global $wpdb;
 		$c   = Songpress_Install::table( 'credits' );
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT song_id FROM {$c} WHERE user_id = %d OR LOWER(TRIM(name)) = LOWER(%s)", (int) $user_id, trim( (string) $name ) ) ) );
+		if ( $ids ) { // writers are credited on the original work and carry to every release (version) of it, so take the whole family
+			$sg  = self::table_songs();
+			$ph  = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+			$all = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$sg} WHERE id IN ({$ph}) OR family_id IN (SELECT family_id FROM (SELECT family_id FROM {$sg} WHERE id IN ({$ph}) AND family_id > 0) f)", array_merge( $ids, $ids ) ) ) ); // phpcs:ignore WordPress.DB
+			$ids = array_values( array_unique( array_merge( $ids, $all ) ) );
+		}
 		$out = array();
 		foreach ( $ids as $id ) {
 			$s = self::get( $id );
