@@ -144,6 +144,15 @@ class Songpress_Songs {
 				$out[] = $s;
 			}
 		}
+		$has = array(); // a family with releases is listed by its releases; the original only stands in when there are none
+		foreach ( $out as $r ) {
+			if ( (int) $r->version_no > 0 ) {
+				$has[ (int) $r->family_id ] = 1;
+			}
+		}
+		$out = array_values( array_filter( $out, function ( $r ) use ( $has ) {
+			return (int) $r->version_no > 0 || empty( $has[ (int) $r->family_id ] );
+		} ) );
 		usort( $out, function ( $a, $b ) {
 			return strcmp( (string) $b->serial, (string) $a->serial );
 		} );

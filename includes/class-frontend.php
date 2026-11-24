@@ -657,8 +657,8 @@ class Songpress_Frontend {
 		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
 		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
-		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d song', 'Credited on %d songs', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
-		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
+		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d release', 'Credited on %d releases', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
+		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
 		$out .= Songpress_Money::quarterly_html( $u->display_name );
 		// the songs this person wrote or performed, each with what it has made on DistroKid
 		$mine = array();
@@ -677,7 +677,7 @@ class Songpress_Frontend {
 			$dk   = Songpress_Money::my_song_totals( $u->display_name );
 			$cat  = self::main_id( 'catalog' );
 			$base = $cat ? get_permalink( $cat ) : home_url( '/' );
-			$out .= '<h3>' . esc_html__( 'Songs', 'songpress' ) . '</h3><ul class="songpress-mysongs">';
+			$out .= '<h3>' . esc_html__( 'Releases', 'songpress' ) . '</h3><ul class="songpress-mysongs">';
 			foreach ( $mine as $s ) {
 				$id    = (int) $s->id;
 				$r     = array();
@@ -688,7 +688,7 @@ class Songpress_Frontend {
 				}
 				$title = Songpress_Songs::display_title( $s );
 				$amt   = $dk['id'][ $id ] ?? ( $dk['title'][ Songpress_Money::norm_title( $s->title ) ] ?? 0 );
-				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle">' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk">' . ( $amt ? esc_html( Songpress_Money::money( $amt ) ) : '&ndash;' ) . '</span></li>';
+				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk">' . ( $amt ? esc_html( Songpress_Money::money( $amt ) ) : '&ndash;' ) . '</span></li>';
 			}
 			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what you have earned from each song.', 'songpress' ) . '</p>';
 		}

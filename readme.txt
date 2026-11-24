@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.71.1
+Stable tag: 0.71.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.71.2 =
+* Profile: the list is releases, not works. Each release is listed on its own with its serial (like 0002-01); an original work only appears when it has no releases. The counts say "releases" too.
 
 = 0.71.1 =
 * Profile: the count of works now includes every release (version) of the works you wrote. A writer is credited on the original work and that credit carries to all its releases, so the old count only saw the originals.
