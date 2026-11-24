@@ -193,7 +193,9 @@ class Songpress_Frontend {
 			$nav .= $mk( 'money', __( 'Money', 'songpress' ), $svg( '<circle cx="12" cy="12" r="9"/><path d="M14.5 9a2.5 2 0 00-2.5-1.5c-1.5 0-2.5.8-2.5 2s1 1.7 2.5 2 2.5.8 2.5 2-1 2-2.5 2A2.5 2 0 019.5 15M12 6v1.5M12 16.5V18"/>' ), 'money' ) . $mk( 'stats', __( 'Stats', 'songpress' ), $svg( '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>' ), 'money' );
 		}
 		if ( Songpress_Transcriber::can_use() ) {
-			$nav .= self::nav_item( Songpress_Transcriber::url(), __( 'Transcriber', 'songpress' ), $svg( '<path d="M3 12h2M7 8v8M11 4v16M15 8v8M19 10v4"/>' ), false );
+			$wave = $svg( '<path d="M3 12h2M7 8v8M11 4v16M15 8v8M19 10v4"/>' );
+			// on the desktop it opens inside the app, under the rail; a phone has no screens, so it goes to the page itself
+			$nav .= wp_is_mobile() ? self::nav_item( Songpress_Transcriber::url(), __( 'Transcriber', 'songpress' ), $wave, false ) : $mk( 'transcriber', __( 'Transcriber', 'songpress' ), $wave, 'edit_own' );
 		}
 		if ( Songpress_Caps::can( 'members' ) ) {
 			$cur = isset( $_GET['kind'] ) ? sanitize_key( wp_unslash( $_GET['kind'] ) ) : 'person';

@@ -128,6 +128,7 @@ class Songpress_ChordTool {
 		header( 'Content-Type: text/html; charset=utf-8' );
 		$css   = self::css();
 		$embed = isset( $_GET['embed'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		$frame = $tr && isset( $_GET['frame'] ); // phpcs:ignore WordPress.Security.NonceVerification -- inside the app, under the rail: no header of its own
 		$sheetview = isset( $_GET['sheet'] ); // phpcs:ignore WordPress.Security.NonceVerification
 		$b   = function ( $act, $label, $cls = '' ) {
 			return '<button type="button" class="ct-b ' . $cls . '" data-ct="' . esc_attr( $act ) . '">' . esc_html( $label ) . '</button>';
@@ -136,7 +137,7 @@ class Songpress_ChordTool {
 		if ( $sheetview ) {
 			echo ( isset( $_GET['nobar'] ) ? '' : '<div class="ct-sv-bar"><button type="button" class="ct-b ct-go" id="ct-sheet-print">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span class="ct-note">' . esc_html__( 'The sheet follows the ChordPro text above. Set the publisher line and logo in Settings > Chord sheet.', 'songpress' ) . '</span></div>' ) . '<div id="ct-sheetbox"><div id="ct-sheet"></div></div>';
 		}
-		echo '<header class="ct-top"><img src="' . esc_url( SONGPRESS_URL . 'assets/seal-amber.svg' ) . '" alt="" width="34" height="34"><h1>' . esc_html( $tr ? __( 'Transcriber', 'songpress' ) : __( 'ChordPro tool', 'songpress' ) ) . '</h1><span class="ct-note">' . esc_html( $tr ? __( 'Listens to a recording and writes the ChordPro. The chords are found in your browser; only the vocal is sent for word timing.', 'songpress' ) : __( 'Works in your browser only. Nothing is saved on the server and it never touches the catalog.', 'songpress' ) ) . '</span>' . ( $tr && ! $embed ? '<a class="ct-b" style="margin-left:auto;text-decoration:none" href="' . esc_url( Songpress_Access::app_url() ) . '">&lsaquo; ' . esc_html__( 'Back to SongPress', 'songpress' ) . '</a>' : '' ) . '</header>';
+		if ( ! $frame ) echo '<header class="ct-top"><img src="' . esc_url( SONGPRESS_URL . 'assets/seal-amber.svg' ) . '" alt="" width="34" height="34"><h1>' . esc_html( $tr ? __( 'Transcriber', 'songpress' ) : __( 'ChordPro tool', 'songpress' ) ) . '</h1><span class="ct-note">' . esc_html( $tr ? __( 'Listens to a recording and writes the ChordPro. The chords are found in your browser; only the vocal is sent for word timing.', 'songpress' ) : __( 'Works in your browser only. Nothing is saved on the server and it never touches the catalog.', 'songpress' ) ) . '</span>' . ( $tr && ! $embed && ! $frame ? '<a class="ct-b" style="margin-left:auto;text-decoration:none" href="' . esc_url( Songpress_Access::app_url() ) . '">&lsaquo; ' . esc_html__( 'Back to SongPress', 'songpress' ) . '</a>' : '' ) . '</header>';
 		if ( $embed ) {
 			echo '<div class="ct-bar ct-usebar"><button type="button" class="ct-b ct-go" data-ct="usesong">' . esc_html__( 'Use in song', 'songpress' ) . '</button><button type="button" class="ct-b" data-ct="cancelsong">' . esc_html__( 'Cancel', 'songpress' ) . '</button><button type="button" class="ct-b" data-ct="direct">' . esc_html__( 'Type in the song form instead', 'songpress' ) . '</button><span class="ct-note">' . esc_html__( 'Your ChordPro text goes into the song when you press Use in song.', 'songpress' ) . '</span></div>';
 		}

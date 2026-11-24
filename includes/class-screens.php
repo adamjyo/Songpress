@@ -94,6 +94,9 @@ class Songpress_Screens {
 		if ( 'notifications' === $slug ) {
 			return Songpress_Push::inbox_html();
 		}
+		if ( 'transcriber' === $slug ) {
+			return Songpress_Transcriber::frame();
+		}
 		if ( 'artists' === $slug ) { // bands and artists are one list now
 			$_GET['kind'] = 'band'; // phpcs:ignore WordPress.Security.NonceVerification
 			$slug         = 'people';

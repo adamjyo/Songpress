@@ -67,6 +67,14 @@ class Songpress_Transcriber {
 		}
 	}
 
+	/** The Transcriber inside the app, under the rail: the page itself in a frame that fills the screen. */
+	public static function frame() {
+		if ( ! self::can_use() ) {
+			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'Your account cannot use the Transcriber.', 'songpress' ) . '</p></div>';
+		}
+		return '<div class="sp-app sp-trframe"><iframe src="' . esc_url( self::url( array( 'frame' => 1 ) ) ) . '" title="' . esc_attr__( 'Transcriber', 'songpress' ) . '" allow="autoplay"></iframe></div>';
+	}
+
 	public static function shortcode() {
 		return '<p><a href="' . esc_url( self::url() ) . '">' . esc_html__( 'Open the Transcriber', 'songpress' ) . '</a></p>';
 	}
