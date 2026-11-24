@@ -1109,7 +1109,7 @@ class Songpress_Admin {
 		echo '<input type="hidden" name="kind" value="' . esc_attr( $kind ) . '">';
 		self::row( 'name', __( 'Name', 'songpress' ), '<input class="regular-text" name="name" value="' . esc_attr( $p->name ?? '' ) . '" required' . ( 'person' !== $kind ? Songpress_Names::attrs( $kind, (int) ( $p->id ?? 0 ) ) : '' ) . '>' . ( 'person' !== $kind ? Songpress_Names::script() : '' ) );
 		self::row( 'aliases', __( 'Also known as', 'songpress' ), '<input class="regular-text" name="aliases" value="' . esc_attr( $p->aliases ?? '' ) . '" placeholder="' . esc_attr__( 'Other spellings, separated by commas', 'songpress' ) . '">' );
-		self::row( 'photo', __( 'Photo', 'songpress' ), Songpress_Media::picker( 'photo', __( 'Choose a photo', 'songpress' ), 'image', (int) ( $p->photo_id ?? 0 ), (string) ( $p->photo_url ?? '' ) ) );
+		self::row( 'photo', __( 'Photo', 'songpress' ), Songpress_Media::picker( 'photo', __( 'Choose a photo', 'songpress' ), 'image', (int) ( $p->photo_id ?? 0 ), (string) ( $p->photo_url ?? '' ) ) . ( 'person' === $kind && $p ? Songpress_Profiles::avatar_tool( (object) array( 'display_name' => $p->name ), $p->name ) : '' ) );
 		self::row( 'bio', __( 'Bio', 'songpress' ), '<textarea name="bio" rows="4" class="large-text">' . esc_textarea( $p->bio ?? '' ) . '</textarea>' );
 		self::row( 'email', __( 'Email', 'songpress' ), '<input type="email" class="regular-text" name="email" value="' . esc_attr( $p->email ?? '' ) . '"> ' . esc_html__( 'Phone', 'songpress' ) . ' <input name="phone" value="' . esc_attr( $p->phone ?? '' ) . '">' );
 		self::row( 'website', __( 'Website', 'songpress' ), '<input class="regular-text" name="website" value="' . esc_attr( $p->website ?? '' ) . '"> ' );
