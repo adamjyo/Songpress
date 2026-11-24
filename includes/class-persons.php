@@ -11,6 +11,7 @@ class Songpress_Persons {
 	public static function init() {
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
 		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
+		add_action( 'wp_ajax_songpress_person_adopt', array( __CLASS__, 'ajax_adopt' ) );
 		add_action( 'admin_post_songpress_person_delete', array( __CLASS__, 'handle_delete' ) );
 	}
 
@@ -140,6 +141,86 @@ class Songpress_Persons {
 			}
 		}
 		return $users;
+	}
+
+	/**
+	 * Make the logged-in WordPress user be an existing SongPress person: everything filed under that person's account
+	 * (credits, class, playlists, favorites, ratings, usage) moves to this login, and this login takes the person's name.
+	 * The old account is left in place, only emptied.
+	 */
+	public static function adopt( $from, $to ) {
+		global $wpdb;
+		$from = (int) $from;
+		$to   = (int) $to;
+		if ( ! $from || ! $to || $from === $to ) {
+			return false;
+		}
+		$moved = array();
+		foreach ( array( 'credits', 'playlists', 'favorites', 'usage' ) as $tb ) {
+			$t = Songpress_Install::table( $tb );
+			if ( 'favorites' === $tb ) { // one favorite per song and person: keep this login's own, move the rest
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$t} WHERE user_id = %d AND song_id IN (SELECT song_id FROM (SELECT song_id FROM {$t} WHERE user_id = %d) x)", $from, $to ) ); // phpcs:ignore WordPress.DB
+			}
+			$moved[ $tb ] = (int) $wpdb->query( $wpdb->prepare( "UPDATE {$t} SET user_id = %d WHERE user_id = %d", $to, $from ) ); // phpcs:ignore WordPress.DB
+		}
+		$r = Songpress_Install::table( 'ratings' );
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$r} WHERE voter = %s AND song_id IN (SELECT song_id FROM (SELECT song_id FROM {$r} WHERE voter = %s) x)", 'u:' . $from, 'u:' . $to ) ); // phpcs:ignore WordPress.DB
+		$moved['ratings'] = (int) $wpdb->query( $wpdb->prepare( "UPDATE {$r} SET voter = %s WHERE voter = %s", 'u:' . $to, 'u:' . $from ) ); // phpcs:ignore WordPress.DB
+		$fu = get_userdata( $from );
+		if ( $fu ) {
+			wp_update_user( array( 'ID' => $to, 'display_name' => $fu->display_name ) );
+		}
+		foreach ( array( Songpress_People::KEY_META ) as $m ) {
+			$v = get_user_meta( $from, $m, true );
+			if ( $v ) {
+				update_user_meta( $to, $m, $v );
+				delete_user_meta( $from, $m );
+			}
+		}
+		if ( '' === (string) get_user_meta( $to, Songpress_Caps::META, true ) ) {
+			$c = get_user_meta( $from, Songpress_Caps::META, true );
+			if ( $c ) {
+				update_user_meta( $to, Songpress_Caps::META, $c );
+			}
+		}
+		delete_user_meta( $from, Songpress_Caps::META );
+		Songpress_Caps::forget( $from );
+		Songpress_Caps::forget( $to );
+		Songpress_Audit::log( 'people', 'A login took over a person', $fu ? $fu->user_login : '', array( 'from' => $from, 'to' => $to, 'moved' => $moved ) );
+		return $moved;
+	}
+
+	public static function ajax_adopt() {
+		check_ajax_referer( 'songpress_adopt', 'n' );
+		if ( ! Songpress_Caps::can( 'members' ) ) {
+			wp_send_json_error( array( 'msg' => __( 'Only Managers can do this.', 'songpress' ) ), 403 );
+		}
+		$login = sanitize_user( wp_unslash( $_POST['login'] ?? '' ), true );
+		$from  = '' !== $login ? get_user_by( 'login', $login ) : false;
+		if ( ! $from ) {
+			wp_send_json_error( array( 'msg' => __( 'No login with that name was found.', 'songpress' ) ) );
+		}
+		if ( (int) $from->ID === get_current_user_id() ) {
+			wp_send_json_error( array( 'msg' => __( 'That is the login you are using now.', 'songpress' ) ) );
+		}
+		if ( empty( $_POST['go'] ) ) { // a first look: what would move
+			global $wpdb;
+			$c = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(DISTINCT song_id) FROM ' . Songpress_Install::table( 'credits' ) . ' WHERE user_id = %d', $from->ID ) ); // phpcs:ignore WordPress.DB
+			wp_send_json_success( array( 'preview' => true, 'name' => $from->display_name, 'works' => $c ) );
+		}
+		$moved = self::adopt( $from->ID, get_current_user_id() );
+		wp_send_json_success( array( 'done' => true, 'name' => $from->display_name ) );
+	}
+
+	private static function adopt_box() {
+		$u = wp_get_current_user();
+		$o = '<details class="spe-tidy"><summary>' . esc_html( sprintf( /* translators: %s: the login you are using */ __( 'Be someone else\'s account: you are logged in as %s', 'songpress' ), $u->user_login ) ) . '</summary>'
+			. '<p class="spe-help">' . esc_html__( 'If you already exist in SongPress under another login (for example adam.page), type that login. Its credits, playlists, favorites and ratings move to the login you are using now, and this login takes that person\'s name.', 'songpress' ) . '</p>'
+			. '<p><input type="text" id="sp-adopt-login" placeholder="adam.page" autocomplete="off"> <button type="button" class="spe-btn" id="sp-adopt-go">' . esc_html__( 'Take over', 'songpress' ) . '</button></p><p class="spe-help" id="sp-adopt-msg" aria-live="polite"></p></details>'
+			. '<script>(function(){var b=document.getElementById("sp-adopt-go"),i=document.getElementById("sp-adopt-login"),m=document.getElementById("sp-adopt-msg"),arm=false,u=' . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ',n=' . wp_json_encode( wp_create_nonce( 'songpress_adopt' ) ) . ';if(!b)return;'
+			. 'i.addEventListener("input",function(){arm=false;b.textContent="Take over"});'
+			. 'b.addEventListener("click",function(){var f=new FormData();f.append("action","songpress_person_adopt");f.append("n",n);f.append("login",i.value.trim());if(arm)f.append("go","1");m.textContent="Working…";fetch(u,{method:"POST",body:f,credentials:"same-origin"}).then(function(r){return r.json()}).then(function(j){if(!j||!j.success){m.textContent=(j&&j.data&&j.data.msg)||"Could not do that.";return}if(j.data.preview){arm=true;b.textContent="Yes, take over";m.textContent="This moves "+j.data.name+"\u2019s "+j.data.works+" credited work(s), playlists, favorites and ratings to you. Press again to do it."}else{arm=false;b.textContent="Take over";m.textContent="Done. You are now "+j.data.name+". Reload the app."}}).catch(function(){m.textContent="Could not do that."})});})();</script>';
+		return $o;
 	}
 
 	public static function handle_tidy() {
@@ -322,6 +403,7 @@ class Songpress_Persons {
 		if ( $plan ) {
 			$o .= '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-tidy">' . wp_nonce_field( 'songpress_person_tidy', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_person_tidy"><p class="spe-help">' . esc_html( sprintf( /* translators: %d: logins */ _n( '%d login ends in a number (like abby.russ2).', '%d logins end in a number (like abby.russ2).', count( $plan ), 'songpress' ), count( $plan ) ) ) . ' ' . esc_html__( 'Tidy them to the plain first.last. If the plain login already belongs to the same person, the two accounts are merged into it.', 'songpress' ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Tidy logins', 'songpress' ) . '</button></form>';
 		}
+		$o .= self::adopt_box();
 		$o .= Songpress_Access::asks_box();
 		$o .= Songpress_Access::old_box();
 		$o .= Songpress_Push::alerts_box();
