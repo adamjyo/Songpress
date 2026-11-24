@@ -20,7 +20,7 @@ class Songpress_ChordTool {
 				array( '{title: }', '{t: }', __( 'Song title', 'songpress' ) ),
 				array( '{subtitle: }', '{st: }', __( 'Writers or a second line under the title', 'songpress' ) ),
 				array( '{artist: }', '', __( 'Performing artist', 'songpress' ) ),
-				array( '{authors: }', '{writers: }', __( 'Who wrote it: shows as a small heading with the names beside it (SongPress)', 'songpress' ) ),
+				array( '{authors: }', '{writers: }', __( 'Who wrote it: the names show under the title, once (SongPress)', 'songpress' ) ),
 				array( '{composer: }', '', __( 'Composer (shows on the sheet)', 'songpress' ) ),
 				array( '{lyricist: }', '', __( 'Lyricist (shows on the sheet)', 'songpress' ) ),
 				array( '{key: }', '', __( 'Key, for example B or F#m', 'songpress' ) ),

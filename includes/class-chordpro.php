@@ -39,7 +39,7 @@ class Songpress_ChordPro {
 					case 'authors':
 					case 'writer':
 					case 'writers':
-						$out .= '<p class="sp-cp-credit"><strong>' . self::h( ucfirst( $d ) ) . '</strong> ' . self::h( $arg ) . '</p>';
+						$out .= '<p class="sp-cp-sub">' . self::h( $arg ) . '</p>';
 						break;
 					case 'key':
 					case 'capo':

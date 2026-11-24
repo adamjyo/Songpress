@@ -56,7 +56,7 @@
         var k = d[1].toLowerCase(), a = d[2] || '';
         if (k === 'title' || k === 't') out.push('<h1>' + esc(a) + '</h1>');
         else if (k === 'subtitle' || k === 'st' || k === 'artist') out.push('<p class="sub">' + esc(a) + '</p>');
-        else if (/^(authors?|writers?)$/.test(k)) out.push('<p class="credit"><b>' + esc(k[0].toUpperCase() + k.slice(1)) + '</b> ' + esc(a) + '</p>');
+        else if (/^(authors?|writers?)$/.test(k)) out.push('<p class="sub">' + esc(a) + '</p>');
         else if (k === 'key' || k === 'capo' || k === 'tempo' || k === 'time') out.push('<span class="meta">' + esc(k[0].toUpperCase() + k.slice(1)) + ': ' + esc(a) + '</span> ');
         else if (k === 'comment' || k === 'c' || k === 'comment_italic' || k === 'ci') out.push('<p class="comment">' + esc(a) + '</p>');
         else if (SEC[k] || EXTRA.test(k)) { if (!SEC[k]) SEC[k] = k.replace(/^start_of_/, '').replace(/_/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }); if (open) out.push('</section>'); open = true; out.push('<section class="sec ' + SEC[k].toLowerCase() + '"><h4>' + esc(a || SEC[k]) + '</h4>'); }
@@ -85,7 +85,7 @@
       if (d) {
         var k = d[1].toLowerCase(), a = (d[2] || '').trim();
         if (k === 'title' || k === 't') meta.title = a;
-        else if (/^(authors?|writers?)$/.test(k)) { if (a) meta.credits.push([k.replace(/^./, function (c) { return c.toUpperCase(); }), a]); }
+        else if (/^(authors?|writers?)$/.test(k)) { if (a) meta.by.push(a); }
         else if (/^(subtitle|st|artist|composer|lyricist|words|music)$/.test(k)) { if (a) meta.by.push(a); }
         else if (k === 'key') meta.key = a;
         else if (k === 'tempo') meta.tempo = a;
@@ -115,6 +115,7 @@
     if (!meta.key && C.key) { var km = /^([A-G][#b]?)(.*)$/.exec(C.key); meta.key = TR.n && km ? shift(km[1], TR.n) + km[2] : C.key; }
     if (!meta.tempo && C.tempo) meta.tempo = C.tempo;
     if (!meta.time && C.time) meta.time = C.time;
+    meta.by = meta.by.filter(function (x, i, a) { return a.indexOf(x) === i; });
     var firstC = 0, by = meta.by.join(' | '), mt = [];
     if (meta.key) mt.push('Key - ' + meta.key);
     if (meta.tempo) mt.push('Tempo - ' + meta.tempo);
@@ -124,7 +125,7 @@
     if (num) foot.push(esc(num));
     if (C.publisher) C.publisher.split(/\r?\n/).forEach(function (l) { if (l.trim()) foot.push(esc(l.trim())); });
     if (meta.copy) foot.push(esc(meta.copy));
-    var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + meta.credits.map(function (c) { return '<p class="sh-credit"><b>' + esc(c[0]) + '</b> ' + esc(c[1]) + '</p>'; }).join('') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
+    var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
     secs.forEach(function (sc, i) {
       h += '<section class="sh-sec"' + (sc.brk ? ' data-brk="' + sc.brk + '"' : '') + (!firstC && /^chorus/i.test(sc.label) && (firstC = i + 1) ? ' data-chorus="1"' : '') + '>' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
