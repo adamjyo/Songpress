@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.37
+Stable tag: 0.72.38
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.38 =
+* Phone app: Export PDF is in the Share menu of a work (next to Copy link).
 
 = 0.72.37 =
 * Works editor: Export PDF moved into the Share popup (next to Copy link), and the separate icon is gone.
