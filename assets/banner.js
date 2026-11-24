@@ -212,4 +212,16 @@
       if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; }
     } catch (e) {}
   });
+  /* phone: the music plays only while the app is on screen. Going home, switching apps or locking the phone stops it and clears the lock-screen player. */
+  if (!C.quiet) {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState !== 'hidden') return;
+      try {
+        window.SPUSERPAUSE = Date.now();
+        if (window.SPAU) window.SPAU.pause();
+        if (au && au !== window.SPAU) au.pause();
+        if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; }
+      } catch (e) {}
+    });
+  }
 })();
