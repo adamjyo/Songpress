@@ -529,7 +529,13 @@ class Songpress_Frontend {
 		// Header: cover art on the left; beside it the title, the artist and the authors as one row of icons. The player runs the full width underneath.
 		$is_root = 0 === (int) $s->version_no;
 		$name    = $is_root ? $s->title : $s->release_title; // only an original work shows the work name; a version shows its release title
-		$out  = '<article class="songpress-song">' . $top . '<header class="songpress-top"><div class="songpress-card2">' . self::art( $s, 'songpress-cover' ) . '<div class="songpress-topl">';
+		$audio = Songpress_Media::audio_url( $s );
+		$cover = self::art( $s, 'songpress-cover' );
+		$tap   = wp_is_mobile() && '' !== $audio; // on a phone the radio bar plays the work: the cover is the play button, so there is no separate player
+		if ( $tap ) {
+			$cover = '<button type="button" class="songpress-play songpress-coverplay" data-src="' . esc_url( $audio ) . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Play %s', 'songpress' ), Songpress_Songs::display_title( $s ) ) ) . '">' . $cover . '<span class="songpress-playicon" aria-hidden="true"></span></button>';
+		}
+		$out  = '<article class="songpress-song" data-sp-id="' . $id . '">' . $top . '<header class="songpress-top"><div class="songpress-card2">' . $cover . '<div class="songpress-topl">';
 		$out .= '<p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</p>';
 		if ( '' !== trim( (string) $name ) ) {
 			$out .= '<h2>' . esc_html( $name ) . '</h2>';
@@ -576,8 +582,7 @@ class Songpress_Frontend {
 		// Under the card: the credits, the streaming links (centred), the player, then the favourite / rate / playlist buttons.
 		$out .= ( '' === $cg ? '' : '<div class="songpress-credits">' . $cg . '</div>' ) . '</div>'; // closes the card
 		$out .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
-		$audio = Songpress_Media::audio_url( $s );
-		if ( '' !== $audio ) {
+		if ( '' !== $audio && ! $tap ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
 		}
 		$out .= Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token );

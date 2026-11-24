@@ -104,8 +104,8 @@
   /* ---------- the Works list: every play button joins one queue, in list order ---------- */
   function collect() {
     return [].map.call(document.querySelectorAll('.songpress-play[data-src]'), function (b) {
-      var li = b.closest('li') || document, ti = li.querySelector('.songpress-title'), ar = li.querySelector('.songpress-bandicon'), im = li.querySelector('img.songpress-thumb');
-      var id = li.getAttribute && li.getAttribute('data-rx-song'); if (!id) { var ck = li.querySelector && li.querySelector('.songpress-pick'); id = ck ? ck.value : 0; }
+      var li = b.closest('li') || b.closest('.songpress-song') || document, ti = li.querySelector('.songpress-title') || li.querySelector('h2'), ar = li.querySelector('.songpress-bandicon') || li.querySelector('.songpress-genre-line'), im = li.querySelector('img.songpress-thumb') || li.querySelector('img.songpress-cover');
+      var id = li.getAttribute && (li.getAttribute('data-rx-song') || li.getAttribute('data-sp-id')); if (!id) { var ck = li.querySelector && li.querySelector('.songpress-pick'); id = ck ? ck.value : 0; }
       return { btn: b, url: b.getAttribute('data-src'), title: ti ? ti.textContent.trim() : '', artist: ar ? (ar.getAttribute('title') || ar.textContent).trim() : '', art: im ? im.getAttribute('src') : '', id: +id || 0 };
     });
   }

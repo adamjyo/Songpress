@@ -1338,3 +1338,9 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 /* 0.72.42: the credits row sits inside the header card, under the art and the title */
 .songpress-card2{flex-wrap:wrap}
 .songpress-card2 .songpress-credits{flex:0 0 100%;width:100%;margin:0;padding-top:12px;border-top:1px solid var(--sp-line)}
+/* 0.72.43: on a phone the cover is the play button (the radio bar is the player) */
+.songpress-card2 .songpress-play.songpress-coverplay{width:112px!important;height:112px!important;border-radius:14px;flex:none;overflow:hidden;position:relative}
+.songpress-card2 .songpress-play.songpress-coverplay .songpress-cover{width:112px;height:112px;display:flex;border-radius:0}
+.songpress-coverplay .songpress-playicon{opacity:1;background:rgba(0,0,0,.28)}
+.songpress-coverplay .songpress-playicon::before{border-width:13px 0 13px 22px;margin-left:5px}
+.songpress-coverplay.on .songpress-playicon::before{border-width:0;width:22px;height:26px;margin:0;border-left:7px solid #fff;border-right:7px solid #fff}
