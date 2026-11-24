@@ -202,7 +202,17 @@ class Songpress_Export {
 		global $wpdb;
 		$t    = Songpress_Install::table( 'songs' );
 		$rows = array();
-		if ( $ids ) {
+		$mine = isset( $_GET['mine'] ); // phpcs:ignore WordPress.Security.NonceVerification -- the page checks its nonce; this only picks the person's own works.
+		if ( $mine ) { // everything the signed-in person is credited on, whatever else the address says
+			$u    = wp_get_current_user();
+			$rows = Songpress_Songs::credited_rows( (int) $u->ID, (string) $u->display_name, true );
+			usort( $rows, function ( $a, $b ) {
+				$d = (int) $a->family_id <=> (int) $b->family_id;
+				return 0 !== $d ? $d : (int) $a->version_no <=> (int) $b->version_no;
+			} );
+			$rows  = array_slice( $rows, 0, self::LIMIT );
+			$total = count( $rows );
+		} elseif ( $ids ) {
 			$ph   = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 			$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE id IN ({$ph}) ORDER BY CAST(TRIM(serial) AS UNSIGNED), version_no", $ids ) ); // phpcs:ignore WordPress.DB
 			$rows = array_values( array_filter( $rows, function ( $s ) {
@@ -214,7 +224,8 @@ class Songpress_Export {
 			$rows  = $res['rows'];
 			$total = (int) $res['total'];
 		}
-		$o  = '<header class="lh"><div><h1>' . esc_html( get_bloginfo( 'name' ) ) . '</h1><div class="meta">' . esc_html( sprintf( /* translators: 1: songs shown, 2: songs in the list, 3: date */ __( 'Works list · %1$s of %2$s works · exported %3$s', 'songpress' ), number_format_i18n( count( $rows ) ), number_format_i18n( $total ), wp_date( get_option( 'date_format' ) ) ) ) . '</div></div></header>';
+		$who = $mine ? wp_get_current_user()->display_name : '';
+		$o  = '<header class="lh"><div><h1>' . esc_html( $mine && '' !== $who ? $who : get_bloginfo( 'name' ) ) . '</h1><div class="meta">' . esc_html( sprintf( /* translators: 1: songs shown, 2: songs in the list, 3: date */ ( $mine ? __( 'My catalog · %1$s of %2$s works · exported %3$s', 'songpress' ) : __( 'Works list · %1$s of %2$s works · exported %3$s', 'songpress' ) ), number_format_i18n( count( $rows ) ), number_format_i18n( $total ), wp_date( get_option( 'date_format' ) ) ) ) . '</div></div></header>';
 		$o .= '<table class="grid list"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Title', 'songpress' ) . '</th><th>' . esc_html__( 'Writers', 'songpress' ) . '</th><th>' . esc_html__( 'Publishers', 'songpress' ) . '</th><th>' . esc_html__( 'Band and album', 'songpress' ) . '</th><th>' . esc_html__( 'Release date', 'songpress' ) . '</th><th>' . esc_html__( 'Codes', 'songpress' ) . '</th><th>' . esc_html__( 'Status', 'songpress' ) . '</th></tr></thead><tbody>';
 		$people = function ( $song_id, $role ) {
 			$l = array();
@@ -236,7 +247,7 @@ class Songpress_Export {
 			$o .= '<tr><td class="num">' . esc_html( $s->serial ) . '</td><td><span class="b">' . esc_html( $title ) . '</span>' . ( '' !== $sub ? '<br><span class="mut">' . esc_html( $sub ) . '</span>' : '' ) . '</td><td>' . $people( $s->id, 'writer' ) . '</td><td>' . $people( $s->id, 'publisher' ) . '</td><td>' . $band . '</td><td class="num">' . esc_html( $s->release_date ) . '</td><td class="codes">' . implode( '<br>', $codes ) . '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td></tr>';
 		}
 		$o .= '</tbody></table>';
-		if ( $total > count( $rows ) && ! $ids ) {
+		if ( $total > count( $rows ) && ! $ids && ! $mine ) {
 			$o .= '<p class="mut note">' . esc_html( sprintf( /* translators: %d: number of works */ __( 'Showing the first %d works. Narrow the list with a search or tick songs to export the rest.', 'songpress' ), self::LIMIT ) ) . '</p>';
 		}
 		return $o;
@@ -253,7 +264,7 @@ class Songpress_Export {
 			. 'table{border-collapse:collapse;width:100%}.kv td{padding:2px 0;vertical-align:top}.r{text-align:right}.mut{color:#777}.ly{font-size:12px;line-height:1.65}'
 			. '.rel{margin-top:26px;border-top:1px solid #e6e6e6;padding-top:6px}.grid{font-size:10.5px}.grid th{text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:500;border-bottom:1px solid #ddd;padding:5px 6px}.grid td{padding:5px 6px;vertical-align:top}.grid tbody tr:nth-child(even){background:#f6f6f4}.grid tr.me td{font-weight:600}'
 			. '.list{margin-top:12px}.list td{font-size:10px}.codes{font-variant-numeric:tabular-nums;white-space:nowrap}.num{color:#666;font-variant-numeric:tabular-nums;white-space:nowrap}.b{font-weight:600}.note{margin-top:12px}'
-			. '@page{size:' . ( 'landscape' === $orient ? 'letter landscape' : 'letter' ) . ';margin:14mm}@media print{body{background:#fff}.bar{display:none}.sheet{margin:0;padding:0;box-shadow:none;max-width:none}.grid thead{display:table-header-group}tr{break-inside:avoid}}';
+			. '@media(max-width:700px){.sheet{padding:16px;overflow-x:auto}.cols{grid-template-columns:1fr}}@page{size:' . ( 'landscape' === $orient ? 'letter landscape' : 'letter' ) . ';margin:14mm}@media print{body{background:#fff}.bar{display:none}.sheet{margin:0;padding:0;box-shadow:none;max-width:none}.grid thead{display:table-header-group}tr{break-inside:avoid}}';
 		return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html( $title . ' · ' . get_bloginfo( 'name' ) ) . '</title><style>' . $css . '</style></head><body>'
 			. '<div class="bar"><button type="button" onclick="window.print()">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span>' . esc_html__( 'Choose Save as PDF in the print window.', 'songpress' ) . '</span></div><div class="sheet">' . $body . '</div></body></html>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above and in the builders.
 	}

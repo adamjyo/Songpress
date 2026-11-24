@@ -1312,3 +1312,10 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-export,.songpress-exportlink{font-size:13px;text-decoration:none;white-space:nowrap}
 .songpress-searchbar .songpress-export{padding:7px 12px;border:1px solid var(--sp-line,#2a2d33);border-radius:8px;color:var(--sp-text,inherit);align-self:center}
 .songpress-searchbar .songpress-export:hover{border-color:var(--sp-accent,#e8a33d)}
+/* desktop works list: Export catalog sits under the + button */
+.songpress-searchbar .songpress-addcol{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px}
+.songpress-searchbar .songpress-addcol .songpress-export{padding:0;border:0;font-size:11px;color:var(--sp-mute,#999);align-self:center}
+.songpress-searchbar .songpress-addcol .songpress-export:hover{color:var(--sp-accent,#e8a33d)}
+/* phone profile: Export my Catalog */
+.songpress-mycat{margin:14px 16px}
+.sp-app a.songpress-mycatbtn{display:block;text-align:center;padding:13px 16px;border-radius:12px;background:var(--sp-accent);color:#14110a;font-weight:600;text-decoration:none}

@@ -295,9 +295,9 @@ class Songpress_Frontend {
 			$ov .= '</form>';
 			$lenbox = $ov;
 		}
-		$exp    = $desktop ? '<a class="songpress-export" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'list', array_filter( array( 'sp_q' => $q, 'sp_status' => $status, 'sp_sort' => $order, 'sp_dir' => $dir ), 'strlen' ) ) ) . '" title="' . esc_attr__( 'Export this list as a PDF', 'songpress' ) . '">' . esc_html__( 'Export PDF', 'songpress' ) . '</a>' : '';
+		$exp    = $desktop ? '<a class="songpress-export" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'list', array_filter( array( 'sp_q' => $q, 'sp_status' => $status, 'sp_sort' => $order, 'sp_dir' => $dir ), 'strlen' ) ) ) . '" title="' . esc_attr__( 'Export this list as a PDF', 'songpress' ) . '">' . esc_html__( 'Export catalog', 'songpress' ) . '</a>' : '';
 		$add    = ( $desktop && Songpress_Caps::can( 'create' ) ) ? '<a class="songpress-add" href="' . esc_url( Songpress_Editor::edit_url( 0 ) ) . '" aria-label="' . esc_attr__( 'Add a song', 'songpress' ) . '" title="' . esc_attr__( 'Add a song', 'songpress' ) . '">+</a>' : '';
-		$out   .= '<div class="songpress-searchbar">' . $lenbox . '<form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . $exp . $add . '</div>';
+		$out   .= '<div class="songpress-searchbar">' . $lenbox . '<form method="get" class="songpress-search">' . ( $desktop && 100 !== $len ? '<input type="hidden" name="sp_n" value="' . (int) $len . '">' : '' ) . '<input type="search" name="sp_q" value="' . esc_attr( $q ) . '" placeholder="' . esc_attr__( 'Search songs, people, lyrics, style', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search songs', 'songpress' ) . '"></form>' . ( $desktop ? '<div class="songpress-addcol">' . $add . $exp . '</div>' : '' ) . '</div>';
 		$bulk = $desktop && ( Songpress_Caps::can( 'edit_any' ) || Songpress_Caps::can( 'edit_own' ) );
 		if ( $bulk ) {
 			$out .= self::bulk_open();
@@ -676,6 +676,9 @@ class Songpress_Frontend {
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d work', 'Credited on %d works', count( $orig ), 'songpress' ), count( $orig ) ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . count( $orig ) . '</strong></li><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
+		if ( wp_is_mobile() ) {
+			$out .= '<p class="songpress-mycat"><a class="songpress-mycatbtn" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'list', array( 'mine' => 1 ) ) ) . '">' . esc_html__( 'Export my Catalog', 'songpress' ) . '</a></p>';
+		}
 		$out .= Songpress_Profiles::avatar_tool( $u ) . Songpress_Profiles::mine_form( $u );
 		$out .= Songpress_Money::quarterly_html( $u->display_name );
 		// the songs this person wrote or performed, each with what it has made on DistroKid
