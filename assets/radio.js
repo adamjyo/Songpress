@@ -164,7 +164,7 @@
   function trackRow(l, id, i) {
     var r = el('div', 'sp-rd-trk'); r.setAttribute('data-id', id);
     var go = el('button', 'sp-rd-go'); go.type = 'button'; go.setAttribute('aria-label', I.play + ' ' + T[id].t);
-    go.appendChild(art(id)); var tx = el('span', 'tx'); tx.appendChild(el('b', '', T[id].t)); tx.appendChild(el('small', '', T[id].b)); go.appendChild(tx);
+    go.appendChild(art(id)); var tx = el('span', 'tx'); tx.appendChild(el('b', '', T[id].t || 'Untitled')); tx.appendChild(el('small', '', T[id].b)); go.appendChild(tx);
     var eq = el('span', 'sp-rd-eq'); eq.setAttribute('aria-hidden', 'true'); eq.innerHTML = '<i></i><i></i><i></i>'; go.appendChild(eq);
     if (st(id).fav) { var hh = el('span', 'sp-rd-h', '\u2665'); hh.setAttribute('aria-label', I.fav); go.appendChild(hh); }
     go.addEventListener('click', function () {
@@ -324,7 +324,7 @@
   function drawQueue() {
     qBox.innerHTML = ''; var h = el('div', 'qh'); h.appendChild(el('b', '', I.queue)); var x = btn('sp-np-qx', I.close, 'down', 22); x.addEventListener('click', function () { qBox.hidden = true; }); h.appendChild(x); qBox.appendChild(h);
     Q.order.forEach(function (id, i) {
-      var r = el('button', 'qi' + (i === Q.pos ? ' on' : '')); r.type = 'button'; r.appendChild(art(id)); var tx = el('span', 'tx'); tx.appendChild(el('b', '', T[id].t)); tx.appendChild(el('small', '', T[id].b)); r.appendChild(tx);
+      var r = el('button', 'qi' + (i === Q.pos ? ' on' : '')); r.type = 'button'; r.appendChild(art(id)); var tx = el('span', 'tx'); tx.appendChild(el('b', '', T[id].t || 'Untitled')); tx.appendChild(el('small', '', T[id].b)); r.appendChild(tx);
       r.addEventListener('click', function () { load(i); drawQueue(); }); qBox.appendChild(r);
     });
     var on = qBox.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'center' });
