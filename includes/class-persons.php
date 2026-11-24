@@ -10,6 +10,7 @@ class Songpress_Persons {
 
 	public static function init() {
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
+		add_action( 'wp_ajax_songpress_person_rename', array( __CLASS__, 'handle_rename' ) ); // admin-post.php is blocked on some hosts, so the form posts here
 		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
 		add_action( 'wp_ajax_songpress_person_adopt', array( __CLASS__, 'ajax_adopt' ) );
 		add_action( 'admin_post_songpress_person_delete', array( __CLASS__, 'handle_delete' ) );
@@ -340,7 +341,15 @@ class Songpress_Persons {
 			if ( ! $u ) {
 				self::go( $back );
 			}
-			$login = self::login_for( $first, $last );
+			$typed = isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ), true ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+			$typed = preg_replace( '/\s+/', '', (string) $typed );
+			if ( '' !== $typed && $typed !== $u->user_login ) {
+				$login = $typed; // a username typed by the manager is used exactly as typed
+			} elseif ( $ok !== $nk ) {
+				$login = self::login_for( $first, $last ); // a new name makes first.last, as before
+			} else {
+				$login = $u->user_login; // nothing changed: keep it
+			}
 			$other = '' === $login ? 0 : (int) username_exists( $login );
 			if ( '' === $login || ( $other && $other !== $uid ) ) {
 				self::go( $back + array( 'sp_err' => rawurlencode( __( 'That login is taken or not valid.', 'songpress' ) ) ) );
@@ -447,11 +456,12 @@ class Songpress_Persons {
 		$o  = '<div class="songpress sp-app sp-editor sp-members sp-people"><div class="spe-top"><h2>' . Songpress_Profiles::chip( $name, 40, 'person' ) . esc_html( $name ) . '</h2> <a class="spe-btn" href="' . esc_url( self::url() ) . '">&lsaquo; ' . esc_html__( 'All people', 'songpress' ) . '</a></div>' . self::notes();
 		$o .= '<p>' . self::del_button( $name ) . ' ' . ( $r['profile'] ? '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => (int) $r['profile']->id, 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Edit photo, bio, contact and IPI', 'songpress' ) . '</a>' : '<a class="spe-btn" href="' . esc_url( self::url( array( 'profile' => 'new', 'kind' => 'person' ) ) ) . '">' . esc_html__( 'Add a profile', 'songpress' ) . '</a>' ) . '</p>';
 
-		$o .= '<h3>' . esc_html__( 'Name and login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false )
+		$o .= '<h3>' . esc_html__( 'Name and login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false )
 			. '<input type="hidden" name="action" value="songpress_person_rename"><input type="hidden" name="uid" value="' . (int) ( $u ? $u->ID : 0 ) . '"><input type="hidden" name="old" value="' . esc_attr( $name ) . '">'
 			. '<label class="spe-field"><span>' . esc_html__( 'First name', 'songpress' ) . '</span><input name="first" value="' . esc_attr( $first ) . '" required></label>'
-			. '<label class="spe-field"><span>' . esc_html__( 'Last name', 'songpress' ) . '</span><input name="last" value="' . esc_attr( $last ) . '" required></label>';
-		$o .= '<p class="spe-help">' . ( $u ? sprintf( /* translators: 1: current login 2: new login */ esc_html__( 'Login now: %1$s. Saving makes it %2$s (first.last). Credits and earnings follow the new name.', 'songpress' ), '<b>' . esc_html( $u->user_login ) . '</b>', '<b>' . esc_html( self::login_for( $first, $last ) ) . '</b>' ) . ( get_current_user_id() === $u->ID ? ' ' . esc_html__( 'This is you, so you will be asked to sign in again with the new login. Your password stays the same.', 'songpress' ) : '' ) : esc_html__( 'This person has no login yet.', 'songpress' ) ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Save name and login', 'songpress' ) . '</button></form>';
+			. '<label class="spe-field"><span>' . esc_html__( 'Last name', 'songpress' ) . '</span><input name="last" value="' . esc_attr( $last ) . '" required></label>'
+			. ( $u ? '<label class="spe-field"><span>' . esc_html__( 'Username', 'songpress' ) . '</span><input name="username" value="' . esc_attr( $u->user_login ) . '" autocapitalize="none" autocomplete="off" spellcheck="false"></label>' : '' );
+		$o .= '<p class="spe-help">' . ( $u ? sprintf( /* translators: 1: current login 2: new login */ esc_html__( 'Login now: %1$s. Change the username above to set it yourself. If you change only the name, the username becomes %2$s (first.last). Credits and earnings follow the new name.', 'songpress' ), '<b>' . esc_html( $u->user_login ) . '</b>', '<b>' . esc_html( self::login_for( $first, $last ) ) . '</b>' ) . ( get_current_user_id() === $u->ID ? ' ' . esc_html__( 'This is you, so you will be asked to sign in again with the new login. Your password stays the same.', 'songpress' ) : '' ) : esc_html__( 'This person has no login yet.', 'songpress' ) ) . '</p><button class="spe-save" type="submit">' . esc_html__( 'Save name and login', 'songpress' ) . '</button></form>';
 
 		if ( ! $u ) {
 			$o .= '<h3>' . esc_html__( 'Give them a login', 'songpress' ) . '</h3><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="spe-addmember">' . wp_nonce_field( 'songpress_member_add', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_member_add"><input type="hidden" name="first" value="' . esc_attr( $first ) . '"><input type="hidden" name="last" value="' . esc_attr( $last ) . '"><label class="spe-field"><span>' . esc_html__( 'Class', 'songpress' ) . '</span><select name="class_new">';
