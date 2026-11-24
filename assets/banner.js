@@ -143,7 +143,7 @@
      Links and GET forms inside the app swap the page body in place instead of reloading, so the audio element is never torn down.
      A new track replaces the old one; Radio and anything outside the app load normally. */
   if (!C.quiet && window.fetch && window.DOMParser && history.pushState) {
-    var lastKey = location.pathname + location.search, busy = false;
+    var lastKey = location.pathname + location.search;
     var appEl = function (d) { return d.querySelector('.songpress.sp-app'); };
     var playingNow = function () { return true; }; // always: every move inside the app stays in this one page, so the browser's own back swipe is a popstate and a track started later is never cut off
     var ok = function (u) {
@@ -178,11 +178,19 @@
       document.dispatchEvent(new Event('sp:swapped'));
       return true;
     };
-    var go = function (url, push, again) {
-      if (busy) return; busy = true; window.SPNAVAT = Date.now();
-      fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'songpress' } }).then(function (r) { return r.ok ? r.text() : Promise.reject(); }).then(function (h) {
-        busy = false; if (!swap(h, url, push)) { if (au && !au.paused) return; location.href = url; } // a full reload would cut the music: only when nothing is playing
-      }).catch(function () { busy = false; if (au && !au.paused && !again) setTimeout(function () { go(url, push, true); }, 700); else if (!au || au.paused) location.href = url; });
+    var navId = 0, ctrl = null;
+    var go = function (url, push, again) { // the latest tap always wins: an earlier, slower page can never land on top of it
+      var my = ++navId; window.SPNAVAT = Date.now();
+      if (ctrl) { try { ctrl.abort(); } catch (x) {} }
+      ctrl = window.AbortController ? new AbortController() : null;
+      var opt = { credentials: 'same-origin', headers: { 'X-Requested-With': 'songpress' } }; if (ctrl) opt.signal = ctrl.signal;
+      fetch(url, opt).then(function (r) { return r.ok ? r.text() : Promise.reject(); }).then(function (h) {
+        if (my !== navId) return;
+        if (!swap(h, url, push)) { if (au && !au.paused) return; location.href = url; } // a full reload would cut the music: only when nothing is playing
+      }).catch(function () {
+        if (my !== navId) return;
+        if (au && !au.paused && !again) setTimeout(function () { if (my === navId) go(url, push, true); }, 700); else if (!au || au.paused) location.href = url;
+      });
     };
     window.SPGO = function (u) { var x = new URL(u, location.href); if (ok(x)) go(x.href, true); else location.href = x.href; }; // the bottom tabs use this so a tab switch keeps the player going
     document.addEventListener('click', function (e) {

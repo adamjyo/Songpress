@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.65
+Stable tag: 0.72.66
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.66 =
+* Phone: the last tap always wins. Tapping Works while Radio was still loading used to be ignored and then the slow Radio page landed on top of it. An earlier page is now cancelled when you tap again.
 
 = 0.72.65 =
 * Phone Radio: each song row shows the band and the genre together on one line under the title ("The Redbeard Demo's · Pop"), for every song.
