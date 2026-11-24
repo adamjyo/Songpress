@@ -132,6 +132,12 @@ class Songpress_Editor {
 			}
 			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
 		$o .= '<script>(function(){var s=document.getElementById("spe-stage"),t=document.querySelector("input[name=title]");if(!s||!t)return;function f(){t.required=s.value.toLowerCase()!=="starter"}s.addEventListener("change",f);f()})()</script>';
+		$tcur = trim( (string) self::f( $song, 'work_type' ) );
+		$to   = '<option value=""></option>';
+		foreach ( Songpress_Songs::merge_options( Songpress_Songs::TYPES, array( $tcur ) ) as $tn ) {
+			$to .= '<option value="' . esc_attr( $tn ) . '"' . selected( strtolower( $tcur ), strtolower( $tn ), false ) . '>' . esc_html( $tn ) . '</option>';
+		}
+		$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Type', 'songpress' ) . '</span><select name="work_type">' . $to . '</select></label>';
 		if ( $root || ! $song ) { // the original work carries the genre; a new version starts with it (the Release panel shows it on a version)
 			$o .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' ) . '<datalist id="spe-genres">';
 			foreach ( Songpress_Songs::genres() as $gn ) {

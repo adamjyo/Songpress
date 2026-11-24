@@ -27,6 +27,7 @@ CREATE TABLE {prefix}songpress_songs (
   alt_titles text NULL,
   status varchar(24) NOT NULL DEFAULT 'idea',
   stage varchar(40) NOT NULL DEFAULT '',
+  work_type varchar(16) NOT NULL DEFAULT '',
   writing_date varchar(32) NOT NULL DEFAULT '',
   musical_key varchar(16) NOT NULL DEFAULT '',
   tempo varchar(16) NOT NULL DEFAULT '',

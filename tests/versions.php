@@ -36,7 +36,7 @@ class FakeWpdb {
 	function __construct() {
 		$this->pdo = new PDO( 'sqlite::memory:' ); $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_families (id INTEGER PRIMARY KEY AUTOINCREMENT, family_no INT UNIQUE, created_at TEXT)' );
-		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, copyright_date TEXT, production_date TEXT, format TEXT, style TEXT, themes TEXT, ai_prompt TEXT, art_prompt TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
+		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, work_type TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, copyright_date TEXT, production_date TEXT, format TEXT, style TEXT, themes TEXT, ai_prompt TEXT, art_prompt TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
 		$this->pdo->exec( "CREATE TABLE wp_songpress_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, $cols)" );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, role TEXT, name TEXT, ipi TEXT, share REAL, user_id INT, position INT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
@@ -1073,6 +1073,14 @@ Songpress_Songs::update( $v1, array( 'stage' => '' ) );
 check( 'status: clearing it clears both', array( Songpress_Songs::get( $v1 )->stage, Songpress_Songs::get( $v1 )->status ), array( '', '' ) );
 check( 'status: the original work is never offered Released', in_array( 'Released', Songpress_Songs::status_choices( 0 ), true ), false );
 check( 'status: a version is offered Released', in_array( 'Released', Songpress_Songs::status_choices( 1 ), true ), true );
+
+// Type field
+Songpress_Songs::update( $v1, array( 'work_type' => 'Live' ) );
+check( 'type saves', Songpress_Songs::get( $v1 )->work_type, 'Live' );
+$dv = Songpress_Songs::create_version( $v1, 1 );
+check( 'a new version starts with no type', (string) Songpress_Songs::get( $dv )->work_type, '' );
+Songpress_Songs::update( $v1, array( 'work_type' => '' ) );
+check( 'type can be cleared', Songpress_Songs::get( $v1 )->work_type, '' );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";

@@ -55,6 +55,15 @@ class Songpress_Install {
 			Songpress_Songs::apply_version_rules();
 			update_option( 'songpress_version_rules', '43' );
 		}
+		// The Type field (Raw, Studio, AI, Live): add its column to existing sites, once. The database version stays the same so older backups can still be restored.
+		if ( '1' !== get_option( 'songpress_type_col' ) ) {
+			global $wpdb;
+			$tb = self::table( 'songs' );
+			if ( ! $wpdb->get_var( "SHOW COLUMNS FROM {$tb} LIKE 'work_type'" ) ) { // phpcs:ignore WordPress.DB
+				$wpdb->query( "ALTER TABLE {$tb} ADD COLUMN work_type varchar(16) NOT NULL DEFAULT '' AFTER stage" ); // phpcs:ignore WordPress.DB
+			}
+			update_option( 'songpress_type_col', '1' );
+		}
 		// Record label credits were removed on request: delete every label credit, once.
 		if ( '1' !== get_option( 'songpress_labels_removed' ) ) {
 			global $wpdb;

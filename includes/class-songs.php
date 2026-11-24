@@ -35,7 +35,7 @@ class Songpress_Songs {
 	const ROOT_DROPPED = array( 'isrc', 'distrokid', 'upc' );
 
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
-	const VERSION_FIELDS = array( 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
+	const VERSION_FIELDS = array( 'work_type', 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
 	/** The writing stages offered in the editor. Any other stage a work already carries is kept in the list. */
 	const STAGES = array( 'Idea', 'Starter', 'Pre-production', 'Production', 'Post-production', 'Finished', 'Released', 'Taken down' );
@@ -152,7 +152,7 @@ class Songpress_Songs {
 
 	/** Columns a form may set. Anything else is ignored. */
 	const FIELDS = array(
-		'title', 'alt_titles', 'status', 'stage', 'writing_date', 'musical_key', 'tempo', 'time_signature', 'genre',
+		'title', 'alt_titles', 'status', 'stage', 'work_type', 'writing_date', 'musical_key', 'tempo', 'time_signature', 'genre',
 		'artist', 'album', 'release_title', 'release_date', 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
 		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
@@ -901,6 +901,9 @@ class Songpress_Songs {
 			return ( '' !== $v && false !== strpos( "=+-@\t\r", $v[0] ) ) ? "'" . $v : $v;
 		}, $row );
 	}
+
+	/** What kind of recording or version a work is. */
+	const TYPES = array( 'Raw', 'Studio', 'AI', 'Live' );
 
 	const CODE_KINDS = array( 'iswc', 'isrc', 'ccli', 'mlc', 'bmi', 'ascap', 'work_id', 'copyright', 'distrokid', 'upc' );
 	const LINK_KINDS = array( 'spotify', 'apple', 'itunes', 'amazon', 'youtube', 'tidal', 'deezer', 'pandora', 'tiktok', 'bandcamp', 'soundcloud', 'distrokid', 'other' );
