@@ -139,7 +139,7 @@
   if (!C.quiet && window.fetch && window.DOMParser && history.pushState) {
     var lastKey = location.pathname + location.search, busy = false;
     var appEl = function (d) { return d.querySelector('.songpress.sp-app'); };
-    var playingNow = function () { return !!(au && au.src && !au.ended); };
+    var playingNow = function () { return true; }; // always: every move inside the app stays in this one page, so the browser's own back swipe is a popstate and a track started later is never cut off
     var ok = function (u) {
       if (u.origin !== location.origin || /sp_radio|wp-admin|wp-login|wp-json|\.(pdf|zip|csv|png|jpe?g|mp3)(\?|$)/i.test(u.pathname + u.search)) return false;
       if (/sp_radio/.test(location.search)) return false;
