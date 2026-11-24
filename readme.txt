@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.3
+Stable tag: 0.72.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.4 =
+* Earnings: saving a work's credits (writers, performers, shares) works that work's money out again at once for every quarter and every source, across all its releases.
 
 = 0.72.3 =
 * Payments CSV: an optional add column adds a line to what is already paid that quarter (once, by its note).

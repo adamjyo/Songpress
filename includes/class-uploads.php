@@ -337,6 +337,33 @@ class Songpress_Uploads {
 		return $done;
 	}
 
+	/**
+	 * Work one song's money out again for its people, every quarter and every source (DistroKid for performers, ASCAP, MLC and CCLI for writers).
+	 * Writer credits are shared across a work's releases, so a song's whole family is redone. Returns how many quarter lines were redone.
+	 */
+	public static function rebuild_song_people( $song_id ) {
+		global $wpdb;
+		$e   = Songpress_Install::table( 'earnings' );
+		$p   = Songpress_Install::table( 'person_earnings' );
+		$sg  = Songpress_Install::table( 'songs' );
+		$fam = (int) $wpdb->get_var( $wpdb->prepare( "SELECT family_id FROM {$sg} WHERE id = %d", (int) $song_id ) ); // phpcs:ignore WordPress.DB
+		$ids = $fam ? array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$sg} WHERE family_id = %d", $fam ) ) ) : array(); // phpcs:ignore WordPress.DB
+		$ids = array_values( array_unique( array_merge( array( (int) $song_id ), $ids ) ) );
+		$n   = 0;
+		foreach ( $ids as $id ) {
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT quarter, src, SUM(amount) AS amt FROM {$e} WHERE song_id = %d AND src IN ('distrokid','mlc','ascap','ccli') GROUP BY quarter, src", $id ) ) as $r ) { // phpcs:ignore WordPress.DB
+				$rows = self::people_rows( $id, $r->quarter, $r->src, (float) $r->amt );
+				if ( ! $rows ) {
+					continue;
+				}
+				$wpdb->query( $wpdb->prepare( "DELETE FROM {$p} WHERE src = %s AND song_id = %d AND quarter = %s", $r->src, $id, $r->quarter ) ); // phpcs:ignore WordPress.DB
+				Songpress_Money::batch( $p, array( 'person', 'person_key', 'work_title', 'song_id', 'quarter', 'src', 'amount' ), $rows, 'INSERT' );
+				$n++;
+			}
+		}
+		return $n;
+	}
+
 	/** Work one song's DistroKid money out again for each of its performers, every quarter it earned. Returns how many quarters were redone. */
 	public static function rebuild_song_dk( $song_id ) {
 		global $wpdb;

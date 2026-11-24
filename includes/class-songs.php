@@ -622,6 +622,9 @@ class Songpress_Songs {
 		$after = self::credit_signature( self::credits( $song_id ) );
 		if ( $after !== $before ) {
 			Songpress_History::log( $song_id, 'people', array( 'after' => $after ) );
+			if ( self::$auto_users && class_exists( 'Songpress_Uploads' ) ) { // a change of people or shares works the money out again at once (an import turns this off)
+				Songpress_Uploads::rebuild_song_people( (int) $song_id );
+			}
 		}
 	}
 

@@ -768,6 +768,15 @@ foreach ( Songpress_Songs::credits( $sb ) as $c ) { if ( 'performer' === $c->rol
 sort( $sw );
 check( 'editing the original copies shared fields to versions, keeps their own', array( $sn, $sg->title, $sg->lyrics, $sg->tempo, $sw, $sp ), array( 1, 'Sync Song II', 'two', '77', array( 'label:Lab', 'writer:Ann', 'writer:Bo' ), array( 'Vee' ) ) );
 check( 'sync twice changes nothing', Songpress_Songs::sync_shared( $sa ), 0 );
+// a change of shares works the money out again at once
+$ra = Songpress_Songs::create( array( 'title' => 'Live Split', 'status' => 'released' ), 1 );
+Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 50 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 50 ) ) );
+put( 'earnings', array( 'song_id' => $ra, 'quarter' => '2026-Q1', 'src' => 'ascap', 'amount' => 100 ) );
+Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 50 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 50 ), array( 'role' => 'label', 'name' => 'Lab' ) ) );
+$lv = function ( $n ) use ( $ra ) { return (float) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT amount FROM wp_songpress_person_earnings WHERE song_id = %d AND person = %s AND src = 'ascap'", $ra, $n ) ); };
+check( 'saving credits splits the money by the shares at once', array( $lv( 'Ann' ), $lv( 'Bo' ) ), array( 50.0, 50.0 ) );
+Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 75 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 25 ) ) );
+check( 'changing a writer share updates earnings at once', array( $lv( 'Ann' ), $lv( 'Bo' ) ), array( 75.0, 25.0 ) );
 Songpress_Songs::update( $sb, array( 'story' => 'from version' ) );
 Songpress_Songs::sync_shared( $sb );
 check( 'editing a version also updates the original', Songpress_Songs::get( $sa )->story, 'from version' );
