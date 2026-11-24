@@ -71,6 +71,7 @@
     start(n, true);
   }
   function start(n, log) {
+    window.SPCTL = 'banner'; if (window.SPRD_YIELD) window.SPRD_YIELD(); bindMS();
     idx = n; var it = list[n]; btn = it.btn; fill(it);
     au.src = it.url; var p = au.play(); if (p && p.catch) p.catch(function () {});
     if (log) use({ id: it.id, src: 'list' });
@@ -78,11 +79,11 @@
   }
   function ownAudio() {
     if (own) return own;
-    own = new Audio(); own.preload = 'none';
+    own = window.SPAU || (window.SPAU = new Audio()); own.preload = 'none'; // shared with Radio, so a song carries on across pages
     own.addEventListener('play', function () { paint(); });
     own.addEventListener('pause', function () { paint(); });
-    own.addEventListener('ended', function () { if (!single) move(1); else paint(); });
-    own.addEventListener('error', function () { if (!single && idx >= 0) setTimeout(function () { move(1); }, 500); });
+    own.addEventListener('ended', function () { if (window.SPCTL === 'radio') return; if (!single) move(1); else paint(); });
+    own.addEventListener('error', function () { if (window.SPCTL !== 'radio' && !single && idx >= 0) setTimeout(function () { move(1); }, 500); });
     return own;
   }
   /* leaving the page (to Radio, say): remember what was playing so Radio can carry on with it */
@@ -96,10 +97,13 @@
   window.addEventListener('pagehide', remember);
   document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') remember(); });
 
-  if ('mediaSession' in navigator) {
+  function bindMS() {
+    if (!('mediaSession' in navigator)) return;
     var h = function (n, f) { try { navigator.mediaSession.setActionHandler(n, f); } catch (e) {} };
     h('play', function () { if (au) au.play(); }); h('pause', function () { if (au) au.pause(); }); h('nexttrack', function () { move(1); }); h('previoustrack', function () { move(-1); });
   }
+  bindMS();
+  window.SPBAN = { hide: function () { if (bar) { bar.hidden = true; bar.classList.remove('in'); } if (pull) pull.hidden = true; } };
 
   /* ---------- the Works list: every play button joins one queue, in list order ---------- */
   function collect() {
@@ -141,12 +145,11 @@
     var appEl = function (d) { return d.querySelector('.songpress.sp-app'); };
     var playingNow = function () { return true; }; // always: every move inside the app stays in this one page, so the browser's own back swipe is a popstate and a track started later is never cut off
     var ok = function (u) {
-      if (u.origin !== location.origin || /sp_radio|wp-admin|wp-login|wp-json|\.(pdf|zip|csv|png|jpe?g|mp3)(\?|$)/i.test(u.pathname + u.search)) return false;
-      if (/sp_radio/.test(location.search)) return false;
+      if (u.origin !== location.origin || /wp-admin|wp-login|wp-json|\.(pdf|zip|csv|png|jpe?g|mp3)(\?|$)/i.test(u.pathname + u.search)) return false;
       return true;
     };
     var relink = function () {
-      if (!au || !au.src) return;
+      if (!au || !au.src || window.SPCTL === 'radio') return;
       var nl = collect(), cur = au.currentSrc || au.src, n = -1;
       nl.forEach(function (it, i) { if (it.url && (it.url === cur || cur.indexOf(it.url) > -1)) n = i; });
       if (n >= 0) { list = nl; idx = n; btn = nl[n].btn; single = false; } else { btn = null; }
@@ -161,7 +164,7 @@
       lastKey = location.pathname + location.search;
       [].forEach.call(ne.querySelectorAll('script'), function (o) {
         var src = o.getAttribute('src');
-        if (src && [].some.call(document.scripts, function (x) { return x.src && x.src.split('?')[0] === o.src.split('?')[0]; })) { o.remove(); return; }
+        if (src && !/radio\.js/.test(src) && [].some.call(document.scripts, function (x) { return x.src && x.src.split('?')[0] === o.src.split('?')[0]; })) { o.remove(); return; }
         var n = document.createElement('script');
         if (src) { n.src = src; n.defer = true; } else { n.textContent = o.textContent; }
         o.parentNode.replaceChild(n, o);

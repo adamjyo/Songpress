@@ -1351,3 +1351,6 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 /* 0.72.51: the full-screen Radio player stops above the bottom tabs, so they stay in reach */
 html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 .songpress-tabs.songpress-tabs-fixed{z-index:100000}
+/* 0.72.54: the Radio mini player lives on the page body (it stays when you leave Radio), so it carries its own button and icon rules */
+.sp-rd-mini button{font:inherit;color:inherit;cursor:pointer}
+.sp-rd-mini .ic{display:inline-flex}

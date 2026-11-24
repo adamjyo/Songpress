@@ -253,7 +253,7 @@ class Songpress_Radio {
 			'max'    => self::NAME_MAX,
 			'i'      => self::strings(),
 		);
-		return '<div class="sp-rd" id="sp-rd"><noscript><p class="songpress-note">' . esc_html__( 'Radio needs JavaScript.', 'songpress' ) . '</p></noscript></div><script>window.SP_RADIO=' . wp_json_encode( $cfg ) . ';</script>' . Songpress_Reactions::boot() . '<script src="' . esc_url( SONGPRESS_URL . 'assets/radio.js?v=' . SONGPRESS_VERSION ) . '" defer></script>';
+		return '<div class="sp-rd" id="sp-rd"><noscript><p class="songpress-note">' . esc_html__( 'Radio needs JavaScript.', 'songpress' ) . '</p></noscript></div><script>window.SP_RADIO=' . wp_json_encode( $cfg ) . ';</script>' . Songpress_Reactions::boot() . Songpress_Reactions::banner() . '<script src="' . esc_url( SONGPRESS_URL . 'assets/radio.js?v=' . SONGPRESS_VERSION ) . '" defer></script>';
 	}
 
 	private static function strings() {

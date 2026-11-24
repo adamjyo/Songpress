@@ -5,6 +5,8 @@
   'use strict';
   var C = window.SP_RADIO, root = document.getElementById('sp-rd');
   if (!C || !root) return;
+  if (window.SPRD_DESTROY) { try { window.SPRD_DESTROY(); } catch (e) {} } // a Radio page opened in place of an earlier one: that one lets go first
+  var alive = true;
   var I = C.i, T = C.tracks, ST = C.st, L = C.lists;
   var IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
@@ -48,7 +50,7 @@
   function count(l) { return l.ids.length === 1 ? I.song1 : l.ids.length + ' ' + I.songs; }
 
   /* ---------- playback ---------- */
-  var au = new Audio(); au.preload = 'none';
+  var au = window.SPAU || (window.SPAU = new Audio()); au.preload = 'none'; // one audio element for the whole app, so a song carries on across pages
   var Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' };
   function curId() { return Q.pos >= 0 ? Q.order[Q.pos] : 0; }
   function build(first) {
@@ -68,7 +70,7 @@
   }
   function load(pos) {
     var id = Q.order[pos]; if (!T[id]) return;
-    Q.pos = pos; au.src = T[id].s;
+    Q.pos = pos; claim(); au.src = T[id].s;
     var p = au.play(); if (p && p.catch) p.catch(function () { toast(I.tap); });
     logUse('play', id, 'radio');
     meta(); ui(true);
@@ -84,26 +86,34 @@
   function toggle() { if (Q.pos < 0) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause(); }
   function setShuffle(on) { Q.shuffle = on; var id = curId(); if (Q.pos >= 0) { if (on) build(id); else { Q.order = Q.base.slice(); Q.pos = Q.order.indexOf(id); } } ui(); }
   function cycleRepeat() { Q.repeat = Q.repeat === 'off' ? 'all' : (Q.repeat === 'all' ? 'one' : 'off'); ui(); }
-  au.addEventListener('ended', function () { if (Q.repeat === 'one') { au.currentTime = 0; var p = au.play(); if (p && p.catch) p.catch(function () {}); } else step(1, true); });
-  au.addEventListener('error', function () { if (Q.pos >= 0) { toast(I.skip); setTimeout(function () { step(1, true); }, 700); } });
-  ['play', 'pause'].forEach(function (n) { au.addEventListener(n, function () { if ('mediaSession' in navigator) navigator.mediaSession.playbackState = n === 'play' ? 'playing' : 'paused'; ui(); }); });
-  au.addEventListener('timeupdate', tick); au.addEventListener('loadedmetadata', tick);
+  au.addEventListener('ended', function () { if (!alive || window.SPCTL !== 'radio') return; if (Q.repeat === 'one') { au.currentTime = 0; var p = au.play(); if (p && p.catch) p.catch(function () {}); } else step(1, true); });
+  au.addEventListener('error', function () { if (alive && window.SPCTL === 'radio' && Q.pos >= 0) { toast(I.skip); setTimeout(function () { step(1, true); }, 700); } });
+  ['play', 'pause'].forEach(function (n) { au.addEventListener(n, function () { if (!alive) return; if ('mediaSession' in navigator) navigator.mediaSession.playbackState = n === 'play' ? 'playing' : 'paused'; ui(); }); });
+  au.addEventListener('timeupdate', function () { if (alive) tick(); }); au.addEventListener('loadedmetadata', function () { if (alive) tick(); });
   function meta() {
     if (!('mediaSession' in navigator) || !window.MediaMetadata) return;
     var t = T[curId()]; if (!t) return;
     navigator.mediaSession.metadata = new MediaMetadata({ title: t.t, artist: t.b, artwork: t.a ? [{ src: t.a }] : [] });
   }
-  if ('mediaSession' in navigator) {
+  function bindMS() {
+    if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
     [['play', toggle], ['pause', toggle], ['nexttrack', function () { step(1); }], ['previoustrack', function () { step(-1); }],
      ['seekto', function (d) { if (d && d.seekTime != null) au.currentTime = d.seekTime; }]].forEach(function (a) { try { ms.setActionHandler(a[0], a[1]); } catch (e) {} });
   }
+  bindMS();
+  function claim() { window.SPCTL = 'radio'; if (window.SPBAN) window.SPBAN.hide(); bindMS(); } // Radio is the one playing now: the Works bar steps aside
 
   /* ---------- views ---------- */
   var view = { name: 'index', k: '', edit: false };
   var main = el('div', 'sp-rd-main'), mini = el('div', 'sp-rd-mini'), np = el('div', 'sp-rd-np');
   mini.hidden = true; np.hidden = true;
-  root.appendChild(main); root.appendChild(mini); document.body.appendChild(np);
+  root.appendChild(main); document.body.appendChild(mini); document.body.appendChild(np); // the mini player lives on the page, so it stays when you leave Radio
+  window.SPRD_DESTROY = function () {
+    alive = false; window.SPRD_SNAP = Q.pos >= 0 ? { key: Q.key, base: Q.base, order: Q.order, pos: Q.pos, shuffle: Q.shuffle, repeat: Q.repeat } : null;
+    try { mini.remove(); np.remove(); } catch (e) {} document.documentElement.classList.remove('sp-np-open', 'sp-rd-has-mini');
+  };
+  window.SPRD_YIELD = function () { if (!alive) return; Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' }; hideNP(); ui(); }; // a track was started on the Works list
 
   function cover(ids, big) {
     var c = el('span', 'sp-rd-cover' + (big ? ' big' : '')); c.setAttribute('aria-hidden', 'true');
@@ -127,7 +137,7 @@
   function keep() { try { if (view.name === 'list' && !view.edit) localStorage.setItem(VK, view.k); else if (view.name === 'index') localStorage.removeItem(VK); } catch (e) {} }
   function go(v) { view = v; keep(); draw(); window.scrollTo(0, 0); }
   try { var kv = localStorage.getItem(VK); if (kv) view = { name: 'list', k: kv, edit: false }; } catch (e) {}
-  document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('.songpress-tabs a.on'); if (a) { try { localStorage.removeItem(VK); } catch (x) {} } });
+  document.addEventListener('click', function (e) { if (!alive) return; var a = e.target.closest && e.target.closest('.songpress-tabs a.on'); if (a) { try { localStorage.removeItem(VK); } catch (x) {} } });
   function draw() {
     main.innerHTML = '';
     if (view.name === 'list' && byK(view.k)) drawList(byK(view.k)); else { view = { name: 'index', k: '', edit: false }; drawIndex(); }
@@ -302,10 +312,10 @@
     if (!npPushed) { try { history.pushState({ spnp: 1 }, '', location.href); npPushed = true; } catch (e) {} }
   }
   function closeNP() { hideNP(); if (npPushed) { npPushed = false; try { history.back(); } catch (e) {} } }
-  window.addEventListener('popstate', function () { if (!np.hidden) { npPushed = false; hideNP(); } });
+  window.addEventListener('popstate', function () { if (alive && !np.hidden) { npPushed = false; hideNP(); } });
   (function () { // a swipe in from the left edge closes the player too
     var s = null;
-    document.addEventListener('touchstart', function (e) { s = null; if (np.hidden || e.touches.length !== 1) return; var p = e.touches[0]; if (p.clientX <= 36) s = { x: p.clientX, y: p.clientY, h: false, dx: 0 }; }, { passive: true });
+    document.addEventListener('touchstart', function (e) { s = null; if (!alive || np.hidden || e.touches.length !== 1) return; var p = e.touches[0]; if (p.clientX <= 36) s = { x: p.clientX, y: p.clientY, h: false, dx: 0 }; }, { passive: true });
     document.addEventListener('touchmove', function (e) {
       if (!s) return; var p = e.touches[0], dx = p.clientX - s.x, dy = p.clientY - s.y;
       if (!s.h) { if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { s = null; return; } if (dx > 10 && dx > Math.abs(dy) * 1.5) s.h = true; else return; }
@@ -315,7 +325,7 @@
     document.addEventListener('touchend', function () { end(true); }); document.addEventListener('touchcancel', function () { end(false); });
   })();
   nHandle.addEventListener('click', closeNP);
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !np.hidden && !document.querySelector('.sp-rx-wrap')) closeNP(); });
+  document.addEventListener('keydown', function (e) { if (alive && e.key === 'Escape' && !np.hidden && !document.querySelector('.sp-rx-wrap')) closeNP(); });
   cPP.addEventListener('click', toggle); cPrev.addEventListener('click', function () { step(-1); }); cNext.addEventListener('click', function () { step(1); });
   bSh.addEventListener('click', function () { setShuffle(!Q.shuffle); }); bRp.addEventListener('click', cycleRepeat);
   bQ.addEventListener('click', function () { qBox.hidden = !qBox.hidden; if (!qBox.hidden) drawQueue(); });
@@ -336,7 +346,7 @@
     if (on && i < 0) f.ids.unshift(id); else if (!on && i >= 0) f.ids.splice(i, 1);
     if (view.name === 'list' && view.k === 'fav') { var y = window.scrollY; draw(); window.scrollTo(0, y); } else if (view.name === 'index') draw();
   }
-  document.addEventListener('sprx:change', function (e) { // the sheet (rate, favorite) changed a work
+  document.addEventListener('sprx:change', function (e) { if (!alive) return; // the sheet (rate, favorite) changed a work
     var d = e.detail || {}, id = +d.id; if (!id || !T[id]) return;
     var s = st(id), was = s.fav; s.avg = d.avg; s.n = d.n; s.mine = d.mine; s.fav = d.fav ? 1 : 0;
     if (was !== s.fav) syncFav(id, !!s.fav);
@@ -401,9 +411,18 @@
 
   /* a song that was playing on the Works list or a work page carries on here, on the Now Playing page */
   (function () {
+    function abs(u) { try { return new URL(u, location.href).href; } catch (e) { return u; } }
+    var cur = au.currentSrc || au.src, snap = window.SPRD_SNAP; window.SPRD_SNAP = null;
+    if (cur && !au.ended) { // the same audio element is already playing a track: carry on with it, no restart
+      var lid = 0; Object.keys(T).forEach(function (k) { if (!lid && T[k].s && abs(T[k].s) === abs(cur)) lid = +k; });
+      if (lid) {
+        if (snap && window.SPCTL === 'radio' && snap.order.indexOf(lid) > -1) { Q.base = snap.base; Q.order = snap.order; Q.pos = snap.order.indexOf(lid); Q.key = snap.key; Q.shuffle = snap.shuffle; Q.repeat = snap.repeat; }
+        else { var al = byK('all') || L[0]; if (al) { Q.base = al.ids.filter(function (x) { return T[x] && T[x].s; }); Q.key = al.k; Q.shuffle = false; build(lid); Q.pos = Q.order.indexOf(lid); } }
+        if (Q.pos >= 0) { claim(); meta(); ui(true); if (!snap) openNP(); return; }
+      }
+    }
     var d = null; try { d = JSON.parse(sessionStorage.getItem('sp_np') || 'null'); sessionStorage.removeItem('sp_np'); } catch (e) {}
     if (!d || !d.url || Date.now() - d.ts > 120000) return;
-    function abs(u) { try { return new URL(u, location.href).href; } catch (e) { return u; } }
     var id = 0; if (d.id && T[d.id] && T[d.id].s) id = +d.id;
     if (!id) Object.keys(T).forEach(function (k) { if (!id && T[k].s && abs(T[k].s) === abs(d.url)) id = +k; });
     if (!id) return;
@@ -411,7 +430,7 @@
     Q.base = l.ids.filter(function (x) { return T[x] && T[x].s; }); Q.key = l.k; Q.shuffle = false; build(id); Q.pos = Q.order.indexOf(id);
     if (Q.pos < 0) return;
     var at = (d.t || 0) + (d.playing ? Math.min(20, (Date.now() - d.ts) / 1000) : 0);
-    au.src = T[id].s;
+    claim(); au.src = T[id].s;
     au.addEventListener('loadedmetadata', function f() { au.removeEventListener('loadedmetadata', f); try { au.currentTime = at; } catch (e) {} });
     if (d.playing) { var pr = au.play(); if (pr && pr.catch) pr.catch(function () { toast(I.tap); }); } else au.load();
     meta(); ui(true); openNP();
