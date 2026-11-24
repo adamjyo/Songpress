@@ -56,6 +56,7 @@
         var k = d[1].toLowerCase(), a = d[2] || '';
         if (k === 'title' || k === 't') out.push('<h1>' + esc(a) + '</h1>');
         else if (k === 'subtitle' || k === 'st' || k === 'artist') out.push('<p class="sub">' + esc(a) + '</p>');
+        else if (/^(authors?|writers?)$/.test(k)) out.push('<p class="credit"><b>' + esc(k[0].toUpperCase() + k.slice(1)) + '</b> ' + esc(a) + '</p>');
         else if (k === 'key' || k === 'capo' || k === 'tempo' || k === 'time') out.push('<span class="meta">' + esc(k[0].toUpperCase() + k.slice(1)) + ': ' + esc(a) + '</span> ');
         else if (k === 'comment' || k === 'c' || k === 'comment_italic' || k === 'ci') out.push('<p class="comment">' + esc(a) + '</p>');
         else if (SEC[k] || EXTRA.test(k)) { if (!SEC[k]) SEC[k] = k.replace(/^start_of_/, '').replace(/_/g, ' ').replace(/^./, function (c) { return c.toUpperCase(); }); if (open) out.push('</section>'); open = true; out.push('<section class="sec ' + SEC[k].toLowerCase() + '"><h4>' + esc(a || SEC[k]) + '</h4>'); }
@@ -74,7 +75,7 @@
 
   /* SongSelect-style printable sheet: title block, key | tempo | time, two columns, numbered sections, chords bold over the words, CCLI line at the foot */
   function buildSheet(text) {
-    var meta = { title: '', by: [], key: '', tempo: '', time: '', ccli: '', iswc: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
+    var meta = { title: '', by: [], credits: [], key: '', tempo: '', time: '', ccli: '', iswc: '', copy: '' }, secs = [], cur = null, counts = {}, loose = [];
     var pending = '';
     function open(label) { cur = { label: label, lines: [], brk: pending }; pending = ''; secs.push(cur); }
     function add(html) { (cur || (open(''), cur)).lines.push(html); }
@@ -84,7 +85,8 @@
       if (d) {
         var k = d[1].toLowerCase(), a = (d[2] || '').trim();
         if (k === 'title' || k === 't') meta.title = a;
-        else if (/^(subtitle|st|artist|composer|lyricist|author|writer|writers|words|music)$/.test(k)) { if (a) meta.by.push(a); }
+        else if (/^(authors?|writers?)$/.test(k)) { if (a) meta.credits.push([k.replace(/^./, function (c) { return c.toUpperCase(); }), a]); }
+        else if (/^(subtitle|st|artist|composer|lyricist|words|music)$/.test(k)) { if (a) meta.by.push(a); }
         else if (k === 'key') meta.key = a;
         else if (k === 'tempo') meta.tempo = a;
         else if (k === 'time') meta.time = a;
@@ -122,11 +124,13 @@
     if (num) foot.push(esc(num));
     if (C.publisher) C.publisher.split(/\r?\n/).forEach(function (l) { if (l.trim()) foot.push(esc(l.trim())); });
     if (meta.copy) foot.push(esc(meta.copy));
-    var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
+    var h = '<header class="sh-head">' + (C.logo ? '<img class="sh-logo" src="' + esc(C.logo) + '" alt="">' : '') + '<h1>' + esc(meta.title || 'Untitled') + '</h1>' + (by ? '<p class="sh-by">' + esc(by) + '</p>' : '') + meta.credits.map(function (c) { return '<p class="sh-credit"><b>' + esc(c[0]) + '</b> ' + esc(c[1]) + '</p>'; }).join('') + (mt.length ? '<p class="sh-mt">' + esc(mt.join(' | ')) + '</p>' : '') + '</header><div class="sh-cols">';
     secs.forEach(function (sc, i) {
       h += '<section class="sh-sec"' + (sc.brk ? ' data-brk="' + sc.brk + '"' : '') + (!firstC && /^chorus/i.test(sc.label) && (firstC = i + 1) ? ' data-chorus="1"' : '') + '>' + (sc.label ? '<h4>' + esc(sc.label.toUpperCase()) + '</h4>' : '') + sc.lines.join('') + '</section>';
     });
-    h += '</div><footer class="sh-foot">' + foot.join('<br>') + '</footer>';
+    var rail = '', nd = 0;
+    chordsIn(text).forEach(function (c) { var f = lookup(c); if (f) { rail += '<figure>' + diagram(c, f.f, f.base) + '</figure>'; nd++; } });
+    h += '</div>' + (nd ? '<aside class="sh-rail' + (nd > 9 ? ' sh-rail2' : '') + '" aria-label="Chord diagrams">' + rail + '</aside>' : '') + '<footer class="sh-foot">' + foot.join('<br>') + '</footer>';
     return h;
   }
 
@@ -140,8 +144,10 @@
     if (hidden) sh.style.cssText = 'display:block;position:absolute;left:-9999px;top:0;width:816px;padding:48px 58px 72px;box-sizing:border-box;transform:none';
     var wrap = document.createElement('div'); wrap.className = 'sh-pages';
     var A = document.createElement('div'); A.className = 'sh-col';
-    var G = document.createElement('div'); G.className = 'sh-cols'; G.appendChild(A);
+    var rail = sh.querySelector('.sh-rail');
+    var G = document.createElement('div'); G.className = 'sh-cols' + (rail ? ' sh-has-rail' + (rail.classList.contains('sh-rail2') ? ' sh-rail2w' : '') : ''); G.appendChild(A);
     var B0 = document.createElement('div'); B0.className = 'sh-col'; G.appendChild(B0);
+    if (rail) G.appendChild(rail);
     cols.parentNode.replaceChild(wrap, cols); wrap.appendChild(G);
     secs.forEach(function (x) { A.appendChild(x); });
     var hs = secs.map(function (x) { return x.offsetHeight + 21; });
@@ -183,8 +189,9 @@
     function range0(i, j) { var r = []; for (var k = i; k < j; k++) r.push(k); return r; }
     wrap.innerHTML = '';
     plan.forEach(function (pg, pi) {
-      var g = document.createElement('div'); g.className = 'sh-cols' + (pi ? ' sh-next' : '');
+      var g = document.createElement('div'); g.className = 'sh-cols' + (pi ? ' sh-next' : (rail ? ' sh-has-rail' + (rail.classList.contains('sh-rail2') ? ' sh-rail2w' : '') : ''));
       pg.forEach(function (ixs) { var c = document.createElement('div'); c.className = 'sh-col'; ixs.forEach(function (k) { c.appendChild(secs[k]); }); g.appendChild(c); });
+      if (!pi && rail) g.appendChild(rail);
       wrap.appendChild(g);
     });
     if (hidden) sh.style.cssText = old;
@@ -250,17 +257,33 @@
     Cmaj7: [-1, 3, 2, 0, 0, 0], Fmaj7: [-1, -1, 3, 2, 1, 0], Am7: [-1, 0, 2, 0, 1, 0], Dm7: [-1, -1, 0, 2, 1, 1], Em7: [0, 2, 0, 0, 0, 0],
     Asus4: [-1, 0, 2, 2, 3, 0], Dsus4: [-1, -1, 0, 2, 3, 3], Dsus2: [-1, -1, 0, 2, 3, 0], Asus2: [-1, 0, 2, 2, 0, 0], Gsus4: [3, 3, 0, 0, 1, 3], Cadd9: [-1, 3, 2, 0, 3, 0], Bb: [-1, 1, 3, 3, 3, 1] };
   var ENH = { 'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb' };
-  function diagram(name, f) {
+  function diagram(name, f, base) {
+    base = base || 1;
     var s = '<svg viewBox="0 0 60 78" width="60" height="78"><text x="30" y="11" text-anchor="middle" class="dn">' + esc(name) + '</text>';
     for (var i = 0; i < 6; i++) s += '<line x1="' + (10 + i * 8) + '" y1="20" x2="' + (10 + i * 8) + '" y2="70" class="ds"/>';
-    for (var j = 0; j <= 5; j++) s += '<line x1="10" y1="' + (20 + j * 10) + '" x2="50" y2="' + (20 + j * 10) + '" class="ds' + (j === 0 ? ' nut' : '') + '"/>';
+    for (var j = 0; j <= 5; j++) s += '<line x1="10" y1="' + (20 + j * 10) + '" x2="50" y2="' + (20 + j * 10) + '" class="ds' + (j === 0 && base === 1 ? ' nut' : '') + '"/>';
+    if (base > 1) s += '<text x="1" y="30" class="dx" style="font-size:7px">' + base + 'fr</text>';
+    var ones = []; f.forEach(function (v, i) { if (v === 1) ones.push(i); });
+    if (base > 1 && ones.length >= 2) s += '<line x1="' + (10 + ones[0] * 8) + '" y1="25" x2="' + (10 + ones[ones.length - 1] * 8) + '" y2="25" class="db"/>';
     f.forEach(function (v, i) {
       var x = 10 + i * 8;
       if (v < 0) s += '<text x="' + x + '" y="17" text-anchor="middle" class="dx">x</text>';
       else if (v === 0) s += '<circle cx="' + x + '" cy="15" r="2.4" class="do"/>';
-      else s += '<circle cx="' + x + '" cy="' + (15 + v * 10) + '" r="3.6" class="dd"/>';
+      else if (!(base > 1 && v === 1 && ones.length >= 2)) s += '<circle cx="' + x + '" cy="' + (15 + v * 10) + '" r="3.6" class="dd"/>';
     });
     return s + '</svg>';
+  }
+  /* any root: an E-shape or A-shape barre chord, frets relative to the barre (1 = the barre fret) */
+  var BAR = {
+    E: { '': [1, 3, 3, 2, 1, 1], m: [1, 3, 3, 1, 1, 1], '7': [1, 3, 1, 2, 1, 1], m7: [1, 3, 1, 1, 1, 1], maj7: [1, 3, 2, 2, 1, 1], sus4: [1, 3, 3, 3, 1, 1] },
+    A: { '': [-1, 1, 3, 3, 3, 1], m: [-1, 1, 3, 3, 2, 1], '7': [-1, 1, 3, 1, 3, 1], m7: [-1, 1, 3, 1, 2, 1], maj7: [-1, 1, 3, 2, 3, 1], sus4: [-1, 1, 3, 3, 4, 1], sus2: [-1, 1, 3, 3, 1, 1] }
+  };
+  function barre(p) {
+    var q = p.q === 'min' ? 'm' : p.q, pc = IDX[p.root];
+    if (pc === undefined) return null;
+    var fE = (pc - 4 + 12) % 12, fA = (pc - 9 + 12) % 12, ce = BAR.E[q] && fE > 0 ? fE : 99, ca = BAR.A[q] && fA > 0 ? fA : 99;
+    if (ce === 99 && ca === 99) return null;
+    return ce <= ca ? { f: BAR.E[q], base: ce } : { f: BAR.A[q], base: ca };
   }
   function chordsIn(text) {
     var seen = {}, list = [], re = /\[([^\]]+)\]/g, m;
@@ -270,14 +293,15 @@
   function lookup(c) {
     var p = parseChord(c); if (!p) return null;
     var r = ENH[p.root] || p.root, q = p.q.replace('min', 'm').replace('maj7', 'maj7');
-    return G[r + q] || null;
+    var g = G[r + q];
+    return g ? { f: g, base: 1 } : barre(p);
   }
 
   function update() {
     var t = ed.value;
     pv.innerHTML = render(t);
     var cs = chordsIn(t), h = '';
-    cs.forEach(function (c) { var f = lookup(c); if (f) h += '<figure>' + diagram(c, f) + '</figure>'; });
+    cs.forEach(function (c) { var f = lookup(c); if (f) h += '<figure>' + diagram(c, f.f, f.base) + '</figure>'; });
     diag.innerHTML = $('ct-showdiag').checked ? h : '';
     if (document.body.getAttribute('data-embed') !== '1') { try { localStorage.setItem('songpress_chordtool', t); } catch (e) {} }
   }

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.68.2
+Stable tag: 0.69.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,12 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.69.0 =
+* Transcriber: a new step, "Put the chart in a work". Search your works, pick one and the ChordPro is saved into it (a work that already has a chart is only replaced after a second press). Opening the Transcriber with ?song=ID preselects that work.
+* Transcriber: the right side now shows the printable chord sheet (the same one the work editor and Print / Save PDF use) instead of the plain preview. The Word timing service text and the chord-chip strip are gone.
+* Chord sheet and PDF: guitar chord diagrams run down the right side. Chords without a stored shape (C#m, G#m, F#, Gm7 and so on) get a barre shape with its fret number.
+* ChordPro: new {authors: } and {writers: } lines (also {author: } and {writer: }). They show as a small heading with the names beside it, on the sheet, in the tool and in works.
 
 = 0.68.2 =
 * Transcriber: when the words could not be timed (no timing key, nothing tapped), the chart no longer comes out with no chords. The lines are spread evenly over the recording and the chords are placed from that, with a note that it is approximate.

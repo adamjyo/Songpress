@@ -100,21 +100,8 @@
     return pro;
   }
 
-  function drawChips() {
-    chips.innerHTML = '';
-    S.segs.forEach(function (g, i) {
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'ct-chip'; b.textContent = g.chord; b.title = fmt(g.t0);
-      b.addEventListener('click', function () { audio.currentTime = Math.max(0, g.t0 - 0.2); audio.play(); });
-      b.addEventListener('dblclick', function () { var v = window.prompt('Chord at ' + fmt(g.t0), g.chord); if (v && v.trim()) { g.chord = v.trim(); drawChips(); } });
-      var w = document.createElement('span'); w.textContent = ' '; chips.appendChild(b);
-    });
-  }
+  function drawChips() {}
 
-  audio.addEventListener('timeupdate', function () {
-    var t = audio.currentTime, k = -1;
-    S.segs.forEach(function (g, i) { if (t >= g.t0) k = i; });
-    [].forEach.call(chips.children, function (c, i) { c.classList.toggle('on', i === k); });
-  });
 
   /* ---------- the run ---------- */
 
@@ -132,7 +119,7 @@
       var timing = Promise.resolve(null);
       if (wantWords) {
         if (!C.can) timing = Promise.reject(Object.assign(new Error('Log in to have the words timed automatically.'), { soft: true }));
-        else if (!C.hasKey) timing = Promise.reject(Object.assign(new Error('Word timing needs a key. A manager adds the free key in Settings (Word timing); the note under "Word timing service" below says how.'), { soft: true, nokey: true }));
+        else if (!C.hasKey) timing = Promise.reject(Object.assign(new Error('Word timing needs a key, and none is saved yet. A manager adds the free key under Settings > Word timing (Transcriber). Meanwhile the chords are placed roughly, or tap the lines in.'), { soft: true, nokey: true }));
         else timing = heardWords(wav16(d.samples, d.sr), lyrics);
       }
       return Promise.all([a, timing.then(function (w) { return { w: w }; }, function (e) { return { err: e }; })]);
@@ -140,7 +127,7 @@
       var res = r[0], t = r[1];
       S.segs = res.chords; S.key = res.keyName; S.bpm = res.tempoConfidence > 0.15 ? res.bpm : 0;
       if (t.w) S.heard = t.w;
-      if (t.err) { say(t.err.message, t.err.soft ? '' : 'err'); if (t.err.nokey) $('tr-svc').open = true; }
+      if (t.err) { say(t.err.message, t.err.soft ? '' : 'err'); }
       if (S.url) URL.revokeObjectURL(S.url);
       S.url = URL.createObjectURL(S.file); audio.src = S.url;
       found.hidden = false; drawChips(); build();
@@ -181,17 +168,46 @@
   var dl = document.createElement('label'); dl.innerHTML = '<small>Tap delay (s)</small> <input type="text" id="tr-delay" value="0.2" size="3" class="ct-b">';
   $('tr-reset').parentNode.appendChild(dl);
 
-  /* ---------- the service box ---------- */
+  /* ---------- the designed sheet on the right ---------- */
 
-  function drawService() {
-    var b = $('tr-svcbox'); b.innerHTML = '';
-    function p(h) { var d = document.createElement('p'); d.className = 'msg'; d.innerHTML = h; b.appendChild(d); }
-    p('Word timing uses the free <a href="https://console.groq.com/docs/speech-to-text" target="_blank" rel="noopener">Groq</a> speech service (Whisper). Only a small mono copy of the recording is sent, through this site. Nothing is kept.');
-    if (!C.can) { p('<a href="' + C.login + '">Log in</a> to use it.'); return; }
-    if (C.hasKey) { p('A key is saved for this site.'); return; }
-    p(C.settings ? 'No key is saved yet. Add the free key in <a href="' + C.settings + '">Settings</a> (Word timing).' : 'No key is saved yet. Ask a manager to add it in Settings.');
+  var sf = $('tr-sheet'), sfReady = false;
+  function sendSheet() { if (sfReady && sf && sf.contentWindow) sf.contentWindow.postMessage({ spChart: ed.value }, location.origin); }
+  window.addEventListener('message', function (e) {
+    if (e.origin !== location.origin || !e.data || !sf || e.source !== sf.contentWindow) return;
+    if (e.data.spSheetReady) { sfReady = true; sendSheet(); }
+    if (typeof e.data.spSheetH === 'number') sf.style.height = Math.max(420, e.data.spSheetH + 70) + 'px';
+  });
+  var st; ed.addEventListener('input', function () { clearTimeout(st); st = setTimeout(sendSheet, 300); });
+
+  /* ---------- putting the chart in a work ---------- */
+
+  var wq = $('tr-wq'), wsel = $('tr-work'), put = $('tr-put'), pm = $('tr-putmsg'), wtm, replacing = false;
+  function post(action, fields) {
+    var fd = new FormData(); fd.append('action', action); fd.append('n', C.nonce);
+    Object.keys(fields).forEach(function (k) { fd.append(k, fields[k]); });
+    return fetch(C.ajax, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); });
   }
-  drawService();
+  function fillWorks(list, pick) {
+    var keep = pick || wsel.value; wsel.innerHTML = '';
+    var o = document.createElement('option'); o.value = ''; o.textContent = list.length ? 'Choose a work' : 'No works found'; wsel.appendChild(o);
+    list.forEach(function (w) { var x = document.createElement('option'); x.value = w.id; x.textContent = w.title + (w.has ? '  (has a chart)' : ''); wsel.appendChild(x); });
+    if (keep) wsel.value = keep; put.disabled = !wsel.value;
+  }
+  function findWorks() { post('songpress_tr_works', { q: wq.value }).then(function (j) { if (j && j.success) fillWorks(j.data.works); }); }
+  wq.addEventListener('input', function () { clearTimeout(wtm); wtm = setTimeout(findWorks, 300); });
+  wsel.addEventListener('change', function () { replacing = false; put.textContent = 'Put the chart in this work'; put.disabled = !wsel.value; pm.textContent = ''; });
+  put.addEventListener('click', function () {
+    if (!wsel.value) return;
+    put.disabled = true; pm.className = 'msg'; pm.textContent = 'Saving…';
+    post('songpress_tr_put', { song: wsel.value, chordpro: ed.value, replace: replacing ? '1' : '' }).then(function (j) {
+      put.disabled = false;
+      if (j && j.success) { replacing = false; put.textContent = 'Put the chart in this work'; pm.innerHTML = ''; pm.appendChild(document.createTextNode('Saved in ' + j.data.title + '. ')); var a = document.createElement('a'); a.href = j.data.url; a.target = '_top'; a.textContent = 'Open the work'; pm.appendChild(a); return; }
+      if (j && j.data && j.data.exists) { replacing = true; put.textContent = 'Replace the chart in this work'; pm.className = 'msg err'; pm.textContent = 'That work already has a ChordPro chart. Press the button again to replace it.'; return; }
+      pm.className = 'msg err'; pm.textContent = (j && j.data && j.data.msg) || 'Could not save.';
+    }).catch(function () { put.disabled = false; pm.className = 'msg err'; pm.textContent = 'Could not save.'; });
+  });
+  if (C.song) { fillWorks([{ id: C.song.id, title: C.song.title, has: false }], String(C.song.id)); wsel.value = String(C.song.id); put.disabled = false; }
+  findWorks();
 
   /* ---------- inside the work editor: take its text and give the chart back ---------- */
 

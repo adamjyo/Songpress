@@ -1232,3 +1232,5 @@ html.sp-np-open,html.sp-np-open body{overflow:hidden}
 .songpress-tabs.songpress-tabs-fixed{position:fixed;left:0;right:0;bottom:0;margin:0;gap:0;flex-wrap:nowrap;z-index:9980;padding-bottom:env(safe-area-inset-bottom,0px);background:#141518;border-top:1px solid var(--sp-line)}
 .sp-app:has(.songpress-tabs-fixed){padding-bottom:84px}
 html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+
+.sp-cp-credit{margin:.2em 0;color:var(--sp-mute,#646970)}.sp-cp-credit strong{margin-right:.5em;font-size:.75em;letter-spacing:.08em;text-transform:uppercase}
