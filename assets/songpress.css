@@ -1331,3 +1331,7 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-top>.spe-streams .spe-st{width:44px;height:44px}
 .songpress-top .songpress-audio{margin-top:10px}
 .sp-app .sp-rx-bar .sp-rx-b{min-height:50px!important;padding:6px 4px!important}
+/* 0.72.41: the back arrow lives in the top bar, before the picture */
+.songpress-userl{display:flex;align-items:center;gap:4px;min-width:0}
+.songpress-userback{display:inline-flex;align-items:center;justify-content:center;width:30px;height:44px;margin-left:-6px;font-size:34px;line-height:1;color:var(--sp-accent);text-decoration:none}
+.songpress-top>.spe-streams{margin-top:12px}

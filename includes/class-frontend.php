@@ -380,11 +380,11 @@ class Songpress_Frontend {
 	 * The top of every phone screen: the person's picture and name, which open their profile. On the profile itself it is a way back
 	 * to the works. The profile shows only when this is tapped.
 	 */
-	private static function userbar( $on, $share_id = 0 ) {
+	private static function userbar( $on, $share_id = 0, $back = '' ) {
 		$c = self::main_id( 'catalog' );
 		$p = self::main_id( 'profile' );
-		if ( 'profile' === $on ) {
-			return '<nav class="songpress-userbar" aria-label="SongPress"><a class="songpress-userlink" href="' . esc_url( $c ? get_permalink( $c ) : home_url( '/' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a></nav>';
+		if ( 'profile' === $on && '' === $back ) {
+			$back = $c ? get_permalink( $c ) : home_url( '/' );
 		}
 		$u    = wp_get_current_user();
 		$name = '' !== trim( (string) $u->display_name ) ? $u->display_name : __( 'Profile', 'songpress' );
@@ -394,7 +394,8 @@ class Songpress_Frontend {
 			$face = (string) get_avatar_url( $u->ID, array( 'size' => 72 ) );
 		}
 		$pic = '' !== $face ? '<img class="songpress-userpic" src="' . esc_url( $face ) . '" width="36" height="36" alt="">' : '<span class="songpress-userpic songpress-userpic-ini" aria-hidden="true">' . esc_html( function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $name, 0, 1 ) ) : strtoupper( substr( $name, 0, 1 ) ) ) . '</span>';
-		return '<nav class="songpress-userbar" aria-label="SongPress"><a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a>' . Songpress_Push::item() . ( $share_id ? self::share_icon( $share_id ) : '' ) . '</nav>';
+		$arrow = '' !== $back ? '<a class="songpress-userback" href="' . esc_url( $back ) . '" aria-label="' . esc_attr__( 'Back to Works', 'songpress' ) . '">&lsaquo;</a>' : '';
+		return '<nav class="songpress-userbar" aria-label="SongPress"><span class="songpress-userl">' . $arrow . '<a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a></span>' . Songpress_Push::item() . ( $share_id ? self::share_icon( $share_id ) : '' ) . '</nav>';
 	}
 
 	/** A share icon for the phone top bar: opens a popup with the song's public link. */
@@ -495,7 +496,7 @@ class Songpress_Frontend {
 		}
 		$edit = ( ! wp_is_mobile() && Songpress_Caps::can_edit_song( $id ) ) ? '<a class="songpress-editlink" href="' . esc_url( Songpress_Editor::edit_url( $id ) ) . '">' . esc_html__( 'Edit', 'songpress' ) . '</a>' : '';
 		$edit .= wp_is_mobile() ? '' : '<a class="songpress-editlink songpress-exportlink" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'work', array( 'song' => (int) $id ) ) ) . '">' . esc_html__( 'Export PDF', 'songpress' ) . '</a>';
-		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) . self::tabs( 'catalog' ) . '</div>';
+		return '<div class="songpress sp-app">' . ( wp_is_mobile() ? self::userbar( 'catalog', $id, remove_query_arg( 'sp_song' ) ) : self::tabs( 'catalog', 'top' ) ) . self::song_body( $s, $uid, $edit . ( wp_is_mobile() ? '' : '<a class="songpress-back" href="' . esc_url( remove_query_arg( 'sp_song' ) ) . '">&lsaquo; ' . esc_html__( 'Works', 'songpress' ) . '</a>' ) ) . self::tabs( 'catalog' ) . '</div>';
 	}
 
 	/** The ChordPro level as the printable chord sheet (the PDF layout), with print and share icons above it. */
@@ -572,14 +573,12 @@ class Songpress_Frontend {
 			}
 			$cg .= '</div>';
 		}
-		// Under the card: the streaming links (centred), the player, the credits, then the favourite / rate / playlist buttons.
+		// Under the card: the credits, the streaming links (centred), the player, then the favourite / rate / playlist buttons.
+		$out .= '' === $cg ? '' : '<div class="songpress-credits">' . $cg . '</div>';
 		$out .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
-		}
-		if ( '' !== $cg ) {
-			$out .= '<div class="songpress-credits">' . $cg . '</div>';
 		}
 		$out .= Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token );
 		$out .= '</header><div class="songpress-main">';
