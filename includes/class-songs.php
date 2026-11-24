@@ -930,6 +930,8 @@ class Songpress_Songs {
 	}
 
 	/** What kind of recording or version a work is. */
+	/** The common time signatures: simple, compound and the usual odd meters. */
+	const TIME_SIGNATURES = array( '4/4', '3/4', '2/4', '2/2', '6/8', '12/8', '9/8', '3/8', '5/4', '7/4', '5/8', '7/8', '6/4', '3/2' );
 	const TYPES = array( 'Raw', 'Studio', 'AI', 'Live', 'Lyrics' );
 
 	const CODE_KINDS = array( 'iswc', 'isrc', 'ccli', 'mlc', 'bmi', 'ascap', 'work_id', 'copyright', 'distrokid', 'upc' );

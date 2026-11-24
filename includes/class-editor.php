@@ -195,7 +195,7 @@ class Songpress_Editor {
 				$rel .= '<option value="' . esc_attr( $gn ) . '">';
 			}
 			$rel .= '</datalist>';
-			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::isrc_fields( $song ? Songpress_Songs::identifiers( $id ) : array() ) . '</div>';
+			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::time_select( $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::isrc_fields( $song ? Songpress_Songs::identifiers( $id ) : array() ) . '</div>';
 		} else {
 			$rel .= self::released_list( $song );
 		}
@@ -349,6 +349,16 @@ class Songpress_Editor {
 		}
 		return '<label class="spe-field"><span>' . esc_html__( 'Performing artist or band', 'songpress' ) . '</span><span class="spe-artsel"><span class="spe-artchip" aria-hidden="true">' . ( '' !== $cur ? $chips[ $cur ] ?? Songpress_Profiles::chip( $cur, 28, 'band' ) : '' ) . '</span><select name="artist" id="spe-artist">' . $o . '</select></span></label>'
 			. '<script>(function(){var s=document.getElementById("spe-artist"),c=s&&s.parentNode.querySelector(".spe-artchip"),M=' . wp_json_encode( $chips ) . ';if(!s||!c)return;s.addEventListener("change",function(){c.innerHTML=M[s.value]||""})})()</script>';
+	}
+
+	/** The time signature as a dropdown: the common ones, a blank to clear it, and whatever the work already has. */
+	private static function time_select( $song ) {
+		$cur = trim( (string) self::f( $song, 'time_signature' ) );
+		$o   = '<option value=""></option>';
+		foreach ( Songpress_Songs::merge_options( Songpress_Songs::TIME_SIGNATURES, array( $cur ) ) as $ts ) {
+			$o .= '<option value="' . esc_attr( $ts ) . '"' . selected( strtolower( $cur ), strtolower( $ts ), false ) . '>' . esc_html( $ts ) . '</option>';
+		}
+		return '<label class="spe-field spe-own"><span>' . esc_html__( 'Time signature', 'songpress' ) . '</span><select name="time_signature">' . $o . '</select></label>';
 	}
 
 	/** The ISRC belongs to one recording, so it sits with the Release details. A second value gets its own field labelled "Alt". */
