@@ -162,6 +162,8 @@ class Songpress_Profiles {
 	}
 
 	public static function ajax_photo() {
+		Songpress_Uploads::watch( 'picture upload' );
+		wp_raise_memory_limit( 'image' );
 		check_ajax_referer( 'songpress_my_photo', 'n' );
 		if ( ! is_user_logged_in() || ! Songpress_Caps::can_view() ) {
 			wp_send_json_error( array( 'msg' => __( 'Not allowed.', 'songpress' ) ), 403 );

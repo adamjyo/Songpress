@@ -73,6 +73,9 @@ class Songpress_Media {
 	/** Ajax: a dropped file is saved into the Media Library like any upload, and its id comes back for the form. */
 	public static function ajax_upload() {
 		check_ajax_referer( 'songpress_upload', 'nonce' );
+		Songpress_Uploads::watch( 'file upload' ); // a fatal is written down and shown on the Upload / Download page
+		@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_raise_memory_limit( 'image' );
 		if ( ! Songpress_Caps::can( 'upload' ) ) {
 			wp_send_json_error( array( 'message' => __( 'You are not allowed to upload files.', 'songpress' ) ), 403 );
 		}

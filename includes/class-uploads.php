@@ -459,6 +459,9 @@ class Songpress_Uploads {
 		if ( ! Songpress_Caps::can( 'money' ) ) {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
 		}
+		self::watch( 'statement upload' ); // a fatal is written down and shown on this page instead of only "critical error"
+		@set_time_limit( 300 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_raise_memory_limit( 'admin' );
 		$src  = isset( $_POST['src'] ) ? sanitize_key( wp_unslash( $_POST['src'] ) ) : '';
 		$args = array( 'type' => $src );
 		if ( ! isset( self::STATEMENTS[ $src ] ) ) {
@@ -494,7 +497,12 @@ class Songpress_Uploads {
 		if ( ! $lines ) {
 			self::back( $args + array( 'm_err' => __( 'No statement lines were found. The file needs a song title (or ISRC), an amount, and a date or a chosen quarter.', 'songpress' ) ) );
 		}
-		$r = self::apply( $src, $lines );
+		try {
+			$r = self::apply( $src, $lines );
+		} catch ( \Throwable $e ) {
+			update_option( 'songpress_last_fatal', array( 'what' => 'statement upload', 'when' => gmdate( 'Y-m-d H:i:s' ), 'msg' => mb_substr( $e->getMessage(), 0, 400 ), 'file' => basename( $e->getFile() ), 'line' => (int) $e->getLine(), 'mem' => ini_get( 'memory_limit' ), 'time' => ini_get( 'max_execution_time' ), 'post' => ini_get( 'post_max_size' ), 'upload' => ini_get( 'upload_max_filesize' ) ), false );
+			self::back( $args + array( 'm_err' => sprintf( /* translators: 1: error text, 2: file and line */ __( 'The statement could not be saved: %1$s (%2$s)', 'songpress' ), $e->getMessage(), basename( $e->getFile() ) . ':' . $e->getLine() ) ) );
+		}
 		self::back( $args + array( 'm_ok' => sprintf(
 			/* translators: 1: lines read, 2: songs saved, 3: quarters, 4: lines with no matching song, 5: their total */
 			__( 'Read %1$d lines. Saved %2$d songs for %3$s. %4$d lines had no matching song (%5$s) and were left out.', 'songpress' ),
@@ -590,7 +598,7 @@ class Songpress_Uploads {
 	private static $ajax = false;
 
 	/** If PHP dies in the middle of an import (a blank page), remember why, so the Notes upload panel can show it next time. */
-	private static function watch( $what ) {
+	public static function watch( $what ) {
 		register_shutdown_function( function () use ( $what ) {
 			$e = error_get_last();
 			if ( $e && in_array( $e['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ), true ) ) {
@@ -935,6 +943,10 @@ class Songpress_Uploads {
 		}
 		$ret = esc_attr( Songpress_Editor::list_url() );
 		$o   = '<div class="songpress sp-app sp-editor sp-money spu"><div class="spe-top"><h2>' . esc_html__( 'Upload / Download', 'songpress' ) . '</h2></div>' . Songpress_Money::notes();
+		$lf0 = get_option( 'songpress_last_fatal' );
+		if ( is_array( $lf0 ) && ! empty( $lf0['msg'] ) && false === strpos( (string) $lf0['what'], 'notes' ) && current_user_can( 'manage_options' ) || ( is_array( $lf0 ) && ! empty( $lf0['msg'] ) && false === strpos( (string) $lf0['what'], 'notes' ) && Songpress_Caps::can( 'money' ) ) ) {
+			$o .= '<div class="notice notice-error"><p><strong>' . esc_html( sprintf( /* translators: 1: what was running, 2: when */ __( 'The last %1$s stopped at %2$s UTC with:', 'songpress' ), $lf0['what'], $lf0['when'] ) ) . '</strong> ' . esc_html( $lf0['msg'] . ' (' . $lf0['file'] . ':' . $lf0['line'] . ')' ) . '</p></div>';
+		}
 		$o  .= '<h3>' . esc_html__( 'Upload', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Choose what you are uploading and its tool appears.', 'songpress' ) . '</p>';
 		$o  .= '<select id="spu-type" class="spu-sel"><option value="">' . esc_html__( 'Choose an upload…', 'songpress' ) . '</option>';
 		foreach ( $types as $k => $label ) {

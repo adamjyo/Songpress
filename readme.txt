@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.81
+Stable tag: 0.72.82
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.82 =
+* Uploads that hit a fatal error are written down and the reason shows at the top of Upload / Download (statements, files, pictures), instead of only WordPress's "critical error". Uploads also ask for more time and memory.
 
 = 0.72.81 =
 * Adding a person no longer gives a login ending in a number (adam.page2). A leftover old-system account holding the name steps aside (renamed name-old) and the new person gets the plain login; a live account of someone else gets a letter suffix, never a number.
