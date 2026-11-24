@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.68
+Stable tag: 0.72.69
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.69 =
+* A person's name changing anywhere (People screen or the WordPress profile) now carries to every credit, their earnings and their payments, so renames are never missed.
 
 = 0.72.68 =
 * Phone: music comes first. Going to the home screen, switching apps or locking the phone no longer pauses the music (undoing 0.72.59): it keeps playing with lock-screen controls, like any music app. Closing the app still stops it.

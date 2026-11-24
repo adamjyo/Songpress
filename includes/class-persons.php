@@ -9,6 +9,7 @@ defined( 'ABSPATH' ) || exit;
 class Songpress_Persons {
 
 	public static function init() {
+		add_action( 'profile_update', array( __CLASS__, 'on_user_update' ), 10, 2 ); // a name changed anywhere (WordPress profile, another screen) must reach every credit
 		add_action( 'admin_post_songpress_person_rename', array( __CLASS__, 'handle_rename' ) );
 		add_action( 'wp_ajax_songpress_person_rename', array( __CLASS__, 'handle_rename' ) ); // admin-ajax.php is blocked on some hosts, so the form posts here
 		add_action( 'admin_post_songpress_person_tidy', array( __CLASS__, 'handle_tidy' ) );
@@ -307,6 +308,54 @@ class Songpress_Persons {
 
 	/* ---------- rename ---------- */
 
+	/** Everything that carries a person's name by value follows a change of name: credits, their earnings and their payments. */
+	public static function follow_name( $old, $new, $user_id = 0 ) {
+		global $wpdb;
+		$old = trim( (string) $old );
+		$new = trim( (string) $new );
+		$ok  = Songpress_Profiles::key( $old );
+		$nk  = Songpress_Profiles::key( $new );
+		if ( '' === $old || '' === $new || $old === $new ) {
+			return 0;
+		}
+		$ct = Songpress_Install::table( 'credits' );
+		$n  = (int) $wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET name = %s WHERE LOWER(TRIM(name)) = %s", $new, strtolower( $old ) ) ); // phpcs:ignore WordPress.DB
+		if ( $ok !== strtolower( trim( $old ) ) ) {
+			$n += (int) $wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET name = %s WHERE name = %s", $new, $old ) ); // phpcs:ignore WordPress.DB
+		}
+		if ( $user_id ) {
+			$n += (int) $wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET name = %s WHERE user_id = %d AND name <> %s", $new, (int) $user_id, $new ) ); // phpcs:ignore WordPress.DB
+		}
+		$ok2 = Songpress_Money::person_key( $old );
+		$nk2 = Songpress_Money::person_key( $new );
+		if ( $ok2 !== $nk2 ) {
+			$pe = Songpress_Install::table( 'person_earnings' );
+			$wpdb->query( $wpdb->prepare( "UPDATE {$pe} SET person = %s, person_key = %s WHERE person_key = %s", $new, $nk2, $ok2 ) ); // phpcs:ignore WordPress.DB
+			$py = Songpress_Install::table( 'payments' );
+			$wpdb->query( $wpdb->prepare( "UPDATE IGNORE {$py} SET party = %s, party_key = %s WHERE party_key = %s", $new, $nk2, $ok2 ) ); // phpcs:ignore WordPress.DB
+		}
+		if ( $n ) {
+			Songpress_Audit::log( 'people', 'A name changed on credits', $old . ' to ' . $new, array( 'credits' => $n ) );
+		}
+		return $n;
+	}
+
+	/** A WordPress profile whose display name changed: carry the new name to the credits. */
+	public static function on_user_update( $user_id, $old_data ) {
+		$u = get_userdata( $user_id );
+		if ( $u && $old_data && isset( $old_data->display_name ) && $old_data->display_name !== $u->display_name ) {
+			self::follow_name( $old_data->display_name, $u->display_name, $user_id );
+			$pt = Songpress_Install::table( 'profiles' );
+			global $wpdb;
+			$ok = Songpress_Profiles::key( $old_data->display_name );
+			$nk = Songpress_Profiles::key( $u->display_name );
+			if ( $ok !== $nk && ! $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$pt} WHERE kind = 'person' AND name_key = %s", $nk ) ) ) { // phpcs:ignore WordPress.DB
+				$wpdb->update( $pt, array( 'name' => $u->display_name, 'name_key' => $nk, 'updated_at' => current_time( 'mysql' ) ), array( 'kind' => 'person', 'name_key' => $ok ) );
+				Songpress_Profiles::reset_cache();
+			}
+		}
+	}
+
 	private static function go( $args ) {
 		wp_safe_redirect( add_query_arg( $args, self::url() ) );
 		exit;
@@ -382,13 +431,7 @@ class Songpress_Persons {
 		} else {
 			Songpress_Profiles::upsert( 'person', $new, array() );
 		}
-		// credits and earnings follow the new name
-		if ( $ok !== $nk ) {
-			$ct = Songpress_Install::table( 'credits' );
-			$wpdb->query( $wpdb->prepare( "UPDATE {$ct} SET name = %s WHERE LOWER(TRIM(name)) = %s", $new, $ok ) ); // phpcs:ignore WordPress.DB
-			$pe = Songpress_Install::table( 'person_earnings' );
-			$wpdb->query( $wpdb->prepare( "UPDATE {$pe} SET person = %s, person_key = %s WHERE person_key = %s", $new, Songpress_Money::person_key( $new ), Songpress_Money::person_key( $old ) ) ); // phpcs:ignore WordPress.DB
-		}
+		self::follow_name( $old, $new, isset( $uid ) ? (int) $uid : 0 ); // credits, earnings and payments follow the new name
 		if ( $self ) {
 			wp_clear_auth_cookie();
 			wp_safe_redirect( Songpress_Members::invite_link( $login ) );
