@@ -122,6 +122,24 @@ class Songpress_Songs {
 		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
 
+	/** Every work this person is credited on: linked to their account, or credited by their name. Newest serial first. */
+	public static function credited_rows( $user_id, $name ) {
+		global $wpdb;
+		$c   = Songpress_Install::table( 'credits' );
+		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT song_id FROM {$c} WHERE user_id = %d OR LOWER(TRIM(name)) = LOWER(%s)", (int) $user_id, trim( (string) $name ) ) ) );
+		$out = array();
+		foreach ( $ids as $id ) {
+			$s = self::get( $id );
+			if ( $s && ( ! self::ARCHIVING || empty( $s->archived_at ) ) ) {
+				$out[] = $s;
+			}
+		}
+		usort( $out, function ( $a, $b ) {
+			return strcmp( (string) $b->serial, (string) $a->serial );
+		} );
+		return $out;
+	}
+
 	public static function user_is_credited( $song_id, $user_id ) {
 		global $wpdb;
 		if ( ! $user_id ) {

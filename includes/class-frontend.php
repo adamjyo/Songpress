@@ -642,8 +642,9 @@ class Songpress_Frontend {
 		}
 		wp_enqueue_style( 'songpress' );
 		$u   = wp_get_current_user();
-		$res = Songpress_Songs::query( array( 'per_page' => 100, 'user_id' => $u->ID ) );
-		$rel = 0;
+		$rows = Songpress_Songs::credited_rows( $u->ID, $u->display_name ); // by account or by name: credits are often typed, not linked
+		$res  = array( 'rows' => $rows, 'total' => count( $rows ) );
+		$rel  = 0;
 		foreach ( $res['rows'] as $s ) {
 			if ( 'released' === $s->status ) {
 				$rel++;
