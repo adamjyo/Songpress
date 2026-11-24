@@ -645,9 +645,8 @@ class Songpress_Frontend {
 		$rows = Songpress_Songs::credited_rows( $u->ID, $u->display_name ); // the releases: every version, and an original that has none
 		$orig = array();
 		foreach ( Songpress_Songs::credited_rows( $u->ID, $u->display_name, true ) as $r ) { // works: one per family
-			if ( 0 === (int) $r->version_no ) { // roots only (NNNN), never versions (NNNN-VV)
-				$orig[ (int) $r->id ] = 1;
-			}
+			$fk          = (int) $r->family_id ? (int) $r->family_id : -(int) $r->id; // one per work (the NNNN of NNNN-VV), whether or not its original row exists
+			$orig[ $fk ] = 1;
 		}
 		$res  = array( 'rows' => $rows, 'total' => count( $rows ) );
 		$rel  = 0;
@@ -664,7 +663,7 @@ class Songpress_Frontend {
 		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
 		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
-		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d work', 'Credited on %d works', count( $orig ), 'songpress' ), $res['total'] ) ) . '</p></div></div>';
+		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d work', 'Credited on %d works', count( $orig ), 'songpress' ), count( $orig ) ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . count( $orig ) . '</strong></li><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
 		$out .= Songpress_Money::quarterly_html( $u->display_name );
 		// the songs this person wrote or performed, each with what it has made on DistroKid
