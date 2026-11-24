@@ -394,8 +394,23 @@ class Songpress_Frontend {
 			$face = (string) get_avatar_url( $u->ID, array( 'size' => 72 ) );
 		}
 		$pic = '' !== $face ? '<img class="songpress-userpic" src="' . esc_url( $face ) . '" width="36" height="36" alt="">' : '<span class="songpress-userpic songpress-userpic-ini" aria-hidden="true">' . esc_html( function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $name, 0, 1 ) ) : strtoupper( substr( $name, 0, 1 ) ) ) . '</span>';
-		$arrow = '' !== $back ? '<a class="songpress-userback" href="' . esc_url( $back ) . '" aria-label="' . esc_attr__( 'Back to Works', 'songpress' ) . '">&lsaquo;</a>' : '';
-		return '<nav class="songpress-userbar" aria-label="SongPress"><span class="songpress-userl">' . $arrow . '<a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a></span>' . Songpress_Push::item() . ( $share_id ? self::share_icon( $share_id ) : '' ) . '</nav>';
+		$arrow = '' !== $back ? self::swipe_back() : ''; // no back button: a swipe in from the left edge goes back (the bar carries where to)
+		return '<nav class="songpress-userbar"' . ( '' !== $back ? ' data-back="' . esc_url( $back ) . '"' : '' ) . ' aria-label="SongPress">' . $arrow . '<span class="songpress-userl"><a class="songpress-userlink" href="' . esc_url( $p ? get_permalink( $p ) : '#' ) . '">' . $pic . '<span class="songpress-username">' . esc_html( $name ) . '</span></a></span>' . Songpress_Push::item() . ( $share_id ? self::share_icon( $share_id ) : '' ) . '</nav>';
+	}
+
+	/** The swipe-in-from-the-left-edge gesture that replaces the back button on a phone. Bound once; it reads the target from the bar on the current page. */
+	private static function swipe_back() {
+		static $done = false;
+		if ( $done ) {
+			return '';
+		}
+		$done = true;
+		return '<script>(function(){if(window.__spSwipe)return;window.__spSwipe=1;var s=null;function app(){return document.querySelector(".songpress.sp-app")}function tgt(){var b=document.querySelector(".songpress-userbar[data-back]");return b?b.getAttribute("data-back"):""}'
+			. 'document.addEventListener("touchstart",function(e){s=null;if(e.touches.length!==1||!tgt())return;var t=e.touches[0];if(t.clientX>36)return;if(e.target.closest&&e.target.closest("input,textarea,select,iframe"))return;s={x:t.clientX,y:t.clientY,m:""}},{passive:true});'
+			. 'document.addEventListener("touchmove",function(e){if(!s)return;var t=e.touches[0],dx=t.clientX-s.x,dy=t.clientY-s.y;if(!s.m){if(Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)){s=null;return}if(dx>10&&dx>Math.abs(dy)*1.5)s.m="h";else return}var a=app();if(a){a.style.transition="none";a.style.transform="translateX("+Math.max(0,Math.min(dx,140))+"px)";a.style.opacity=String(1-Math.min(dx,200)/500)}s.dx=dx;e.preventDefault()},{passive:false});'
+			. 'function reset(){var a=app();if(a){a.style.transition="transform .18s,opacity .18s";a.style.transform="";a.style.opacity="";setTimeout(function(){a.style.transition=""},220)}}'
+			. 'document.addEventListener("touchend",function(){if(!s||s.m!=="h"){s=null;return}var go=s.dx>90,u=tgt();s=null;reset();if(go&&u){var a=app(),l=document.createElement("a");l.href=u;a.appendChild(l);l.click();l.remove()}});'
+			. 'document.addEventListener("touchcancel",function(){s=null;reset()})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- a fixed script.
 	}
 
 	/** A share icon for the phone top bar: opens a popup with the song's public link. */
