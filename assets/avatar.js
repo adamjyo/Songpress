@@ -113,23 +113,28 @@
   var cutBtn = root.querySelector('.sp-av-cut');
   var lib = null;
   cutBtn.addEventListener('click', function () {
-    if (!st.img) { return; }
+    if (!st.img) { say(T.pick || 'Choose a photo first.'); return; }
     if (st.cut) { st.useCut = !st.useCut; cutBtn.textContent = st.useCut ? T.keep : T.cut; draw(); return; }
     cutBtn.disabled = true;
     say(T.work);
+    var fail = function (e) { cutBtn.disabled = false; say((T.fail || 'Could not remove the background.') + (e && e.message ? ' (' + e.message + ')' : '')); };
     var run = function (mod) {
       var c = document.createElement('canvas');
       c.width = st.img.naturalWidth; c.height = st.img.naturalHeight;
       c.getContext('2d').drawImage(st.img, 0, 0);
       c.toBlob(function (b) {
-        mod.removeBackground(b, { progress: function (key, cur, tot) { if (tot) { say(T.work + ' ' + Math.round(100 * cur / tot) + '%'); } } }).then(function (out) {
-          var u = URL.createObjectURL(out);
-          load(u, function (im) { st.cut = im; st.useCut = true; cutBtn.disabled = false; cutBtn.textContent = T.keep; say(''); draw(); });
-        }).catch(function () { cutBtn.disabled = false; say(T.fail); });
+        var go = function (cfg, again) {
+          cfg.progress = function (key, cur, tot) { if (tot) { say(T.work + ' ' + Math.round(100 * cur / tot) + '%'); } };
+          var fn = mod.removeBackground || (mod.default && mod.default.removeBackground) || mod.default;
+          Promise.resolve(fn(b, cfg)).then(function (out) {
+            load(URL.createObjectURL(out), function (im) { st.cut = im; st.useCut = true; cutBtn.disabled = false; cutBtn.textContent = T.keep; say(''); draw(); });
+          }).catch(function (e) { if (again) { say(T.work); go({ device: 'cpu', model: 'isnet_quint8' }, false); } else { fail(e); } });
+        };
+        go({}, true);
       }, 'image/png');
     };
     if (lib) { run(lib); return; }
-    import(C.lib).then(function (m) { lib = m; run(m); }).catch(function () { cutBtn.disabled = false; say(T.fail); });
+    import(C.lib).then(function (m) { lib = m; run(m); }).catch(fail);
   });
 
   root.querySelector('.sp-av-save').addEventListener('click', function () {

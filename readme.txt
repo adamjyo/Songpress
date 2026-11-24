@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.79
+Stable tag: 0.72.80
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.80 =
+* Remove background: says to choose a photo first, retries on the slower CPU mode if the fast mode fails, and shows the real error if it still cannot run.
 
 = 0.72.79 =
 * The picture maker is open by default on a person's profile edit page, above the plain upload.
