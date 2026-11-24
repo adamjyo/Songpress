@@ -153,21 +153,18 @@ class Songpress_Editor {
 				$by_role[ $role ] = $rows;
 			}
 		}
-		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html( $root ? __( 'Writer shares are the splits and should add up to 100. Writers, publishers and labels listed here are shared by every version.', 'songpress' ) : __( 'Writer shares are the splits for this version and should add up to 100. Everyone listed belongs to this version only. Add as many people as the song has.', 'songpress' ) ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="people"><h3>' . esc_html__( 'People and splits', 'songpress' ) . '</h3>';
 		$o .= self::credit_group( 'writer', __( 'Writers', 'songpress' ), __( 'Add writer', 'songpress' ), $by_role['writer'], 4, true, true, true );
 		if ( ! $root ) {
 			$o .= '<div class="spe-own">' . self::credit_group( 'performer', __( 'Performers', 'songpress' ), __( 'Add performer', 'songpress' ), $by_role['performer'], 1, false, true, false );
 			$o .= self::credit_group( 'producer', __( 'Producers', 'songpress' ), __( 'Add producer', 'songpress' ), $by_role['producer'], 1, false, true, false ) . '</div>';
-		} else {
-			$o .= '<p class="spe-help">' . esc_html__( 'Performers and producers are added on each version. Changes here to the title, lyrics, chords, story, writers, publishers and labels are copied to every version.', 'songpress' ) . '</p>';
 		}
 		$o .= '</section>';
 
 		/* Publishing: the numbers, then who publishes and who releases it. Shared by every version except the ISRC. */
-		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Fill in the numbers this song has and leave the rest blank. They are shared by every version. DistroKid and UPC belong to one release, so they are entered on each version. The ISRC is under Release.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="publishing"><h3>' . esc_html__( 'Publishing', 'songpress' ) . '</h3>';
 		$o .= self::code_fields( $song ? Songpress_Songs::identifiers( $id ) : array(), $root );
 		$o .= self::credit_group( 'publisher', __( 'Publishers', 'songpress' ), __( 'Add publisher', 'songpress' ), $by_role['publisher'], 1, false, true, true );
-		$o .= self::credit_group( 'label', __( 'Labels', 'songpress' ), __( 'Add label', 'songpress' ), $by_role['label'], 0, false, false, true );
 		$o .= '</section>';
 
 		/* Release: everything that belongs to one recording or release, so only versions have it. */
@@ -187,14 +184,14 @@ class Songpress_Editor {
 			$rel .= '</datalist>';
 			$rel .= self::input( 'musical_key', __( 'Key', 'songpress' ), $song ) . self::input( 'tempo', __( 'Tempo (BPM)', 'songpress' ), $song ) . self::input( 'time_signature', __( 'Time signature', 'songpress' ), $song ) . self::input( 'format', __( 'Format', 'songpress' ), $song ) . self::input( 'production_date', __( 'Produced on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::isrc_fields( $song ? Songpress_Songs::identifiers( $id ) : array() ) . '</div>';
 		} else {
-			$rel .= '<p class="spe-help">' . esc_html__( 'Release details (release name, band, album, genre, key, tempo, dates) belong to versions. Add a version when this song is recorded or released.', 'songpress' ) . '</p>' . self::released_list( $song );
+			$rel .= self::released_list( $song );
 		}
 		$rel .= '</section>';
 
 		$o .= $rel;
 
 		/* Lyrics and chords */
-		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3><p class="spe-help adv">' . esc_html__( 'Each work has three levels: ChordPro, then chords and lyrics, then lyrics. A level you leave blank falls back to the highest level that is filled in, with the chords taken off. Phones show the highest level.', 'songpress' ) . '</p>';
+		$o .= '<section class="spe-panel simple" data-panel="chart"><h3>' . esc_html__( 'Lyrics and chords', 'songpress' ) . '</h3>';
 		$lv  = $song ? Songpress_Songs::lyric_levels( $song ) : array();
 		$hint = function ( $level ) use ( $lv ) {
 			if ( empty( $lv[ $level ] ) || 'own' === $lv[ $level ][1] || '' === $lv[ $level ][1] ) {
@@ -208,7 +205,7 @@ class Songpress_Editor {
 		};
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="lyrics" rows="14"' . $ph( 'lyrics' ) . '>' . esc_textarea( self::f( $song, 'lyrics' ) ) . '</textarea>' . $hint( 'lyrics' ) . '</label>';
 		$o .= '<label class="spe-field adv"><span>' . esc_html__( 'Chords and lyrics', 'songpress' ) . '</span><textarea class="spe-chart" name="chords_lyrics" rows="14"' . $ph( 'chords_lyrics' ) . '>' . esc_textarea( self::f( $song, 'chords_lyrics' ) ) . '</textarea>' . $hint( 'chords_lyrics' ) . '</label>';
-		$o .= '<label class="spe-field adv"><span class="spe-lbrow">ChordPro <button type="button" class="spe-toolico" id="spe-cp-open" title="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button> <button type="button" class="spe-toolico" id="spe-tr-open" title="' . esc_attr__( 'Open the Transcriber: listen to a recording and write the chords', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the Transcriber', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 4v16M15 8v8M19 10v4M21 12h0"/></svg></button></span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' . ( $song ? '&song=' . (int) $song->id : '' ) ) . '" data-tr="' . esc_url( Songpress_Transcriber::url( array( 'embed' => 1 ) ) ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea><small class="spe-help">' . esc_html__( 'Click in the box, or the music note beside ChordPro, to open the ChordPro tool.', 'songpress' ) . '</small></label>' . Songpress_ChordTool::reference_html( 'spe-chordpro' ) . self::sheet_preview( $song ) . self::chordpro_popup() . '</section>';
+		$o .= '<label class="spe-field adv"><span class="spe-lbrow">ChordPro <button type="button" class="spe-toolico" id="spe-cp-open" title="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the ChordPro tool', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button> <button type="button" class="spe-toolico" id="spe-tr-open" title="' . esc_attr__( 'Open the Transcriber: listen to a recording and write the chords', 'songpress' ) . '" aria-label="' . esc_attr__( 'Open the Transcriber', 'songpress' ) . '"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2M7 8v8M11 4v16M15 8v8M19 10v4M21 12h0"/></svg></button></span><textarea class="spe-chart" name="chordpro" id="spe-chordpro" rows="14" data-tool="' . esc_url( Songpress_ChordTool::url() . '&embed=1' . ( $song ? '&song=' . (int) $song->id : '' ) ) . '" data-tr="' . esc_url( Songpress_Transcriber::url( array( 'embed' => 1 ) ) ) . '">' . esc_textarea( self::f( $song, 'chordpro' ) ) . '</textarea></label>' . Songpress_ChordTool::reference_html( 'spe-chordpro' ) . self::sheet_preview( $song ) . self::chordpro_popup() . '</section>';
 
 		/* Links: streaming, store and video links belong to one version. */
 		if ( ! $root ) {
@@ -665,7 +662,7 @@ class Songpress_Editor {
 			$li  .= '<li><a href="' . esc_url( self::edit_url( $v->id ) ) . '"><span class="songpress-serial">' . esc_html( $v->serial ) . '</span> <b>' . esc_html( '' !== (string) $v->release_title ? $v->release_title : Songpress_Songs::display_title( $v ) ) . '</b></a>' . ( $bits ? '<small class="spe-help">' . esc_html( implode( ' · ', $bits ) ) . '</small>' : '' ) . '</li>';
 		}
 		if ( '' === $li ) {
-			return '<p class="spe-help">' . esc_html__( 'No version has been released yet.', 'songpress' ) . '</p>';
+			return '';
 		}
 		return '<h4>' . esc_html__( 'Released versions', 'songpress' ) . '</h4><ul class="spe-versions spe-released">' . $li . '</ul>';
 	}

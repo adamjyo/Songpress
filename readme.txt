@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.18
+Stable tag: 0.72.19
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.19 =
+* Works editor: the Labels section and the explanatory help texts under People, Publishing, Release, Lyrics and chords and the ChordPro box are removed. The chord sheet note is gone too.
 
 = 0.72.18 =
 * All record label credits are deleted from the database, once, when this version loads (the Audit log shows how many). Take a backup first if you may want them back.
