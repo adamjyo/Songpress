@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.0
+Stable tag: 0.72.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.1 =
+* Profile: a profile picture maker. Choose a photo, remove its background (in the browser), pick a backdrop, zoom and drag, and save. The name strip is fixed: first name and last initial.
 
 = 0.72.0 =
 * Profile: a "My information" section where a signed-in person edits their own email, phone, birthday, address, website, IPI, PRO and bio. Saves through admin-ajax. Adds birthday and address columns (database 27).

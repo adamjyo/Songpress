@@ -1292,3 +1292,15 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-myform input, .songpress-myform textarea { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid rgba(127,127,127,.4); background: transparent; color: inherit; }
 .songpress-myform .songpress-btn { justify-self: start; background: var(--sp-accent, #e9a847); color: #111; border: 0; border-radius: 999px; padding: 10px 22px; font-weight: 600; }
 .songpress-myinfo-msg { font-size: 13px; }
+
+/* Profile picture maker */
+.sp-av { display: grid; gap: 12px; padding-bottom: 14px; justify-items: center; }
+.sp-av canvas { width: min(100%, 320px); aspect-ratio: 1; border-radius: 14px; background: repeating-conic-gradient(rgba(127,127,127,.25) 0 25%, transparent 0 50%) 0 0 / 16px 16px; touch-action: none; }
+.sp-av-pick, .sp-av .songpress-btn { background: var(--sp-accent, #e9a847); color: #111; border: 0; border-radius: 999px; padding: 10px 22px; font-weight: 600; cursor: pointer; text-align: center; }
+.sp-av .songpress-btn2 { background: transparent; color: inherit; border: 1px solid var(--sp-accent, #e9a847); border-radius: 999px; padding: 9px 20px; font-weight: 600; cursor: pointer; }
+.sp-avatar-tool:not(.has-photo) .sp-av-cut, .sp-avatar-tool:not(.has-photo) .sp-av-zl, .sp-avatar-tool:not(.has-photo) .sp-av-bg { display: none; }
+.sp-av-bg { display: flex; gap: 8px; }
+.sp-av-bg button { border: 1px solid rgba(127,127,127,.5); background: transparent; color: inherit; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.sp-av-bg button.on { border-color: var(--sp-accent, #e9a847); color: var(--sp-accent, #e9a847); }
+.sp-av-zl { display: grid; gap: 4px; width: min(100%, 320px); font-size: 13px; }
+.sp-av-msg { font-size: 13px; text-align: center; }

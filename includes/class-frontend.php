@@ -664,7 +664,7 @@ class Songpress_Frontend {
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
 		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d work', 'Credited on %d works', count( $orig ), 'songpress' ), count( $orig ) ) ) . '</p></div></div>';
 		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . count( $orig ) . '</strong></li><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
-		$out .= Songpress_Profiles::mine_form( $u );
+		$out .= Songpress_Profiles::avatar_tool( $u ) . Songpress_Profiles::mine_form( $u );
 		$out .= Songpress_Money::quarterly_html( $u->display_name );
 		// the songs this person wrote or performed, each with what it has made on DistroKid
 		$mine = array();

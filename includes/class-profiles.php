@@ -86,6 +86,7 @@ class Songpress_Profiles {
 
 	public static function init_mine() {
 		add_action( 'wp_ajax_songpress_my_profile', array( __CLASS__, 'ajax_mine' ) );
+		add_action( 'wp_ajax_songpress_my_photo', array( __CLASS__, 'ajax_photo' ) );
 	}
 
 	/** The form on the Profile screen. Fields are saved as typed, so a field can be cleared. */
@@ -113,6 +114,77 @@ class Songpress_Profiles {
 			. '<button class="songpress-btn" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button> <span class="songpress-myinfo-msg" role="status"></span></form>'
 			. '<script>(function(){var f=document.currentScript.parentNode.querySelector(".songpress-myform");if(!f)return;f.addEventListener("submit",function(e){e.preventDefault();var m=f.querySelector(".songpress-myinfo-msg");m.textContent="…";fetch(f.dataset.ajax,{method:"POST",credentials:"same-origin",body:new FormData(f)}).then(function(r){return r.json()}).then(function(j){m.textContent=j&&j.success?' . wp_json_encode( __( 'Saved.', 'songpress' ) ) . ':((j&&j.data&&j.data.msg)||' . wp_json_encode( __( 'Could not save.', 'songpress' ) ) . ')}).catch(function(){m.textContent=' . wp_json_encode( __( 'Could not save.', 'songpress' ) ) . '})})})();</script></details>';
 		return $o;
+	}
+
+	/** "Adam P": the first name and the last initial, in capitals. Fixed: the picture maker prints exactly this. */
+	public static function photo_label( $name ) {
+		$w = preg_split( '/\s+/', trim( (string) $name ) );
+		$f = (string) array_shift( $w );
+		$l = $w ? (string) end( $w ) : '';
+		return trim( function_exists( 'mb_strtoupper' ) ? mb_strtoupper( $f ) . ( '' !== $l ? ' ' . mb_strtoupper( mb_substr( $l, 0, 1 ) ) : '' ) : strtoupper( $f ) . ( '' !== $l ? ' ' . strtoupper( $l[0] ) : '' ) );
+	}
+
+	/** The picture maker on the Profile screen. */
+	public static function avatar_tool( $user ) {
+		$cfg = array(
+			'label' => self::photo_label( $user->display_name ),
+			'ajax'  => admin_url( 'admin-ajax.php' ),
+			'n'     => wp_create_nonce( 'songpress_my_photo' ),
+			'lib'   => 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/+esm',
+			't'     => array(
+				'cut'    => __( 'Remove background', 'songpress' ),
+				'keep'   => __( 'Bring the background back', 'songpress' ),
+				'work'   => __( 'Removing the background (first time can take a minute)', 'songpress' ),
+				'fail'   => __( 'The background could not be removed here. You can still use the photo as it is.', 'songpress' ),
+				'bad'    => __( 'That file could not be opened as a picture.', 'songpress' ),
+				'pick'   => __( 'Choose a photo first.', 'songpress' ),
+				'saving' => __( 'Saving…', 'songpress' ),
+				'saved'  => __( 'Saved.', 'songpress' ),
+				'fail2'  => __( 'Could not save the picture.', 'songpress' ),
+			),
+		);
+		$o = '<details class="songpress-myinfo sp-avatar-tool"><summary>' . esc_html__( 'Profile picture', 'songpress' ) . '</summary><div class="sp-av">'
+			. '<canvas aria-label="' . esc_attr__( 'Profile picture preview', 'songpress' ) . '"></canvas>'
+			. '<label class="sp-av-pick songpress-btn">' . esc_html__( 'Choose a photo', 'songpress' ) . '<input class="sp-av-file" type="file" accept="image/*" hidden></label>'
+			. '<button type="button" class="sp-av-cut songpress-btn2">' . esc_html__( 'Remove background', 'songpress' ) . '</button>'
+			. '<div class="sp-av-bg" role="group" aria-label="' . esc_attr__( 'Background', 'songpress' ) . '"><button type="button" data-bg="accent" class="on">' . esc_html__( 'Color', 'songpress' ) . '</button><button type="button" data-bg="dark">' . esc_html__( 'Dark', 'songpress' ) . '</button><button type="button" data-bg="white">' . esc_html__( 'White', 'songpress' ) . '</button><button type="button" data-bg="none">' . esc_html__( 'None', 'songpress' ) . '</button></div>'
+			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="1" max="3" step="0.01" value="1"></label>'
+			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The name strip is added for you.', 'songpress' ) . '</p>'
+			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html__( 'Use as my profile picture', 'songpress' ) . '</button> <span class="sp-av-msg" role="status"></span>'
+			. '</div></details>';
+		wp_enqueue_script( 'songpress-avatar', SONGPRESS_URL . 'assets/avatar.js', array(), SONGPRESS_VERSION, true );
+		wp_add_inline_script( 'songpress-avatar', 'window.SP_AV=' . wp_json_encode( $cfg ) . ';', 'before' );
+		return $o;
+	}
+
+	public static function ajax_photo() {
+		check_ajax_referer( 'songpress_my_photo', 'n' );
+		if ( ! is_user_logged_in() || ! Songpress_Caps::can_view() ) {
+			wp_send_json_error( array( 'msg' => __( 'Not allowed.', 'songpress' ) ), 403 );
+		}
+		if ( empty( $_FILES['file']['tmp_name'] ) || $_FILES['file']['size'] > 6 * MB_IN_BYTES ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			wp_send_json_error( array( 'msg' => __( 'The picture is missing or too large.', 'songpress' ) ) );
+		}
+		$info = @getimagesize( $_FILES['file']['tmp_name'] ); // phpcs:ignore
+		if ( ! $info || ! in_array( $info[2], array( IMAGETYPE_PNG, IMAGETYPE_JPEG ), true ) || $info[0] > 2000 || $info[1] > 2000 ) {
+			wp_send_json_error( array( 'msg' => __( 'That is not a usable picture.', 'songpress' ) ) );
+		}
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+		require_once ABSPATH . 'wp-admin/includes/image.php';
+		$u    = wp_get_current_user();
+		$file = array( 'name' => sanitize_file_name( 'profile-' . $u->user_login . '-' . time() . '.png' ), 'type' => 'image/png', 'tmp_name' => $_FILES['file']['tmp_name'], 'error' => 0, 'size' => (int) $_FILES['file']['size'] ); // phpcs:ignore
+		$up   = wp_handle_upload( $file, array( 'test_form' => false, 'mimes' => array( 'png' => 'image/png', 'jpg|jpeg' => 'image/jpeg' ) ) );
+		if ( ! empty( $up['error'] ) ) {
+			wp_send_json_error( array( 'msg' => $up['error'] ) );
+		}
+		$att = wp_insert_attachment( array( 'post_mime_type' => $up['type'], 'post_title' => $u->display_name, 'post_status' => 'inherit' ), $up['file'] );
+		if ( ! $att || is_wp_error( $att ) ) {
+			wp_send_json_error( array( 'msg' => __( 'Could not save the picture.', 'songpress' ) ) );
+		}
+		wp_update_attachment_metadata( $att, wp_generate_attachment_metadata( $att, $up['file'] ) );
+		self::upsert( 'person', $u->display_name, array( 'photo_id' => (int) $att ) );
+		self::reset_cache();
+		wp_send_json_success( array( 'url' => $up['url'] ) );
 	}
 
 	public static function ajax_mine() {
