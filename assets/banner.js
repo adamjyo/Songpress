@@ -85,6 +85,17 @@
     own.addEventListener('error', function () { if (!single && idx >= 0) setTimeout(function () { move(1); }, 500); });
     return own;
   }
+  /* leaving the page (to Radio, say): remember what was playing so Radio can carry on with it */
+  function remember() {
+    try {
+      if (!au || !au.src || au.ended || !current.title) return;
+      var id = current.id || 0;
+      sessionStorage.setItem('sp_np', JSON.stringify({ url: au.currentSrc || au.src, id: id, t: au.currentTime || 0, playing: !au.paused, ts: Date.now() }));
+    } catch (e) {}
+  }
+  window.addEventListener('pagehide', remember);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') remember(); });
+
   if ('mediaSession' in navigator) {
     var h = function (n, f) { try { navigator.mediaSession.setActionHandler(n, f); } catch (e) {} };
     h('play', function () { if (au) au.play(); }); h('pause', function () { if (au) au.pause(); }); h('nexttrack', function () { move(1); }); h('previoustrack', function () { move(-1); });

@@ -377,4 +377,22 @@
 
   window.addEventListener('beforeunload', function () { try { au.pause(); } catch (e) {} });
   draw(); ui();
+
+  /* a song that was playing on the Works list or a work page carries on here, on the Now Playing page */
+  (function () {
+    var d = null; try { d = JSON.parse(sessionStorage.getItem('sp_np') || 'null'); sessionStorage.removeItem('sp_np'); } catch (e) {}
+    if (!d || !d.url || Date.now() - d.ts > 120000) return;
+    function abs(u) { try { return new URL(u, location.href).href; } catch (e) { return u; } }
+    var id = 0; if (d.id && T[d.id] && T[d.id].s) id = +d.id;
+    if (!id) Object.keys(T).forEach(function (k) { if (!id && T[k].s && abs(T[k].s) === abs(d.url)) id = +k; });
+    if (!id) return;
+    var l = byK('all') || L[0]; if (!l) return;
+    Q.base = l.ids.filter(function (x) { return T[x] && T[x].s; }); Q.key = l.k; Q.shuffle = false; build(id); Q.pos = Q.order.indexOf(id);
+    if (Q.pos < 0) return;
+    var at = (d.t || 0) + (d.playing ? Math.min(20, (Date.now() - d.ts) / 1000) : 0);
+    au.src = T[id].s;
+    au.addEventListener('loadedmetadata', function f() { au.removeEventListener('loadedmetadata', f); try { au.currentTime = at; } catch (e) {} });
+    if (d.playing) { var pr = au.play(); if (pr && pr.catch) pr.catch(function () { toast(I.tap); }); } else au.load();
+    meta(); ui(true); openNP();
+  }());
 }());

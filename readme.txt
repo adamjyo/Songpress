@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.69.3
+Stable tag: 0.69.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.69.4 =
+* A song playing from the Works list or a work page carries on when you tap Radio: Radio opens on the Now Playing page with the same song, at the same place.
 
 = 0.69.3 =
 * {authors: Adam Page} (or writers) now shows just the names, once, under the title on the sheet. It no longer adds a second "Authors" line, and the work's own writers line is not repeated beside it.
