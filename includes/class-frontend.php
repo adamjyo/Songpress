@@ -492,11 +492,10 @@ class Songpress_Frontend {
 		);
 		$o = '<nav class="songpress-tabs songpress-tabs-' . $pos . ( wp_is_mobile() && 'bottom' === $pos ? ' songpress-tabs-fixed' : '' ) . '" aria-label="SongPress">';
 		foreach ( $items as $k => $it ) {
-			if ( 'profile' === $k ) { // Help sits before Profile; it opens the tour over whatever you were looking at
-				$o .= '<button type="button" class="songpress-tabhelp" data-sp-tour>' . $ic( '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5M12 17.2v.1"/>' ) . '<span>' . esc_html__( 'Help', 'songpress' ) . '</span></button>';
-			}
 			$o .= '<a class="' . ( $k === $on ? 'on' : '' ) . '"' . ( $k === $on ? ' aria-current="page"' : '' ) . ' href="' . esc_url( $it[0] ) . '">' . $it[2] . '<span>' . esc_html( $it[1] ) . '</span></a>';
 		}
+		// Help sits last, at the far right; it opens the tour over whatever you were looking at
+		$o .= '<button type="button" class="songpress-tabhelp" data-sp-tour>' . $ic( '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 015 .5c0 1.7-2.5 2-2.5 3.5M12 17.2v.1"/>' ) . '<span>' . esc_html__( 'Help', 'songpress' ) . '</span></button>';
 		return $o . ( 'bottom' === $pos ? self::nav_memory() : '' ) . '</nav>' . Songpress_Tour::boot();
 	}
 
