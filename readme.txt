@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.11
+Stable tag: 0.72.12
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -30,8 +30,8 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 
 == Changelog ==
 
-= 0.72.11 =
-* Works editor: a version can be made its own work. The Versions panel has a Make it a work button that gives it a new number and makes it a root.
+= 0.72.12 =
+* Works editor: the serial number can be changed (Versions panel). A plain number like 0300 makes a version its own work; 0012-04 makes a song a version of 0012. Taken numbers are refused.
 
 = 0.72.10 =
 * Works editor: cover art is shown whole in its square box instead of being cropped.

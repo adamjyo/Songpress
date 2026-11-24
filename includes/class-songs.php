@@ -368,31 +368,61 @@ class Songpress_Songs {
 		return $id;
 	}
 
-	/** Turns a version into a work of its own: it gets a new NNNN number, becomes version 0 (a root) and leaves its old family. Returns the new serial, or a WP_Error. */
-	public static function make_root( $song_id ) {
+	/**
+	 * Changes a serial number: 0012 (a work) or 0012-03 (a version of it). The song moves into the family with that number
+	 * (a new family is made if there is none). A work that has versions can only be renumbered to a free number, and its versions follow.
+	 * Returns the new serial, or a WP_Error.
+	 */
+	public static function set_serial( $song_id, $serial ) {
 		global $wpdb;
 		$t    = self::table_songs();
+		$f    = Songpress_Install::table( 'families' );
 		$song = self::get( (int) $song_id );
 		if ( ! $song ) {
 			return new WP_Error( 'songpress_missing', __( 'That song does not exist.', 'songpress' ) );
 		}
-		if ( 0 === (int) $song->version_no ) {
-			return new WP_Error( 'songpress_root', __( 'This is already a work of its own.', 'songpress' ) );
+		$p = Songpress_Serial::parse( $serial );
+		if ( ! $p || $p['family'] < 1 ) {
+			return new WP_Error( 'songpress_serial', __( 'A serial number looks like 0012 or 0012-03.', 'songpress' ) );
 		}
-		$from = $song->serial;
-		$res  = Songpress_Serial::allocate( true, 0, function ( $fid, $fno, $ver, $serial ) use ( $wpdb, $t, $song ) {
-			$set = array( 'family_id' => $fid, 'version_no' => 0, 'serial' => $serial );
-			if ( 'released' === $song->status ) { // a work of its own can not be marked Released; its releases are versions
-				$set['status'] = 'finished';
+		$new = Songpress_Serial::format( $p['family'], $p['version'] );
+		if ( $new === $song->serial ) {
+			return $new;
+		}
+		$lock = 'songpress_serial_' . $wpdb->prefix;
+		if ( 1 !== (int) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) ) ) {
+			return new WP_Error( 'songpress_lock', __( 'Another save is in progress. Try again in a moment.', 'songpress' ) );
+		}
+		try {
+			$fid    = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$f} WHERE family_no = %d", $p['family'] ) );
+			$others = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE family_id = %d AND id <> %d", (int) $song->family_id, (int) $song->id ) );
+			if ( 0 === (int) $song->version_no && $others > 0 ) { // a work with versions: the whole family is renumbered
+				if ( $fid || $p['version'] > 0 ) {
+					return new WP_Error( 'songpress_serial', __( 'This work has versions. It can only be renumbered to a number nobody uses yet, without a version part. Move or renumber its versions first to do anything else.', 'songpress' ) );
+				}
+				$wpdb->update( $f, array( 'family_no' => $p['family'] ), array( 'id' => (int) $song->family_id ) );
+				foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, version_no FROM {$t} WHERE family_id = %d", (int) $song->family_id ) ) as $r ) {
+					$wpdb->update( $t, array( 'serial' => Songpress_Serial::format( $p['family'], (int) $r->version_no ) ), array( 'id' => (int) $r->id ) );
+				}
+			} else {
+				if ( $fid && (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE family_id = %d AND version_no = %d AND id <> %d", $fid, $p['version'], (int) $song->id ) ) > 0 ) {
+					return new WP_Error( 'songpress_serial', sprintf( /* translators: %s: serial number */ __( '%s is already taken.', 'songpress' ), $new ) );
+				}
+				if ( ! $fid ) {
+					$wpdb->insert( $f, array( 'family_no' => $p['family'], 'created_at' => current_time( 'mysql', true ) ) );
+					$fid = (int) $wpdb->insert_id;
+				}
+				$set = array( 'family_id' => $fid, 'version_no' => $p['version'], 'serial' => $new );
+				if ( 0 === $p['version'] && 'released' === $song->status ) { // a work cannot be marked Released; its releases are versions
+					$set['status'] = 'finished';
+				}
+				$wpdb->update( $t, $set, array( 'id' => (int) $song->id ) );
 			}
-			$wpdb->update( $t, $set, array( 'id' => (int) $song->id ) );
-			return $serial;
-		} );
-		if ( is_wp_error( $res ) ) {
-			return $res;
+		} finally {
+			$wpdb->query( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
 		}
-		Songpress_History::log( (int) $song_id, 'made_root', array( 'from' => $from, 'serial' => $res ) );
-		return $res;
+		Songpress_History::log( (int) $song_id, 'serial_changed', array( 'from' => $song->serial, 'serial' => $new ) );
+		return $new;
 	}
 
 	/** Copy of an existing song as the next version of its family. @return int|WP_Error song id */

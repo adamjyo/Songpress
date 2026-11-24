@@ -698,9 +698,9 @@ class Songpress_Editor {
 			$o .= '<p class="spe-help">' . esc_html__( 'A version is a new recording, arrangement or release of this song. It gets the next number, like 0012-01. Writers and splits start as a copy of this one. Performers and producers start empty. Nothing you change on a version affects the original or the other versions.', 'songpress' ) . '</p>';
 			$o .= self::post_form( 'songpress_new_version', 'songpress_new_version', $id, array(), __( 'Add a version', 'songpress' ) );
 		}
-		if ( (int) $song->version_no > 0 && Songpress_Caps::can( 'edit_any' ) ) {
-			$o .= '<h4>' . esc_html__( 'Make this its own work', 'songpress' ) . '</h4><p class="spe-help">' . esc_html__( 'Moves this version out of its family. It gets a new number, becomes the original work of its own (a root), and no longer shows as a version of the old one. Its credits and splits stay as they are.', 'songpress' ) . '</p>';
-			$o .= str_replace( '<form method="post"', '<form method="post" onsubmit="return confirm(' . esc_attr( wp_json_encode( __( 'Make this version its own work? It gets a new number.', 'songpress' ) ) ) . ')"', self::post_form( 'songpress_make_root', 'songpress_make_root', $id, array(), __( 'Make it a work', 'songpress' ) ) );
+		if ( Songpress_Caps::can( 'edit_any' ) ) {
+			$o .= '<h4>' . esc_html__( 'Serial number', 'songpress' ) . '</h4><p class="spe-help">' . esc_html__( 'A work is 0012 and its versions are 0012-01, 0012-02. Change the number to move this song: give a version a plain number like 0300 to make it a work of its own, or 0012-04 to make it a version of 0012.', 'songpress' ) . '</p>';
+			$o .= '<form method="post" class="spe-inline" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_set_serial', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_set_serial"><input type="hidden" name="song_id" value="' . (int) $id . '"><input type="hidden" name="sp_return" value="' . esc_url( self::list_url() ) . '"><input type="text" name="serial" value="' . esc_attr( $song->serial ) . '" size="10" aria-label="' . esc_attr__( 'Serial number', 'songpress' ) . '"> <button type="submit" class="spe-btn">' . esc_html__( 'Change serial number', 'songpress' ) . '</button></form>';
 		}
 		if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 			$archived = ! empty( $song->archived_at );

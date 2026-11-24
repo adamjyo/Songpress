@@ -57,8 +57,8 @@ class Songpress_History {
 				return __( 'Created', 'songpress' );
 			case 'version':
 				return __( 'Created as a version of an earlier song', 'songpress' );
-			case 'made_root':
-				return sprintf( /* translators: 1: old serial, 2: new serial */ __( 'Made its own work: %1$s is now %2$s', 'songpress' ), (string) ( $d['from'] ?? '' ), (string) ( $d['serial'] ?? '' ) );
+			case 'serial_changed':
+				return sprintf( /* translators: 1: old serial, 2: new serial */ __( 'Serial number changed from %1$s to %2$s', 'songpress' ), (string) ( $d['from'] ?? '' ), (string) ( $d['serial'] ?? '' ) );
 			case 'version_made':
 				return sprintf( /* translators: %s: serial number */ __( 'New version %s created', 'songpress' ), (string) ( $d['serial'] ?? '' ) );
 			case 'scheduled':

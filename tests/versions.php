@@ -1036,12 +1036,17 @@ foreach ( array_merge( glob( SONGPRESS_DIR . 'includes/*.php' ), glob( SONGPRESS
 }
 check( 'no escaped placeholder in a single-quoted string', $bad, array() );
 
-// a version can be made its own work (a root)
-$mr = Songpress_Songs::make_root( $v3 );
+// serial numbers can be changed
+$mr = Songpress_Songs::set_serial( $v3, '0777' );
 $gm = Songpress_Songs::get( $v3 );
-check( 'make_root: version becomes a root', array( (int) $gm->version_no, $gm->serial === $mr ), array( 0, true ) );
-check( 'make_root: leaves the old family', (int) $gm->family_id !== (int) Songpress_Songs::get( $v1 )->family_id, true );
-check( 'make_root: a root cannot be made a root again', is_wp_error( Songpress_Songs::make_root( $v3 ) ), true );
+check( 'set_serial: a version becomes a root', array( $mr, (int) $gm->version_no, $gm->serial ), array( '0777', 0, '0777' ) );
+check( 'set_serial: leaves the old family', (int) $gm->family_id !== (int) Songpress_Songs::get( $v1 )->family_id, true );
+check( 'set_serial: a taken number is refused', is_wp_error( Songpress_Songs::set_serial( $v3, '0001-01' ) ), true );
+check( 'set_serial: junk is refused', is_wp_error( Songpress_Songs::set_serial( $v3, 'abc' ) ), true );
+$mr2 = Songpress_Songs::set_serial( $v3, '0001-09' );
+$gm2 = Songpress_Songs::get( $v3 );
+check( 'set_serial: a work becomes a version of another', array( $mr2, (int) $gm2->version_no, (int) $gm2->family_id === (int) Songpress_Songs::get( $v1 )->family_id ), array( '0001-09', 9, true ) );
+check( 'set_serial: a work with versions keeps its family when renumbered', is_wp_error( Songpress_Songs::set_serial( $v0, '0001-08' ) ), true );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
