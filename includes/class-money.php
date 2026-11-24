@@ -1570,6 +1570,9 @@ JS;
 		}
 		$by = array();
 		foreach ( self::my_rows( $key ) as $r ) {
+			if ( 'band' === $r->src ) { // the writer's share only: what a band they are paid for earns is not theirs as a writer
+				continue;
+			}
 			$by[ $r->quarter ] = ( $by[ $r->quarter ] ?? 0 ) + (float) $r->total;
 		}
 		if ( ! $by ) {
