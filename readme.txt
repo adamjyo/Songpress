@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.68.1
+Stable tag: 0.68.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.68.2 =
+* Transcriber: when the words could not be timed (no timing key, nothing tapped), the chart no longer comes out with no chords. The lines are spread evenly over the recording and the chords are placed from that, with a note that it is approximate.
 
 = 0.68.1 =
 * The player banner is now a flat card in the app accent color, closer to the reference design.

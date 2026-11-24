@@ -82,6 +82,10 @@
     if (!o.align && n && S.taps.length) {
       var d = parseFloat(($('tr-delay') || {}).value); o.times = S.taps.map(function (t) { return Math.max(0, t - (isNaN(d) ? 0.2 : d)); }); how = 'taps';
     }
+    if (!o.align && !o.times && n && S.segs.length) { // nothing timed the words: spread the lines over the recording so the chords still land inside them
+      var st = S.segs[0].t0 || 0, en = S.duration || S.segs[S.segs.length - 1].t1;
+      o.times = T.spread(n, st, en); how = 'spread';
+    }
     var pro = T.buildChordPro(o);
     ed.value = pro; ed.dispatchEvent(new Event('input', { bubbles: true }));
     var bits = ['Key ' + S.key];
@@ -89,6 +93,7 @@
     bits.push(S.segs.length + ' chord changes');
     if (how === 'words') bits.push(Math.round((S.matched || 0) * 100) + '% of the lyric words were found in the singing');
     else if (how === 'taps') bits.push('lined up from your taps');
+    else if (how === 'spread') bits.push('chords placed roughly: the lines were spread evenly over the recording. Add the word timing key, or tap the lines in, to place them exactly');
     else if (n) bits.push('lyrics not lined up yet: use the timing service or tap them in');
     sum.textContent = bits.join(' · ');
     if (how === 'words' && S.matched < 0.4) say('Few lyric words were found in the recording. Check the lyrics match what is sung, or line them up by tapping.', 'err');
