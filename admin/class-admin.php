@@ -1471,6 +1471,12 @@ class Songpress_Admin {
 		}
 		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		wp_nonce_field( 'songpress_settings' );
+		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
+		self::update_box();
+		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
+		echo '<p><label><input type="checkbox" name="auto_update" value="1"' . checked( Songpress_Updater::auto_enabled(), true, false ) . '> ' . esc_html__( 'Install SongPress updates automatically (checked every hour)', 'songpress' ) . '</label></p>';
+		echo '<p><label>' . esc_html__( 'GitHub repository', 'songpress' ) . ' <input name="github_repo" size="28" value="' . esc_attr( Songpress_Updater::repo() ) . '" placeholder="owner/repository"></label></p>';
+		echo '<p class="sp-help">' . esc_html__( 'SongPress checks GitHub every few minutes for a newer version. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
 		echo '<input type="hidden" name="action" value="songpress_settings"><p><label><input type="checkbox" name="delete_on_uninstall" value="1"' . checked( get_option( 'songpress_delete_on_uninstall' ), '1', false ) . '> ' . esc_html__( 'Delete all SongPress data when the plugin is deleted', 'songpress' ) . '</label></p>';
 		echo '<p class="sp-help">' . esc_html__( 'Off by default. Leave it off to keep your catalog if you remove the plugin by accident.', 'songpress' ) . '</p>';
 		echo '<p><label><input type="checkbox" name="public_donate" value="1"' . checked( get_option( 'songpress_public_donate' ), '1', false ) . '> ' . esc_html__( 'Show a small "Donate: buy me a cup of coffee" link at the bottom of public SongPress pages', 'songpress' ) . '</label></p>';
@@ -1494,12 +1500,6 @@ class Songpress_Admin {
 			. 'p.addEventListener("blur",function(){clearTimeout(t);var d=new FormData();d.append("publisher",p.value);send(d)});'
 			. 'f.addEventListener("change",function(){if(!f.files.length)return;var d=new FormData();d.append("sheet_logo",f.files[0]);send(d)});'
 			. 'if(rm)rm.addEventListener("change",function(){if(!rm.checked)return;var d=new FormData();d.append("remove_logo","1");send(d);rm.checked=false})})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed script and JSON.
-		echo '<h2>' . esc_html__( 'Updates', 'songpress' ) . '</h2>';
-		self::update_box();
-		echo '<p><label><input type="checkbox" name="github_updates" value="1"' . checked( Songpress_Updater::enabled(), true, false ) . '> ' . esc_html__( 'Get SongPress updates from GitHub', 'songpress' ) . '</label></p>';
-		echo '<p><label><input type="checkbox" name="auto_update" value="1"' . checked( Songpress_Updater::auto_enabled(), true, false ) . '> ' . esc_html__( 'Install SongPress updates automatically (checked every hour)', 'songpress' ) . '</label></p>';
-		echo '<p><label>' . esc_html__( 'GitHub repository', 'songpress' ) . ' <input name="github_repo" size="28" value="' . esc_attr( Songpress_Updater::repo() ) . '" placeholder="owner/repository"></label></p>';
-		echo '<p class="sp-help">' . esc_html__( 'SongPress checks GitHub every few minutes for a newer version. Nothing about your site is sent. New versions show up under Dashboard > Updates.', 'songpress' ) . '</p>';
 		submit_button();
 		echo '</form>';
 
