@@ -317,7 +317,7 @@ class Songpress_Editor {
 
 	private static function credit_group( $role, $title, $add_label, array $existing, $min, $with_user, $with_share, $simple ) {
 		$count = max( $min, count( $existing ) );
-		$o     = in_array( $role, array( 'writer', 'publisher', 'performer' ), true ) ? self::people_list() : '';
+		$o     = in_array( $role, array( 'writer', 'publisher', 'performer', 'producer' ), true ) ? self::people_list() : '';
 		$o    .= '<div class="spe-group' . ( $simple ? '' : ' adv' ) . ( $with_user ? ' spe-two' : '' ) . '" data-role="' . esc_attr( $role ) . '" data-next="' . (int) $count . '"><h4>' . esc_html( $title ) . '</h4>';
 		$o    .= '<div class="spe-head' . ( $with_user ? ' spe-nohead' : '' ) . '"><span>' . esc_html__( 'Name', 'songpress' ) . '</span><span class="adv">IPI</span>' . ( $with_share ? '<span>' . esc_html__( 'Share %', 'songpress' ) . '</span>' : '<span></span>' ) . ( $with_user ? '<span class="adv">' . esc_html__( 'Account', 'songpress' ) . '</span>' : '<span class="adv"></span>' ) . '<span></span></div><div class="spe-rows">';
 		for ( $i = 0; $i < $count; $i++ ) {
@@ -461,7 +461,7 @@ class Songpress_Editor {
 		$n    = 'credits[' . $role . '][' . $i . ']';
 		$name = (string) ( $c->name ?? '' );
 		$kind = Songpress_Profiles::kind_for_role( $role );
-		$pick = in_array( $role, array( 'writer', 'publisher', 'performer' ), true );
+		$pick = in_array( $role, array( 'writer', 'publisher', 'performer', 'producer' ), true );
 		$h    = '<div class="spe-credit"><span class="spe-who">' . ( '' !== trim( $name ) ? Songpress_Profiles::chip( $name, 28, $kind ) : '' );
 		if ( $pick ) {
 			$list = self::pick_profiles( $kind );
