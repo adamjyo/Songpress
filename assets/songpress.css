@@ -1321,3 +1321,13 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .sp-app a.songpress-mycatbtn{display:block;text-align:center;padding:13px 16px;border-radius:12px;background:var(--sp-accent);color:#14110a;font-weight:600;text-decoration:none}
 .sp-app a.spe-ib{text-decoration:none}
 .spe-dlgbar a.spe-btn{text-decoration:none;display:inline-flex;align-items:center}
+/* 0.72.39+: compact work header — streams, player, one credits line, small action buttons */
+.songpress-credits{flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;margin:14px 2px 2px;text-align:left}
+.songpress-avs{display:flex;flex:none}.songpress-avs>span{display:block;margin-right:-10px}
+.songpress-avs .sp-face,.songpress-avs>span>*{width:34px!important;height:34px!important;margin:0!important;border:2px solid var(--sp-bg,#0d0e11);box-sizing:border-box;font-size:13px!important}
+.songpress-avs{padding-right:10px}
+.songpress-crl{min-width:0;font-size:13px;line-height:1.45;color:var(--sp-soft)}.songpress-crl b{color:var(--sp-text,inherit);font-weight:600;margin-right:4px}
+.songpress-top>.spe-streams{margin:14px 0 4px;justify-content:center}
+.songpress-top>.spe-streams .spe-st{width:44px;height:44px}
+.songpress-top .songpress-audio{margin-top:10px}
+.sp-app .sp-rx-bar .sp-rx-b{min-height:50px!important;padding:6px 4px!important}

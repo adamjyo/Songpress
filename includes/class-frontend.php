@@ -535,37 +535,53 @@ class Songpress_Frontend {
 		} elseif ( '' !== trim( (string) Songpress_Songs::display_title( $s ) ) ) {
 			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>'; // a version with no release title yet: the work name
 		}
-		if ( '' !== trim( (string) $s->genre ) ) {
-			$out .= '<p class="songpress-sub songpress-genre-line">' . esc_html( $s->genre ) . '</p>';
+		$under = '' !== trim( (string) $s->artist ) ? $s->artist : $s->genre; // a band, when there is one, replaces the genre
+		if ( '' !== trim( (string) $under ) ) {
+			$out .= '<p class="songpress-sub songpress-genre-line">' . esc_html( $under ) . '</p>';
 		}
 		$out .= '</div></div>';
 		// Under the card, centred: the band, the writers and the performers, each on its own labelled row.
-		$people = function ( $role ) use ( $id ) {
+		$names = function ( $role ) use ( $id ) {
 			$seen = array();
-			$h    = '';
 			foreach ( Songpress_Songs::credits( $id ) as $c ) {
 				$k = Songpress_Profiles::key( $c->name );
-				if ( $role !== $c->role || '' === $k || isset( $seen[ $k ] ) ) {
-					continue;
+				if ( $role === $c->role && '' !== $k && ! isset( $seen[ $k ] ) ) {
+					$seen[ $k ] = $c->name;
 				}
-				$seen[ $k ] = 1;
-				$h         .= '<span class="songpress-pp" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 64, 'person' ) . '<small>' . esc_html( $c->name ) . '</small></span>';
 			}
-			return $h;
+			return array_values( $seen );
 		};
-		$group = function ( $label, $inner ) {
-			return '' === $inner ? '' : '<section class="songpress-cg"><h3>' . esc_html( $label ) . '</h3><div class="songpress-cr">' . $inner . '</div></section>';
-		};
-		$band  = '' !== trim( (string) $s->artist ) ? '<span class="songpress-pp" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 64, 'band' ) . '<small>' . esc_html( $s->artist ) . '</small></span>' : ''; // the performing act, never matched against people
-		$cg    = $group( __( 'Band', 'songpress' ), $band ) . $group( __( 'Writers', 'songpress' ), $people( 'writer' ) ) . $group( __( 'Performers', 'songpress' ), $people( 'performer' ) );
-		if ( '' !== $cg ) {
-			$out .= '<div class="songpress-credits">' . $cg . '</div>';
+		$wr   = $names( 'writer' );
+		$pf   = $names( 'performer' );
+		$all  = array();
+		foreach ( array_merge( $wr, $pf ) as $n ) {
+			$all[ Songpress_Profiles::key( $n ) ] = $n;
 		}
-		$out  .= Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token ) . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
+		$cg = '';
+		if ( $all ) {
+			$cg .= '<div class="songpress-avs">';
+			foreach ( array_slice( array_values( $all ), 0, 4 ) as $n ) {
+				$cg .= '<span title="' . esc_attr( $n ) . '">' . Songpress_Profiles::chip( $n, 34, 'person' ) . '</span>';
+			}
+			$cg .= '</div><div class="songpress-crl">';
+			if ( $wr ) {
+				$cg .= '<div><b>' . esc_html__( 'Written', 'songpress' ) . '</b> ' . esc_html( implode( ', ', $wr ) ) . '</div>';
+			}
+			if ( $pf ) {
+				$cg .= '<div><b>' . esc_html__( 'Performed', 'songpress' ) . '</b> ' . esc_html( implode( ', ', $pf ) ) . '</div>';
+			}
+			$cg .= '</div>';
+		}
+		// Under the card: the streaming links (centred), the player, the credits, then the favourite / rate / playlist buttons.
+		$out .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
 		}
+		if ( '' !== $cg ) {
+			$out .= '<div class="songpress-credits">' . $cg . '</div>';
+		}
+		$out .= Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token );
 		$out .= '</header><div class="songpress-main">';
 		if ( 'none' !== $kind ) {
 			// the lyric process: any level can be shown; a level nobody typed falls back to the highest one, stepped down
