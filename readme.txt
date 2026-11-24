@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.7
+Stable tag: 0.72.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.8 =
+* Desktop: the Radio page and menu item and the drop-down player banner are removed. The phone app keeps both.
 
 = 0.72.7 =
 * Earnings: a share of 0, or taking someone off a work, now removes their money for that work (before, the old amounts stayed). Works nobody is credited on keep their old-catalog amounts.

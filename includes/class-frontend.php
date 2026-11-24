@@ -179,7 +179,9 @@ class Songpress_Frontend {
 		$who     = '' !== trim( (string) $cu->display_name ) ? $cu->display_name : __( 'Profile', 'songpress' );
 		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
 		$nav     = '<div class="sp-who">' . self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . Songpress_Push::item() . '</div>' . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
-		$nav .= self::nav_item( add_query_arg( 'sp_radio', '1', $cat_url ), __( 'Radio', 'songpress' ), $svg( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ), 'catalog' === $which && isset( $_GET['sp_radio'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( wp_is_mobile() ) {
+			$nav .= self::nav_item( add_query_arg( 'sp_radio', '1', $cat_url ), __( 'Radio', 'songpress' ), $svg( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ), 'catalog' === $which && isset( $_GET['sp_radio'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		}
 		$mk = function ( $slug, $label, $icon, $cap, $badge = 0 ) use ( $cat_url, $page ) {
 			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'backups', 'health', 'earnings', 'activity', 'uploads', 'import' ), true ) ) || ( 'registrations' === $slug && 'agreements' === $page ) || ( 'agreements' === $slug && 'registrations' === $page );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on, $badge ) : '';
@@ -236,7 +238,7 @@ class Songpress_Frontend {
 			return $msg;
 		}
 		$desktop = ! wp_is_mobile(); // phones and tablets only view; managing and editing is for the desktop app
-		if ( isset( $_GET['sp_radio'] ) ) { // Radio: playlists, on the desktop and on the phone
+		if ( ! $desktop && isset( $_GET['sp_radio'] ) ) { // Radio (phone only): playlists, on the desktop and on the phone
 			wp_enqueue_style( 'songpress' );
 			return '<div class="songpress sp-app">' . ( $desktop ? '' : self::userbar( 'catalog' ) ) . Songpress_Radio::render() . self::tabs( 'radio' ) . '</div>';
 		}

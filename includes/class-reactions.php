@@ -222,7 +222,7 @@ class Songpress_Reactions {
 	/** The player banner that slides down when a song plays from the Works list or a work page. */
 	public static function banner() {
 		static $done = false;
-		if ( $done ) {
+		if ( $done || ! wp_is_mobile() ) { // phone app only
 			return '';
 		}
 		$done = true;
