@@ -43,8 +43,15 @@ class Songpress_Members {
 		$base  = sanitize_user( strtolower( trim( $first ) . '.' . trim( $last ) ), true );
 		$base  = preg_replace( '/\s+/', '', (string) $base );
 		$login = $base;
-		for ( $i = 2; '' !== $login && username_exists( $login ); $i++ ) {
-			$login = $base . $i;
+		// A login never ends in a number. An account already holding the name that is not an admin and has no SongPress class is a leftover
+		// from the old system: it steps aside (renamed name-old) and the login goes to the new person. A live account of someone else gets a letter suffix.
+		$held = '' !== $login ? get_user_by( 'login', $login ) : false;
+		if ( $held ) {
+			if ( ! Songpress_Caps::is_wp_admin( $held->ID ) && '' === (string) get_user_meta( $held->ID, Songpress_Caps::META, true ) ) {
+				Songpress_People::step_aside( $held->ID );
+			} else {
+				$login = Songpress_People::free_login( $login, 'x' );
+			}
 		}
 		return $login;
 	}
