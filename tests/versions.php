@@ -1071,7 +1071,7 @@ $gs = Songpress_Songs::get( $v1 );
 check( 'status: a stage with no matching status keeps the old one, and shows the stage', array( $gs->status, Songpress_Songs::effective_status( $gs ) ), array( 'finished', 'Taken down!' ) );
 Songpress_Songs::update( $v1, array( 'stage' => '' ) );
 check( 'status: clearing it clears both', array( Songpress_Songs::get( $v1 )->stage, Songpress_Songs::get( $v1 )->status ), array( '', '' ) );
-check( 'status: the original work is never offered Released', in_array( 'Released', Songpress_Songs::status_choices( 0 ), true ), false );
+check( 'status: the original work can be marked Released', in_array( 'Released', Songpress_Songs::status_choices( 0 ), true ), true );
 check( 'status: a version is offered Released', in_array( 'Released', Songpress_Songs::status_choices( 1 ), true ), true );
 
 // Type field

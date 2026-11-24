@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.28
+Stable tag: 0.72.29
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.29 =
+* Works editor: Released is back in the Status dropdown on every work, originals included.
 
 = 0.72.28 =
 * Works editor: the Chord sheet (PDF) section is hidden until there is ChordPro text, and appears as soon as you type some.

@@ -119,11 +119,6 @@ class Songpress_Songs {
 	/** Every choice for the Status field: the writing stages, plus the value the work being edited already carries. */
 	public static function status_choices( $version_no, array $extra = array() ) {
 		$all = self::merge_options( self::stages(), $extra ); // just the stages, plus the value this work already has
-		if ( 0 === (int) $version_no ) { // the original work can never be released
-			$all = array_values( array_filter( $all, function ( $l ) {
-				return 'released' !== strtolower( (string) $l );
-			} ) );
-		}
 		return $all;
 	}
 
