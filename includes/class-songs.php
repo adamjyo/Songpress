@@ -127,7 +127,7 @@ class Songpress_Songs {
 	}
 
 	/** Every work this person is credited on: linked to their account, or credited by their name. Newest serial first. */
-	public static function credited_rows( $user_id, $name ) {
+	public static function credited_rows( $user_id, $name, $with_originals = false ) {
 		global $wpdb;
 		$c   = Songpress_Install::table( 'credits' );
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT song_id FROM {$c} WHERE user_id = %d OR LOWER(TRIM(name)) = LOWER(%s)", (int) $user_id, trim( (string) $name ) ) ) );
@@ -143,6 +143,9 @@ class Songpress_Songs {
 			if ( $s && ( ! self::ARCHIVING || empty( $s->archived_at ) ) ) {
 				$out[] = $s;
 			}
+		}
+		if ( $with_originals ) {
+			return $out;
 		}
 		$has = array(); // a family with releases is listed by its releases; the original only stands in when there are none
 		foreach ( $out as $r ) {

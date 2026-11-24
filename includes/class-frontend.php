@@ -642,10 +642,16 @@ class Songpress_Frontend {
 		}
 		wp_enqueue_style( 'songpress' );
 		$u   = wp_get_current_user();
-		$rows = Songpress_Songs::credited_rows( $u->ID, $u->display_name ); // by account or by name: credits are often typed, not linked
+		$rows = Songpress_Songs::credited_rows( $u->ID, $u->display_name ); // the releases: every version, and an original that has none
+		$orig = array();
+		foreach ( Songpress_Songs::credited_rows( $u->ID, $u->display_name, true ) as $r ) { // works: one per family
+			if ( 0 === (int) $r->version_no ) { // roots only (NNNN), never versions (NNNN-VV)
+				$orig[ (int) $r->id ] = 1;
+			}
+		}
 		$res  = array( 'rows' => $rows, 'total' => count( $rows ) );
 		$rel  = 0;
-		foreach ( $res['rows'] as $s ) {
+		foreach ( $rows as $s ) {
 			if ( 'released' === $s->status ) {
 				$rel++;
 			}
@@ -657,8 +663,8 @@ class Songpress_Frontend {
 		$pf   = Songpress_Profiles::find( $u->display_name, 'person' );
 		$face = $pf ? Songpress_Profiles::photo_url( $pf ) : '';
 		$out  = '<div class="songpress songpress-profile sp-app">' . ( wp_is_mobile() ? self::userbar( 'profile' ) : self::tabs( 'profile', 'top' ) ) . '<div class="songpress-profile-head"><div class="songpress-avatar" aria-hidden="true">' . ( '' !== $face ? '<img src="' . esc_url( $face ) . '" alt="">' : esc_html( $ini ) ) . '</div><div><h2>' . esc_html( $u->display_name ) . '</h2>';
-		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d release', 'Credited on %d releases', $res['total'], 'songpress' ), $res['total'] ) ) . '</p></div></div>';
-		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $res['total'] . '</strong></li><li>' . esc_html__( 'Released', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
+		$out .= '<p class="songpress-sub">' . esc_html( sprintf( /* translators: %d: number of songs */ _n( 'Credited on %d work', 'Credited on %d works', count( $orig ), 'songpress' ), $res['total'] ) ) . '</p></div></div>';
+		$out .= '<ul class="songpress-stats"><li>' . esc_html__( 'Works', 'songpress' ) . '<strong>' . count( $orig ) . '</strong></li><li>' . esc_html__( 'Releases', 'songpress' ) . '<strong>' . (int) $rel . '</strong></li></ul>';
 		$out .= Songpress_Money::quarterly_html( $u->display_name );
 		// the songs this person wrote or performed, each with what it has made on DistroKid
 		$mine = array();
