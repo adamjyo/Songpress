@@ -348,7 +348,7 @@ class Songpress_Songs {
 			} elseif ( in_array( $f, array( 'art_id', 'audio_id' ), true ) ) {
 				$out[ $f ] = absint( $v ) ?: null;
 			} elseif ( 'status' === $f ) {
-				$out[ $f ] = isset( self::statuses()[ $v ] ) ? $v : 'idea';
+				$out[ $f ] = ( '' === trim( (string) $v ) || isset( self::statuses()[ $v ] ) ) ? trim( (string) $v ) : 'idea'; // blank clears the status
 			} else {
 				$out[ $f ] = sanitize_text_field( $v );
 			}

@@ -109,15 +109,16 @@ class Songpress_Editor {
 			$statuses[ $song->status ] = Songpress_Songs::statuses()[ $song->status ];
 		}
 		$opts = '';
+		$opts .= '<option value=""' . selected( $song ? (string) self::f( $song, 'status' ) : 'idea', '', false ) . '></option>'; // blank clears it
 		foreach ( $statuses as $k => $label ) {
-			$opts .= '<option value="' . esc_attr( $k ) . '"' . selected( self::f( $song, 'status' ) ?: 'idea', $k, false ) . '>' . esc_html( $label ) . '</option>';
+			$opts .= '<option value="' . esc_attr( $k ) . '"' . selected( $song ? (string) self::f( $song, 'status' ) : 'idea', $k, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		$cur_artist  = $song ? (int) $song->artist_id : ( isset( $_GET['sp_artist'] ) ? absint( $_GET['sp_artist'] ) : Songpress_Artists::default_id() );
 		$all_artists = Songpress_Artists::all();
 		$artist_hidden = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
 		$artist_html   = $artist_hidden;
 		if ( count( $all_artists ) > 1 ) {
-			$ao = '';
+			$ao = '<option value="0"' . selected( $cur_artist, 0, false ) . '></option>';
 			foreach ( $all_artists as $a ) {
 				$ao .= '<option value="' . (int) $a->id . '"' . selected( $cur_artist, (int) $a->id, false ) . '>' . esc_html( $a->name ) . '</option>';
 			}
