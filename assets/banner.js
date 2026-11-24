@@ -203,4 +203,13 @@
     });
   }
   document.addEventListener('sp:swapped', function () { if (typeof relink === 'function') relink(); });
+  /* quitting or closing the app stops the music and clears the lock-screen player; just switching away (home, lock) keeps playing */
+  window.addEventListener('pagehide', function () {
+    try {
+      window.SPUSERPAUSE = Date.now();
+      if (window.SPAU) window.SPAU.pause();
+      if (au && au !== window.SPAU) au.pause();
+      if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; }
+    } catch (e) {}
+  });
 })();

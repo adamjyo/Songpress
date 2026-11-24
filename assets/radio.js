@@ -419,6 +419,7 @@
   }
 
   window.addEventListener('beforeunload', function () { try { au.pause(); } catch (e) {} });
+  window.addEventListener('pagehide', function () { try { window.SPUSERPAUSE = Date.now(); au.pause(); if ('mediaSession' in navigator) { navigator.mediaSession.playbackState = 'none'; navigator.mediaSession.metadata = null; } } catch (e) {} });
   draw(); ui();
 
   /* a song that was playing on the Works list or a work page carries on here, on the Now Playing page */
