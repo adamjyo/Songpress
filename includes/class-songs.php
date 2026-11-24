@@ -502,6 +502,7 @@ class Songpress_Songs {
 		foreach ( self::VERSION_FIELDS as $f ) {
 			$data[ $f ] = in_array( $f, array( 'audio_id', 'art_id' ), true ) ? 0 : '';
 		}
+		$data['genre']           = (string) $from->genre; // the genre is the work's, so a new version starts with it
 		$data['status']          = 'writing';
 		$new = self::insert( false, (int) $from->family_id, $data, $owner_id );
 		if ( ! is_wp_error( $new ) ) {

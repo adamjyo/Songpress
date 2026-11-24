@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.20
+Stable tag: 0.72.21
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.21 =
+* Fix for 0.72.20: a new version reliably starts with the work's genre.
 
 = 0.72.20 =
 * Works editor: Genre is now in Basics on an original work, and a new version starts with the work's genre (it can still be changed per version).
