@@ -777,6 +777,13 @@ $lv = function ( $n ) use ( $ra ) { return (float) $GLOBALS['wpdb']->get_var( $G
 check( 'saving credits splits the money by the shares at once', array( $lv( 'Ann' ), $lv( 'Bo' ) ), array( 50.0, 50.0 ) );
 Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 75 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 25 ) ) );
 check( 'changing a writer share updates earnings at once', array( $lv( 'Ann' ), $lv( 'Bo' ) ), array( 75.0, 25.0 ) );
+// a change on the original reaches the earnings booked to a release
+$rb = Songpress_Songs::create_version( $ra, 1 );
+put( 'earnings', array( 'song_id' => $rb, 'quarter' => '2026-Q1', 'src' => 'mlc', 'amount' => 200 ) );
+Songpress_Songs::replace_credits( $ra, array( array( 'role' => 'writer', 'name' => 'Ann', 'share' => 90 ), array( 'role' => 'writer', 'name' => 'Bo', 'share' => 10 ) ) );
+Songpress_Songs::sync_shared( $ra );
+$lw = function ( $n ) use ( $rb ) { return (float) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( "SELECT amount FROM wp_songpress_person_earnings WHERE song_id = %d AND person = %s AND src = 'mlc'", $rb, $n ) ); };
+check( 'a change on the original updates earnings booked to its release', array( $lw( 'Ann' ), $lw( 'Bo' ) ), array( 180.0, 20.0 ) );
 Songpress_Songs::update( $sb, array( 'story' => 'from version' ) );
 Songpress_Songs::sync_shared( $sb );
 check( 'editing a version also updates the original', Songpress_Songs::get( $sa )->story, 'from version' );

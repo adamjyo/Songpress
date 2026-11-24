@@ -623,7 +623,7 @@ class Songpress_Songs {
 		if ( $after !== $before ) {
 			Songpress_History::log( $song_id, 'people', array( 'after' => $after ) );
 			if ( self::$auto_users && class_exists( 'Songpress_Uploads' ) ) { // a change of people or shares works the money out again at once (an import turns this off)
-				$n = Songpress_Uploads::rebuild_song_people( (int) $song_id );
+				$n = Songpress_Uploads::rebuild_song_people( (int) $song_id, false ); // its releases follow when the shared credits are copied to them (sync_shared)
 				if ( class_exists( 'Songpress_Audit' ) ) {
 					Songpress_Audit::log( 'money', 'Worked out earnings again after a credit change', (string) ( self::get( (int) $song_id )->serial ?? $song_id ), array( 'quarter lines redone' => $n ) );
 				}
@@ -726,6 +726,9 @@ class Songpress_Songs {
 			$wpdb->query( $wpdb->prepare( "INSERT INTO {$idt} (song_id, kind, value) SELECT %d, kind, value FROM {$idt} WHERE song_id = %d AND kind NOT IN ({$kinds})", $to, (int) $from->id ) );
 			$wpdb->query( $wpdb->prepare( "UPDATE {$t} SET revision = revision + 1, updated_at = %s WHERE id = %d", current_time( 'mysql', true ), $to ) );
 			Songpress_History::log( $to, 'synced', array( 'from' => $from->serial ) );
+			if ( self::$auto_users && class_exists( 'Songpress_Uploads' ) ) { // the release now has the new writers and shares: work its money out again
+				Songpress_Uploads::rebuild_song_people( $to, false );
+			}
 			++$n;
 		}
 		return $n;

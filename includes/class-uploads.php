@@ -341,13 +341,13 @@ class Songpress_Uploads {
 	 * Work one song's money out again for its people, every quarter and every source (DistroKid for performers, ASCAP, MLC and CCLI for writers).
 	 * Writer credits are shared across a work's releases, so a song's whole family is redone. Returns how many quarter lines were redone.
 	 */
-	public static function rebuild_song_people( $song_id ) {
+	public static function rebuild_song_people( $song_id, $family = true ) {
 		global $wpdb;
 		$e   = Songpress_Install::table( 'earnings' );
 		$p   = Songpress_Install::table( 'person_earnings' );
 		$sg  = Songpress_Install::table( 'songs' );
 		$fam = (int) $wpdb->get_var( $wpdb->prepare( "SELECT family_id FROM {$sg} WHERE id = %d", (int) $song_id ) ); // phpcs:ignore WordPress.DB
-		$ids = $fam ? array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$sg} WHERE family_id = %d", $fam ) ) ) : array(); // phpcs:ignore WordPress.DB
+		$ids = $fam && $family ? array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$sg} WHERE family_id = %d", $fam ) ) ) : array(); // phpcs:ignore WordPress.DB
 		$ids = array_values( array_unique( array_merge( array( (int) $song_id ), $ids ) ) );
 		$n   = 0;
 		foreach ( $ids as $id ) {
