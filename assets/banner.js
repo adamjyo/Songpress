@@ -132,4 +132,67 @@
     });
     pa.addEventListener('pause', paint); pa.addEventListener('ended', paint);
   }
+
+  /* ---------- the player keeps playing while you move around the app (phone) ----------
+     Links and GET forms inside the app swap the page body in place instead of reloading, so the audio element is never torn down.
+     A new track replaces the old one; Radio and anything outside the app load normally. */
+  if (!C.quiet && window.fetch && window.DOMParser && history.pushState) {
+    var lastKey = location.pathname + location.search, busy = false;
+    var appEl = function (d) { return d.querySelector('.songpress.sp-app'); };
+    var playingNow = function () { return !!(au && au.src && !au.ended); };
+    var ok = function (u) {
+      if (u.origin !== location.origin || /sp_radio|wp-admin|wp-login|wp-json|\.(pdf|zip|csv|png|jpe?g|mp3)(\?|$)/i.test(u.pathname + u.search)) return false;
+      if (/sp_radio/.test(location.search)) return false;
+      return true;
+    };
+    var relink = function () {
+      if (!au || !au.src) return;
+      var nl = collect(), cur = au.currentSrc || au.src, n = -1;
+      nl.forEach(function (it, i) { if (it.url && (it.url === cur || cur.indexOf(it.url) > -1)) n = i; });
+      if (n >= 0) { list = nl; idx = n; btn = nl[n].btn; single = false; } else { btn = null; }
+      paint();
+    };
+    var swap = function (html, url, push) {
+      var d = new DOMParser().parseFromString(html, 'text/html'), ne = appEl(d), oe = appEl(document);
+      if (!ne || !oe) return false;
+      oe.parentNode.replaceChild(ne, oe);
+      if (d.title) document.title = d.title;
+      if (push) history.pushState({ sp: 1 }, '', url);
+      lastKey = location.pathname + location.search;
+      [].forEach.call(ne.querySelectorAll('script'), function (o) {
+        var src = o.getAttribute('src');
+        if (src && [].some.call(document.scripts, function (x) { return x.src && x.src.split('?')[0] === o.src.split('?')[0]; })) { o.remove(); return; }
+        var n = document.createElement('script');
+        if (src) { n.src = src; n.defer = true; } else { n.textContent = o.textContent; }
+        o.parentNode.replaceChild(n, o);
+      });
+      if (push) window.scrollTo(0, 0);
+      if (window.SPRX && window.SPRX.rescan) window.SPRX.rescan();
+      relink();
+      return true;
+    };
+    var go = function (url, push) {
+      if (busy) return; busy = true;
+      fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'songpress' } }).then(function (r) { return r.ok ? r.text() : Promise.reject(); }).then(function (h) {
+        busy = false; if (!swap(h, url, push)) location.href = url;
+      }).catch(function () { busy = false; location.href = url; });
+    };
+    document.addEventListener('click', function (e) {
+      if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !playingNow()) return;
+      var a = e.target.closest && e.target.closest('.songpress.sp-app a[href]'); if (!a || a.target || a.hasAttribute('download') || a.getAttribute('onclick')) return;
+      var u; try { u = new URL(a.href, location.href); } catch (x) { return; }
+      if (!ok(u) || (u.pathname + u.search === location.pathname + location.search)) return;
+      e.preventDefault(); go(u.href, true);
+    });
+    document.addEventListener('submit', function (e) {
+      var f = e.target; if (e.defaultPrevented || !playingNow() || !f.closest || !f.closest('.songpress.sp-app') || (f.method || 'get').toLowerCase() !== 'get' || f.target) return;
+      var u = new URL(f.action || location.href, location.href); if (!ok(u)) return;
+      var q = new URLSearchParams(new FormData(f)); q.forEach(function (v, k) { u.searchParams.set(k, v); });
+      e.preventDefault(); go(u.href, true);
+    });
+    window.addEventListener('popstate', function () {
+      if (location.pathname + location.search === lastKey) return;
+      if (playingNow() && ok(new URL(location.href))) go(location.href, false); else location.reload();
+    });
+  }
 })();

@@ -208,6 +208,7 @@
   var suppressUntil = 0, holding = false, openRow = null;
   function setX(li, x, anim) { li.classList.toggle('drag', !anim); li.style.setProperty('--sx', x + 'px'); }
   function closeRows(except) { if (openRow && openRow !== except) { setX(openRow, 0, true); openRow.classList.remove('sp-rx-open'); openRow = null; } }
+  function bindList() {
   var list = document.querySelector('.songpress-list');
   if (list && list.querySelector('.songpress-card')) {
     list.classList.add('sp-rx-on');
@@ -253,4 +254,8 @@
     }
     list.addEventListener('touchend', end); list.addEventListener('touchcancel', end);
   }
+  }
+  bindList();
+  /* the page body was swapped without a reload (the player keeps playing): paint the new bars and bind the new list */
+  window.SPRX.rescan = function () { openRow = null; [].forEach.call(document.querySelectorAll('.sp-rx-bar'), function (b) { paint(b, meta(b)); }); bindList(); };
 })();

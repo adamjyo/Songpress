@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.44
+Stable tag: 0.72.45
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.45 =
+* Phone: the player keeps playing while you move around the app (Works, a work, Profile, back). Links and search forms swap the page in place instead of reloading, so the audio is never cut off; it only changes when you play another track. Radio still opens as its own page.
 
 = 0.72.44 =
 * The player at the top of the phone app shows the SongPress seal logo instead of the "Sp" letters.
