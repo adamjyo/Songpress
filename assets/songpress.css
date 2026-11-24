@@ -1361,9 +1361,9 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .sp-rd-pull[hidden]{display:none}
 /* 0.72.56: no down-arrow at the top of the full-screen Radio player; a back swipe closes it */
 .sp-np-handle{display:none!important}
-.sp-av canvas { border-radius: 50%; }
+.sp-av canvas { border-radius: 14px; background: #1c1c1e; aspect-ratio: 742/750; }
 .sp-av-sw { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; width: min(100%, 320px); }
 .sp-av-sw button { aspect-ratio: 1; border-radius: 50%; border: 1px solid rgba(127,127,127,.4); padding: 0; cursor: pointer; }
-.sp-av-cl, .sp-av-nl { display: flex; flex-direction: column; gap: 4px; width: min(100%, 320px); font-size: 13px; }
+.sp-av-cl, .sp-av-nl, .sp-av-dl { display: flex; flex-direction: column; gap: 4px; width: min(100%, 320px); font-size: 13px; }
 .sp-av-cl input { width: 100%; height: 44px; padding: 2px; border-radius: 8px; }
 .sp-av-nl input { min-height: 44px; padding: 8px 10px; border-radius: 8px; text-transform: uppercase; }

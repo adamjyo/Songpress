@@ -150,9 +150,10 @@ class Songpress_Profiles {
 			. '<button type="button" class="sp-av-cut songpress-btn2">' . esc_html__( 'Remove background', 'songpress' ) . '</button>'
 			. '<div class="sp-av-sw" role="group" aria-label="' . esc_attr__( 'Circle color', 'songpress' ) . '"></div>'
 			. '<label class="sp-av-cl"><span>' . esc_html__( 'Pick any color', 'songpress' ) . '</span><input class="sp-av-color" type="color" value="#e9a847"></label>'
+			. '<label class="sp-av-dl"><span>' . esc_html__( 'Darkness', 'songpress' ) . '</span><input class="sp-av-dark" type="range" min="0" max="80" step="1" value="0"></label>'
 			. '<label class="sp-av-nl"><span>' . esc_html__( 'Name on the picture', 'songpress' ) . '</span><input class="sp-av-name" type="text" maxlength="24" autocomplete="off"></label>'
 			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="0.5" max="3" step="0.01" value="1"></label>'
-			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The photo sits over the name, so move or shrink it to show more of the name.', 'songpress' ) . '</p>'
+			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The name goes under the circle.', 'songpress' ) . '</p>'
 			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html( '' !== (string) $person ? __( 'Use as their profile picture', 'songpress' ) : __( 'Use as my profile picture', 'songpress' ) ) . '</button> <span class="sp-av-msg" role="status"></span>'
 			. '</div></details>';
 		wp_enqueue_script( 'songpress-avatar', SONGPRESS_URL . 'assets/avatar.js', array(), SONGPRESS_VERSION, true );
@@ -192,6 +193,7 @@ class Songpress_Profiles {
 			wp_send_json_error( array( 'msg' => __( 'Could not save the picture.', 'songpress' ) ) );
 		}
 		wp_update_attachment_metadata( $att, wp_generate_attachment_metadata( $att, $up['file'] ) );
+		update_post_meta( $att, '_sp_icon', 1 ); // made with the picture maker: circle on top, name below
 		self::upsert( 'person', $u->display_name, array( 'photo_id' => (int) $att ) );
 		self::reset_cache();
 		wp_send_json_success( array( 'url' => $up['url'] ) );
@@ -295,6 +297,9 @@ class Songpress_Profiles {
 		$src  = self::photo_url( $p );
 		$st   = 'width:' . (int) $px . 'px;height:' . (int) $px . 'px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px';
 		if ( '' !== $src ) {
+			if ( $p && (int) $p->photo_id && get_post_meta( (int) $p->photo_id, '_sp_icon', true ) ) {
+				$st .= ';object-view-box:inset(1.6% 13.5% 26.1% 13.5%)'; // small round faces show just the circle, not the name under it
+			}
 			return '<img class="sp-face" src="' . esc_url( $src ) . '" alt="" loading="lazy" style="' . esc_attr( $st ) . '">';
 		}
 		$ini = '';

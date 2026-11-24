@@ -1,12 +1,12 @@
-/* Profile picture maker: upload a photo, remove its background, put it in a colored circle over a name (first name and last initial by default; it can be changed). */
+/* Profile picture maker: upload a photo, remove its background, put it in a colored circle above its name (first name and last initial by default; it can be changed). */
 (function () {
   var root = document.querySelector('.sp-avatar-tool');
   if (!root || !window.SP_AV) { return; }
   var C = window.SP_AV, T = C.t || {};
-  var S = 512, cv = root.querySelector('canvas'), cx = cv.getContext('2d');
+  var W = 742, H = 750, R = 271, S = W, cv = root.querySelector('canvas'), cx = cv.getContext('2d');
   var msg = root.querySelector('.sp-av-msg'), zoom = root.querySelector('.sp-av-zoom');
   var st = { img: null, cut: null, useCut: false, z: 1, ox: 0, oy: 0, color: '' };
-  cv.width = cv.height = S;
+  cv.width = W; cv.height = H;
   var accent = (getComputedStyle(root).getPropertyValue('--sp-accent') || '').trim() || '#e9a847';
   if (!/^#[0-9a-f]{6}$/i.test(accent)) { accent = '#e9a847'; }
   st.color = accent;
@@ -14,36 +14,40 @@
   nameIn.value = C.label || '';
   picker.value = st.color;
   function say(t) { msg.textContent = t || ''; }
-  function ink(hex) { // readable text on the circle color
-    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#15171c' : '#ffffff';
+  var dk = root.querySelector('.sp-av-dark');
+  function shade() { // the picked color, darkened by the slider
+    var n = parseInt(st.color.slice(1), 16), f = 1 - (parseInt(dk.value, 10) || 0) / 100;
+    return 'rgb(' + Math.round((n >> 16) * f) + ',' + Math.round(((n >> 8) & 255) * f) + ',' + Math.round((n & 255) * f) + ')';
   }
   function draw() {
-    cx.clearRect(0, 0, S, S);
+    var col = shade(), mx = W / 2, my = 12 + R;
+    cx.clearRect(0, 0, W, H);
+    cx.fillStyle = '#1c1c1e';
+    cx.fillRect(0, 0, W, H);
     cx.save();
     cx.beginPath();
-    cx.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
+    cx.arc(mx, my, R, 0, Math.PI * 2);
+    cx.fillStyle = col;
+    cx.fill();
     cx.clip();
-    cx.fillStyle = st.color;
-    cx.fillRect(0, 0, S, S);
-    // the name sits in the circle, behind the photo
-    var label = (nameIn.value || '').trim().toUpperCase();
-    if (label) {
-      var fs = Math.round(S * 0.17);
-      cx.fillStyle = ink(st.color);
-      cx.textAlign = 'center';
-      cx.textBaseline = 'middle';
-      do { cx.font = '800 ' + fs + 'px -apple-system, system-ui, "Segoe UI", Roboto, Arial, sans-serif'; fs -= 2; } while (fs > 20 && cx.measureText(label).width > S * 0.72);
-      cx.fillText(label, S / 2, S * 0.8);
-    }
     var im = st.useCut && st.cut ? st.cut : st.img;
     if (im) {
       var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
-      var k = Math.max(S / w, S / h) * st.z;
+      var k = Math.max(2 * R / w, 2 * R / h) * st.z;
       var dw = w * k, dh = h * k;
-      cx.drawImage(im, (S - dw) / 2 + st.ox, (S - dh) / 2 + st.oy, dw, dh);
+      cx.drawImage(im, mx - dw / 2 + st.ox, my - dh / 2 + st.oy, dw, dh);
     }
     cx.restore();
+    // the name under the circle, in the circle's color
+    var label = (nameIn.value || '').trim().toUpperCase();
+    if (label) {
+      var fs = 92;
+      cx.fillStyle = col;
+      cx.textAlign = 'center';
+      cx.textBaseline = 'middle';
+      do { cx.font = '900 ' + fs + 'px "Arial Black", Arial, sans-serif'; fs -= 2; } while (fs > 28 && cx.measureText(label).width > W - 48);
+      cx.fillText(label, mx, my + R + 52);
+    }
   }
   function load(src, done) {
     var im = new Image();
@@ -89,13 +93,14 @@
   }
   picker.addEventListener('input', function () { st.color = picker.value; draw(); });
   nameIn.addEventListener('input', draw);
+  dk.addEventListener('input', draw);
 
   // drag to move the photo inside the frame
   var drag = null;
   cv.addEventListener('pointerdown', function (e) { if (!st.img) { return; } drag = { x: e.clientX, y: e.clientY, ox: st.ox, oy: st.oy }; cv.setPointerCapture(e.pointerId); });
   cv.addEventListener('pointermove', function (e) {
     if (!drag) { return; }
-    var r = cv.getBoundingClientRect(), s = S / r.width;
+    var r = cv.getBoundingClientRect(), s = W / r.width;
     st.ox = drag.ox + (e.clientX - drag.x) * s;
     st.oy = drag.oy + (e.clientY - drag.y) * s;
     draw();
