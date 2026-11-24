@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.70.2
+Stable tag: 0.70.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.70.3 =
+* Player banner: the logo is the plain "Sp" mark in the card's text color, no circle around it.
 
 = 0.70.2 =
 * Profile: your works were missing (Works 0, Credited on 0 songs) because only credits linked to your login were counted. Credits typed in by your name now count too, and your Songs list on the profile fills in.

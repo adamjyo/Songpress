@@ -227,7 +227,7 @@ class Songpress_Reactions {
 		}
 		$done = true;
 		$cfg  = array(
-			'logo' => SONGPRESS_URL . 'assets/icon.svg',
+			'logo' => SONGPRESS_URL . 'assets/icon-sp.svg',
 			'i'    => array( 'player' => __( 'Player', 'songpress' ), 'prev' => __( 'Previous', 'songpress' ), 'next' => __( 'Next', 'songpress' ), 'play' => __( 'Play', 'songpress' ), 'pause' => __( 'Pause', 'songpress' ), 'hide' => __( 'Hide player', 'songpress' ), 'show' => __( 'Show player', 'songpress' ), 'back15' => __( 'Back 15 seconds', 'songpress' ), 'fwd15' => __( 'Forward 15 seconds', 'songpress' ) ),
 		);
 		return '<script>window.SP_BAN=' . wp_json_encode( $cfg ) . ';</script><script src="' . esc_url( SONGPRESS_URL . 'assets/banner.js?v=' . SONGPRESS_VERSION ) . '" defer></script>';

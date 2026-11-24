@@ -22,7 +22,7 @@
   function build() {
     if (bar) return;
     bar = mk('div', 'sp-ban'); bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', I.player || 'Player'); bar.hidden = true;
-    bar.innerHTML = '<div class="bn-top"><span class="bn-art"></span><span class="bn-tx"><b class="bn-t"></b><span class="bn-a"></span></span><img class="bn-logo" alt="" src="' + (C.logo || '') + '"></div><hr class="bn-hr"><div class="bn-ctl"><button type="button" class="bn-prev"></button><button type="button" class="bn-pp"></button><button type="button" class="bn-next"></button></div><button type="button" class="bn-hide">' + (I.hide || 'Hide player') + '</button>';
+    bar.innerHTML = '<div class="bn-top"><span class="bn-art"></span><span class="bn-tx"><b class="bn-t"></b><span class="bn-a"></span></span><span class="bn-logo" aria-hidden="true" style="-webkit-mask-image:url(' + (C.logo || '') + ');mask-image:url(' + (C.logo || '') + ')"></span></div><hr class="bn-hr"><div class="bn-ctl"><button type="button" class="bn-prev"></button><button type="button" class="bn-pp"></button><button type="button" class="bn-next"></button></div><button type="button" class="bn-hide">' + (I.hide || 'Hide player') + '</button>';
     accent(bar); document.body.appendChild(bar);
     ['touchstart', 'click'].forEach(function (n) { bar.addEventListener(n, function () { if (bar.classList.contains('in')) arm(); }, { passive: true }); });
     bar.querySelector('.bn-prev').innerHTML = SVG.prev; bar.querySelector('.bn-next').innerHTML = SVG.next;
