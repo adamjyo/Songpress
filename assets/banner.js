@@ -195,4 +195,5 @@
       if (playingNow() && ok(new URL(location.href))) go(location.href, false); else location.reload();
     });
   }
+  document.addEventListener('sp:swapped', function () { if (typeof relink === 'function') relink(); });
 })();
