@@ -57,6 +57,7 @@ class Songpress_Editor {
 			'back'   => '<path d="M15 18l-6-6 6-6"/>',
 			'save'   => '<path d="M5 12l5 5L20 7"/>',
 			'share'  => '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4"/>',
+			'export' => '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',
 			'trash'  => '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
 		);
 		return '<svg class="spe-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ( $d[ $name ] ?? '' ) . '</svg>';
@@ -285,7 +286,8 @@ class Songpress_Editor {
 	private static function share_popup( $song ) {
 		$link  = add_query_arg( 'sp_share', Songpress_Songs::token_for( (int) $song->id ), home_url( '/' ) );
 		$title = Songpress_Songs::display_title( $song );
-		$o     = '<button type="button" class="spe-ib spe-sharebtn" id="spe-share-open" title="' . esc_attr__( 'Share', 'songpress' ) . '" aria-label="' . esc_attr__( 'Share', 'songpress' ) . '">' . self::ico( 'share' ) . '</button>';
+		$o     = '<a class="spe-ib spe-exportbtn" target="_blank" rel="noopener" href="' . esc_url( Songpress_Export::url( 'work', array( 'song' => (int) $song->id ) ) ) . '" title="' . esc_attr__( 'Export PDF', 'songpress' ) . '" aria-label="' . esc_attr__( 'Export PDF', 'songpress' ) . '">' . self::ico( 'export' ) . '</a>';
+		$o    .= '<button type="button" class="spe-ib spe-sharebtn" id="spe-share-open" title="' . esc_attr__( 'Share', 'songpress' ) . '" aria-label="' . esc_attr__( 'Share', 'songpress' ) . '">' . self::ico( 'share' ) . '</button>';
 		$o    .= '<dialog class="spe-dialog" id="spe-share-dlg" aria-labelledby="spe-share-h"><form method="dialog"><h3 id="spe-share-h">' . esc_html( sprintf( /* translators: %s: song title */ __( 'Share %s', 'songpress' ), $title ) ) . '</h3>';
 		$o    .= '<p class="spe-help">' . esc_html__( 'Anyone with this link can read the song, with its cover, audio and chart. They do not need to log in. They never see splits, codes, notes or money.', 'songpress' ) . '</p>';
 		$o    .= '<input type="text" readonly id="spe-share-link" value="' . esc_attr( $link ) . '" onfocus="this.select()" data-title="' . esc_attr( $title ) . '">';

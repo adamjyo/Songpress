@@ -1319,3 +1319,4 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 /* phone profile: Export my Catalog */
 .songpress-mycat{margin:14px 16px}
 .sp-app a.songpress-mycatbtn{display:block;text-align:center;padding:13px 16px;border-radius:12px;background:var(--sp-accent);color:#14110a;font-weight:600;text-decoration:none}
+.sp-app a.spe-ib{text-decoration:none}
