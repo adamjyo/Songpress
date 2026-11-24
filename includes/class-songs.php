@@ -935,7 +935,7 @@ class Songpress_Songs {
 	}
 
 	/** What kind of recording or version a work is. */
-	const TYPES = array( 'Raw', 'Studio', 'AI', 'Live' );
+	const TYPES = array( 'Raw', 'Studio', 'AI', 'Live', 'Lyrics' );
 
 	const CODE_KINDS = array( 'iswc', 'isrc', 'ccli', 'mlc', 'bmi', 'ascap', 'work_id', 'copyright', 'distrokid', 'upc' );
 	const LINK_KINDS = array( 'spotify', 'apple', 'itunes', 'amazon', 'youtube', 'tidal', 'deezer', 'pandora', 'tiktok', 'bandcamp', 'soundcloud', 'distrokid', 'other' );
