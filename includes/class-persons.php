@@ -340,6 +340,54 @@ class Songpress_Persons {
 		return $n;
 	}
 
+	/**
+	 * Two names that are the same person: everything under $from moves to $to (credits, earnings, payments, profile).
+	 * A credit that would then appear twice on one work in the same role is kept once. Returns counts.
+	 */
+	public static function merge_into( $from, $to ) {
+		global $wpdb;
+		$fk = Songpress_Money::person_key( $from );
+		$tk = Songpress_Money::person_key( $to );
+		if ( '' === $fk || $fk === $tk ) {
+			return array();
+		}
+		$out = array( 'credits' => self::follow_name( $from, $to ) );
+		$ct  = Songpress_Install::table( 'credits' );
+		$out['dupes'] = (int) $wpdb->query( "DELETE c1 FROM {$ct} c1 JOIN {$ct} c2 ON c1.song_id = c2.song_id AND c1.role = c2.role AND c1.name = c2.name AND c1.id > c2.id WHERE c1.name = " . $wpdb->prepare( '%s', $to ) ); // phpcs:ignore WordPress.DB
+		// payments: the same quarter on both sides is added together; paid only when both were paid
+		$py = Songpress_Install::table( 'payments' );
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$py} WHERE party_key = %s", $fk ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$have = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$py} WHERE pay_year = %d AND pay_quarter = %d AND kind = %s AND party_key = %s", $r->pay_year, $r->pay_quarter, $r->kind, $tk ) ); // phpcs:ignore WordPress.DB
+			if ( $have ) {
+				$wpdb->update( $py, array( 'amount' => round( (float) $have->amount + (float) $r->amount, 2 ), 'paid' => ( (int) $have->paid && (int) $r->paid ) ? 1 : 0, 'paid_on' => $have->paid_on ?: $r->paid_on, 'notes' => trim( $have->notes . "\n" . $r->notes ), 'updated_at' => current_time( 'mysql' ) ), array( 'id' => (int) $have->id ) );
+				$wpdb->delete( $py, array( 'id' => (int) $r->id ) );
+			} else {
+				$wpdb->update( $py, array( 'party' => $to, 'party_key' => $tk ), array( 'id' => (int) $r->id ) );
+			}
+			$out['payments'] = ( $out['payments'] ?? 0 ) + 1;
+		}
+		// profile: keep $to's, fill its blanks from $from's, then drop $from's
+		$pt   = Songpress_Install::table( 'profiles' );
+		$a    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$pt} WHERE kind = 'person' AND name_key = %s", Songpress_Profiles::key( $from ) ), ARRAY_A ); // phpcs:ignore WordPress.DB
+		$b    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$pt} WHERE kind = 'person' AND name_key = %s", Songpress_Profiles::key( $to ) ), ARRAY_A ); // phpcs:ignore WordPress.DB
+		if ( $a && $b ) {
+			$fill = array();
+			foreach ( array( 'payee', 'photo_id', 'photo_url', 'bio', 'email', 'phone', 'website', 'ipi', 'pro', 'birthday', 'address' ) as $f ) {
+				if ( isset( $a[ $f ] ) && ( '' === (string) ( $b[ $f ] ?? '' ) || '0' === (string) $b[ $f ] ) && '' !== (string) $a[ $f ] && '0' !== (string) $a[ $f ] ) {
+					$fill[ $f ] = $a[ $f ];
+				}
+			}
+			$wpdb->update( $pt, $fill + array( 'aliases' => trim( $b['aliases'] . ( '' !== (string) $b['aliases'] ? ', ' : '' ) . $a['name'] ) ), array( 'id' => (int) $b['id'] ) );
+			$wpdb->delete( $pt, array( 'id' => (int) $a['id'] ) );
+			Songpress_Profiles::reset_cache();
+		} elseif ( $a ) {
+			$wpdb->update( $pt, array( 'name' => $to, 'name_key' => Songpress_Profiles::key( $to ) ), array( 'id' => (int) $a['id'] ) );
+			Songpress_Profiles::reset_cache();
+		}
+		Songpress_Audit::log( 'people', 'Merged two names', $from . ' into ' . $to, $out );
+		return $out;
+	}
+
 	/** A WordPress profile whose display name changed: carry the new name to the credits. */
 	public static function on_user_update( $user_id, $old_data ) {
 		$u = get_userdata( $user_id );

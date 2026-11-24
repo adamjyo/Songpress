@@ -114,6 +114,11 @@ class Songpress_Install {
 			Songpress_Uploads::rebuild_dk_people();
 			update_option( 'songpress_dk_shares', '1' );
 		}
+		// Nikki Sanders and Nikki Braby are the same person; the name kept is Braby. Once.
+		if ( '1' !== get_option( 'songpress_merge_nikki' ) && class_exists( 'Songpress_Persons' ) ) {
+			Songpress_Persons::merge_into( 'Nikki Sanders', 'Nikki Braby' );
+			update_option( 'songpress_merge_nikki', '1' );
+		}
 		// The Lists screen is gone: statuses and genres now come from the built-in options and from what works carry.
 		delete_option( 'songpress_statuses' );
 		delete_option( 'songpress_genres' );
