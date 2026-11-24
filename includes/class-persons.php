@@ -365,12 +365,7 @@ class Songpress_Persons {
 					$f .= '<p><button type="submit">' . esc_html__( 'Yes, replace it', 'songpress' ) . '</button> <a href="' . esc_url( self::url( $back ) ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a></p></form>';
 					wp_die( '<h1>' . esc_html__( 'That username is already used', 'songpress' ) . '</h1><p>' . esc_html( sprintf( /* translators: 1: login 2: display name */ __( '%1$s belongs to %2$s. If you continue, %1$s moves to %3$s and the other account is renamed (its name and password stay).', 'songpress' ), $login, $ou ? $ou->display_name : '', $new ) ) . '</p>' . $f, '', array( 'response' => 200 ) ); // phpcs:ignore WordPress.Security.EscapeOutput
 				}
-				$free = $login . '-old';
-				for ( $i = 2; username_exists( $free ); $i++ ) {
-					$free = $login . '-old' . $i;
-				}
-				$wpdb->update( $wpdb->users, array( 'user_login' => $free, 'user_nicename' => sanitize_title( $free ) ), array( 'ID' => $other ) );
-				clean_user_cache( $other );
+				$free = Songpress_People::step_aside( $other );
 				$moved = $free;
 			}
 			$wpdb->update( $wpdb->users, array( 'user_login' => $login, 'user_nicename' => sanitize_title( $login ), 'display_name' => $new ), array( 'ID' => $uid ) );

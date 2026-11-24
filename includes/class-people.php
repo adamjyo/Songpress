@@ -84,6 +84,31 @@ class Songpress_People {
 		return strtolower( preg_replace( '/[^a-z0-9]/i', '', (string) $name ) );
 	}
 
+	/** An unused login built from $base and a suffix of letters only ("adam.page-old", "adam.page-oldb", ...). */
+	public static function free_login( $base, $suffix = 'old' ) {
+		$try = $base . '-' . $suffix;
+		foreach ( range( 'b', 'z' ) as $l ) {
+			if ( ! username_exists( $try ) ) {
+				return $try;
+			}
+			$try = $base . '-' . $suffix . $l;
+		}
+		return $try;
+	}
+
+	/** Rename an old-system account out of the way so its login can be reused. */
+	public static function step_aside( $user_id ) {
+		global $wpdb;
+		$u = get_userdata( (int) $user_id );
+		if ( ! $u ) {
+			return '';
+		}
+		$free = self::free_login( $u->user_login );
+		$wpdb->update( $wpdb->users, array( 'user_login' => $free, 'user_nicename' => sanitize_title( $free ) ), array( 'ID' => (int) $user_id ) );
+		clean_user_cache( (int) $user_id );
+		return $free;
+	}
+
 	/** The account for this name: the one made for it earlier, or a new Viewer. 0 when none could be made. */
 	public static function ensure_user( $name, &$created = null ) {
 		$name  = trim( (string) $name );
@@ -102,10 +127,16 @@ class Songpress_People {
 			update_user_meta( $same->ID, self::KEY_META, $key );
 			return (int) $same->ID;
 		}
-		// Never take over an account that already exists under that name: it may be a different person.
-		$try = $login;
-		for ( $i = 2; username_exists( $try ); $i++ ) {
-			$try = $login . $i;
+		// A login never ends in a number. An account already holding it that is not an admin, is not this person's and has no SongPress class
+		// is a leftover from the old system: it steps aside (renamed name-old) and the login goes to this person.
+		$try  = $login;
+		$held = get_user_by( 'login', $login );
+		if ( $held ) {
+			if ( ! Songpress_Caps::is_wp_admin( $held->ID ) && '' === (string) get_user_meta( $held->ID, Songpress_Caps::META, true ) ) {
+				self::step_aside( $held->ID );
+			} else { // a live account of someone else: fall back to a letter suffix, never a number
+				$try = self::free_login( $login, 'x' );
+			}
 		}
 		$parts = preg_split( '/\s+/', $name );
 		$id    = wp_insert_user( array(
