@@ -291,6 +291,27 @@ CREATE TABLE {prefix}songpress_ratings (
   UNIQUE KEY song_voter (song_id,voter)
 ) {charset};
 
+-- Radio: playlists. A playlist belongs to one person; shared ones can be played by everyone who can see the works in them.
+CREATE TABLE {prefix}songpress_playlists (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  user_id bigint(20) unsigned NOT NULL,
+  name varchar(120) NOT NULL,
+  shared tinyint(1) NOT NULL DEFAULT 0,
+  created_at datetime NULL,
+  PRIMARY KEY  (id),
+  KEY user_id (user_id)
+) {charset};
+
+CREATE TABLE {prefix}songpress_playlist_songs (
+  id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  playlist_id bigint(20) unsigned NOT NULL,
+  song_id bigint(20) unsigned NOT NULL,
+  position int(11) NOT NULL DEFAULT 0,
+  PRIMARY KEY  (id),
+  UNIQUE KEY pl_song (playlist_id,song_id),
+  KEY song_id (song_id)
+) {charset};
+
 -- Art studio: layered cover-art projects. Layers are kept as one JSON list (images, text, shapes, a canvas colour).
 CREATE TABLE {prefix}songpress_art (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,

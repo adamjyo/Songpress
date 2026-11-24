@@ -173,12 +173,13 @@ class Songpress_Frontend {
 		$cat_url = self::main_id( 'catalog' ) ? get_permalink( self::main_id( 'catalog' ) ) : $here;
 		$pro_url = self::main_id( 'profile' ) ? get_permalink( self::main_id( 'profile' ) ) : $here;
 		$page    = isset( $_GET['sp_page'] ) ? sanitize_key( wp_unslash( $_GET['sp_page'] ) ) : '';
-		$in_app  = '' === $page;
+		$in_app  = '' === $page && ! isset( $_GET['sp_radio'] );
 		$avatar  = get_avatar_url( get_current_user_id(), array( 'size' => 36 ) );
 		$cu      = wp_get_current_user();
 		$who     = '' !== trim( (string) $cu->display_name ) ? $cu->display_name : __( 'Profile', 'songpress' );
 		$face    = $avatar ? '<img class="sp-me" src="' . esc_url( $avatar ) . '" width="22" height="22" alt="">' : $me;
 		$nav     = '<div class="sp-who">' . self::nav_item( $pro_url, $who, $face, 'profile' === $which ) . Songpress_Push::item() . '</div>' . self::nav_item( $cat_url, __( 'Works', 'songpress' ), $songs, 'catalog' === $which && $in_app );
+		$nav .= self::nav_item( add_query_arg( 'sp_radio', '1', $cat_url ), __( 'Radio', 'songpress' ), $svg( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ), 'catalog' === $which && isset( $_GET['sp_radio'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		$mk = function ( $slug, $label, $icon, $cap, $badge = 0 ) use ( $cat_url, $page ) {
 			$on = $page === $slug || ( 'settings' === $slug && in_array( $page, array( 'backups', 'health', 'earnings', 'activity', 'uploads', 'import' ), true ) ) || ( 'registrations' === $slug && 'agreements' === $page ) || ( 'agreements' === $slug && 'registrations' === $page );
 			return Songpress_Caps::can( $cap ) ? self::nav_item( add_query_arg( 'sp_page', $slug, $cat_url ), $label, $icon, $on, $badge ) : '';
@@ -235,6 +236,10 @@ class Songpress_Frontend {
 			return $msg;
 		}
 		$desktop = ! wp_is_mobile(); // phones and tablets only view; managing and editing is for the desktop app
+		if ( isset( $_GET['sp_radio'] ) ) { // Radio: playlists, on the desktop and on the phone
+			wp_enqueue_style( 'songpress' );
+			return '<div class="songpress sp-app">' . ( $desktop ? '' : self::userbar( 'catalog' ) ) . Songpress_Radio::render() . self::tabs( 'radio' ) . '</div>';
+		}
 		if ( $desktop && isset( $_GET['sp_page'] ) ) {
 			return Songpress_Screens::render( sanitize_key( wp_unslash( $_GET['sp_page'] ) ) );
 		}
@@ -443,7 +448,19 @@ class Songpress_Frontend {
 		if ( ! $c || ! $p || ! Songpress_Install::page_ok( $c ) || ! Songpress_Install::page_ok( $p ) ) {
 			return '';
 		}
-		return '<nav class="songpress-tabs songpress-tabs-' . $pos . '" aria-label="SongPress"><a class="' . ( 'catalog' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $c ) ) . '">' . esc_html__( 'Works', 'songpress' ) . '</a><a class="' . ( 'profile' === $on ? 'on' : '' ) . '" href="' . esc_url( get_permalink( $p ) ) . '">' . esc_html__( 'Profile', 'songpress' ) . '</a></nav>';
+		$ic = function ( $d ) {
+			return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $d . '</svg>';
+		};
+		$items = array(
+			'catalog' => array( get_permalink( $c ), __( 'Works', 'songpress' ), $ic( '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>' ) ),
+			'radio'   => array( add_query_arg( 'sp_radio', '1', get_permalink( $c ) ), __( 'Radio', 'songpress' ), $ic( '<circle cx="12" cy="12" r="2"/><path d="M8 8a5.7 5.7 0 000 8M16 8a5.7 5.7 0 010 8M5 5a10 10 0 000 14M19 5a10 10 0 010 14"/>' ) ),
+			'profile' => array( get_permalink( $p ), __( 'Profile', 'songpress' ), $ic( '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/>' ) ),
+		);
+		$o = '<nav class="songpress-tabs songpress-tabs-' . $pos . '" aria-label="SongPress">';
+		foreach ( $items as $k => $it ) {
+			$o .= '<a class="' . ( $k === $on ? 'on' : '' ) . '"' . ( $k === $on ? ' aria-current="page"' : '' ) . ' href="' . esc_url( $it[0] ) . '">' . $it[2] . '<span>' . esc_html( $it[1] ) . '</span></a>';
+		}
+		return $o . '</nav>';
 	}
 
 	private static function song_view( $id, $uid ) {
@@ -654,7 +671,7 @@ class Songpress_Frontend {
 			}
 			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what you have earned from each song.', 'songpress' ) . '</p>';
 		}
-		$out .= wp_kses_post( songpress_public_donate_link() ) . ( wp_is_mobile() ? '' : self::tabs( 'profile' ) ) . '</div>';
+		$out .= wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'profile' ) . '</div>';
 		return $out;
 	}
 }

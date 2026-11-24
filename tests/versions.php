@@ -43,6 +43,8 @@ class FakeWpdb {
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_history (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, user_id INT, action TEXT, detail TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_artists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, slug TEXT UNIQUE, settings TEXT, created_at TEXT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_profiles (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, name TEXT, name_key TEXT, payee TEXT, aliases TEXT, photo_id INT DEFAULT 0, photo_url TEXT, bio TEXT, email TEXT, phone TEXT, website TEXT, ipi TEXT, pro TEXT, updated_at TEXT, UNIQUE(kind,name_key))' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_playlists (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, name TEXT, shared INT DEFAULT 0, created_at TEXT)' );
+		$this->pdo->exec( 'CREATE TABLE wp_songpress_playlist_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, playlist_id INT, song_id INT, position INT DEFAULT 0, UNIQUE(playlist_id,song_id))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_earnings (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, quarter TEXT, src TEXT, amount REAL, UNIQUE(song_id,quarter,src))' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_person_earnings (id INTEGER PRIMARY KEY AUTOINCREMENT, person TEXT, person_key TEXT, work_title TEXT, song_id INT, quarter TEXT, src TEXT, amount REAL)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_payments (id INTEGER PRIMARY KEY AUTOINCREMENT, pay_year INT, pay_quarter INT, kind TEXT, party TEXT, party_key TEXT, amount REAL, paid INT, paid_on TEXT, notes TEXT, updated_at TEXT, UNIQUE(pay_year,pay_quarter,kind,party_key))' );

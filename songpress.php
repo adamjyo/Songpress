@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/adamjyo/Songpress
  * GitHub Plugin URI: adamjyo/Songpress
  * Description:       A song catalog manager. Keep every song and every version under one serial number, share your catalog, and see your own works.
- * Version:           0.64.4
+ * Version:           0.65.0
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            Adam Yoo
@@ -18,8 +18,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'SONGPRESS_VERSION', '0.64.4' );
-define( 'SONGPRESS_DB_VERSION', '23' );
+define( 'SONGPRESS_VERSION', '0.65.0' );
+define( 'SONGPRESS_DB_VERSION', '24' );
 define( 'SONGPRESS_FILE', __FILE__ );
 define( 'SONGPRESS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SONGPRESS_URL', plugin_dir_url( __FILE__ ) );
@@ -60,6 +60,7 @@ require_once SONGPRESS_DIR . 'includes/class-persons.php';
 require_once SONGPRESS_DIR . 'includes/class-sessions.php';
 require_once SONGPRESS_DIR . 'includes/class-chordtool.php';
 require_once SONGPRESS_DIR . 'includes/class-transcriber.php';
+require_once SONGPRESS_DIR . 'includes/class-radio.php';
 require_once SONGPRESS_DIR . 'includes/class-screens.php';
 require_once SONGPRESS_DIR . 'includes/class-post.php';
 require_once SONGPRESS_DIR . 'includes/class-frontend.php';
@@ -91,6 +92,7 @@ add_action( 'plugins_loaded', function () {
 		Songpress_Sessions::init();
 		Songpress_ChordTool::init();
 		Songpress_Transcriber::init();
+		Songpress_Radio::init();
 		Songpress_Audit::init();
 		Songpress_Names::init();
 		Songpress_Backup::init();
