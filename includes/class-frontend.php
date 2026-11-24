@@ -516,31 +516,40 @@ class Songpress_Frontend {
 		// Header: cover art on the left; beside it the title, the artist and the authors as one row of icons. The player runs the full width underneath.
 		$is_root = 0 === (int) $s->version_no;
 		$name    = $is_root ? $s->title : $s->release_title; // only an original work shows the work name; a version shows its release title
-		$out  = '<article class="songpress-song">' . $top . '<header class="songpress-top">' . self::art( $s, 'songpress-cover' ) . '<div class="songpress-topl">';
+		$out  = '<article class="songpress-song">' . $top . '<header class="songpress-top"><div class="songpress-card2">' . self::art( $s, 'songpress-cover' ) . '<div class="songpress-topl">';
 		$out .= '<p class="songpress-sub"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( Songpress_Songs::statuses()[ $s->status ] ?? $s->status ) . '</p>';
 		if ( '' !== trim( (string) $name ) ) {
 			$out .= '<h2>' . esc_html( $name ) . '</h2>';
 		} elseif ( '' !== trim( (string) Songpress_Songs::display_title( $s ) ) ) {
-			// a version with no release title yet: the work name, and its style
-			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>' . ( '' !== trim( (string) $s->genre ) ? '<p class="songpress-sub">' . esc_html( $s->genre ) . '</p>' : '' );
+			$out .= '<h2 class="songpress-notitle">' . esc_html( Songpress_Songs::display_title( $s ) ) . '</h2>'; // a version with no release title yet: the work name
 		}
-		if ( '' !== trim( (string) $s->artist ) ) {
-			$out .= '<p class="songpress-band">' . Songpress_Profiles::chip( $s->artist, 64, 'band' ) . esc_html( $s->artist ) . '</p>'; // the performing act, never matched against people
+		if ( '' !== trim( (string) $s->genre ) ) {
+			$out .= '<p class="songpress-sub songpress-genre-line">' . esc_html( $s->genre ) . '</p>';
 		}
-		$seen  = array();
-		$icons = '';
-		foreach ( Songpress_Songs::credits( $id ) as $c ) {
-			$k = Songpress_Profiles::key( $c->name );
-			if ( 'writer' !== $c->role || '' === $k || isset( $seen[ $k ] ) ) {
-				continue;
+		$out .= '</div></div>';
+		// Under the card, centred: the band, the writers and the performers, each on its own labelled row.
+		$people = function ( $role ) use ( $id ) {
+			$seen = array();
+			$h    = '';
+			foreach ( Songpress_Songs::credits( $id ) as $c ) {
+				$k = Songpress_Profiles::key( $c->name );
+				if ( $role !== $c->role || '' === $k || isset( $seen[ $k ] ) ) {
+					continue;
+				}
+				$seen[ $k ] = 1;
+				$h         .= '<span class="songpress-pp" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 64, 'person' ) . '<small>' . esc_html( $c->name ) . '</small></span>';
 			}
-			$seen[ $k ] = 1;
-			$icons     .= '<span class="songpress-icon" title="' . esc_attr( $c->name ) . '">' . Songpress_Profiles::chip( $c->name, 64, 'person' ) . '</span>';
+			return $h;
+		};
+		$group = function ( $label, $inner ) {
+			return '' === $inner ? '' : '<section class="songpress-cg"><h3>' . esc_html( $label ) . '</h3><div class="songpress-cr">' . $inner . '</div></section>';
+		};
+		$band  = '' !== trim( (string) $s->artist ) ? '<span class="songpress-pp" title="' . esc_attr( $s->artist ) . '">' . Songpress_Profiles::chip( $s->artist, 64, 'band' ) . '<small>' . esc_html( $s->artist ) . '</small></span>' : ''; // the performing act, never matched against people
+		$cg    = $group( __( 'Band', 'songpress' ), $band ) . $group( __( 'Writers', 'songpress' ), $people( 'writer' ) ) . $group( __( 'Performers', 'songpress' ), $people( 'performer' ) );
+		if ( '' !== $cg ) {
+			$out .= '<div class="songpress-credits">' . $cg . '</div>';
 		}
-		if ( '' !== $icons ) {
-			$out .= '<p class="songpress-authors" aria-label="' . esc_attr__( 'Authors', 'songpress' ) . '">' . $icons . '</p>';
-		}
-		$out  .= '</div>' . Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token ) . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
+		$out  .= Songpress_Reactions::bar( $s, $uid ? '' : (string) $s->share_token ) . Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {
 			$out .= '<audio class="songpress-audio" controls preload="none" src="' . esc_url( $audio ) . '"></audio>';
