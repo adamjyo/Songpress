@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.34
+Stable tag: 0.72.35
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.35 =
+* Exports: earnings to date per release (the works list and a work's Releases table, with a total). An original work shows the total of its releases. People who can see money get the full income; Export my Catalog shows only your own share. Band payments are not counted.
 
 = 0.72.34 =
 * Desktop works list: Export catalog now sits under the + button. Phone app: Export my Catalog button on the profile opens the same catalog list for the works you are credited on.

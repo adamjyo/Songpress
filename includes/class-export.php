@@ -90,6 +90,58 @@ class Songpress_Export {
 		return '';
 	}
 
+	/** Money shown in an export: a dollar amount. */
+	private static function money( $n ) {
+		return '$' . number_format( (float) $n, 2 );
+	}
+
+	/**
+	 * What each song has earned through today (statements received, the band payments left out), summed over the whole family of each song, so
+	 * an original work shows the total of its releases. With $person_key it is that person's share (person_earnings), else the full income.
+	 * Returns song_id => amount, for the ids given.
+	 */
+	public static function earned_map( array $song_ids, $person_key = '' ) {
+		global $wpdb;
+		$song_ids = array_values( array_unique( array_filter( array_map( 'intval', $song_ids ) ) ) );
+		if ( ! $song_ids ) {
+			return array();
+		}
+		$sg  = Songpress_Install::table( 'songs' );
+		$ph  = implode( ',', array_fill( 0, count( $song_ids ), '%d' ) );
+		$fam = array(); // song id => its family's song ids
+		$all = array();
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT s.id AS sid, s.version_no AS sv, m.id AS mid FROM {$sg} s JOIN {$sg} m ON m.family_id = s.family_id WHERE s.id IN ({$ph})", $song_ids ) ) as $r ) { // phpcs:ignore WordPress.DB
+			if ( (int) $r->sv > 0 && (int) $r->sid !== (int) $r->mid ) { // a release is only itself; an original work stands for its whole family
+				continue;
+			}
+			$fam[ (int) $r->sid ][] = (int) $r->mid;
+			$all[ (int) $r->mid ]   = 1;
+		}
+		if ( ! $all ) {
+			return array();
+		}
+		$ids = array_keys( $all );
+		$ph2 = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		if ( '' !== $person_key ) {
+			$sql = $wpdb->prepare( 'SELECT song_id, SUM(amount) AS a FROM ' . Songpress_Install::table( 'person_earnings' ) . " WHERE person_key = %s AND src <> 'band' AND song_id IN ({$ph2}) GROUP BY song_id", array_merge( array( $person_key ), $ids ) ); // phpcs:ignore WordPress.DB
+		} else {
+			$sql = $wpdb->prepare( 'SELECT song_id, SUM(amount) AS a FROM ' . Songpress_Install::table( 'earnings' ) . " WHERE src <> 'band' AND song_id IN ({$ph2}) GROUP BY song_id", $ids ); // phpcs:ignore WordPress.DB
+		}
+		$by = array();
+		foreach ( (array) $wpdb->get_results( $sql ) as $r ) { // phpcs:ignore WordPress.DB
+			$by[ (int) $r->song_id ] = (float) $r->a;
+		}
+		$out = array();
+		foreach ( $song_ids as $id ) {
+			$sum = 0.0;
+			foreach ( (array) ( $fam[ $id ] ?? array( $id ) ) as $m ) {
+				$sum += $by[ $m ] ?? 0.0;
+			}
+			$out[ $id ] = $sum;
+		}
+		return $out;
+	}
+
 	/** The family root of a song (or the song itself when there is none). */
 	private static function root_of( $s ) {
 		global $wpdb;
@@ -175,16 +227,23 @@ class Songpress_Export {
 		$o .= '' !== $ly ? '<div class="ly">' . nl2br( esc_html( $ly ) ) . '</div>' : '<p class="mut">&mdash;</p>';
 		$o .= '</div></div>';
 		// Releases: every released version (an ISRC, or a Released status).
+		$money = Songpress_Caps::can( 'money' );
+		$own   = array(); // what each version has earned by itself
+		if ( $money ) {
+			foreach ( (array) $wpdb->get_results( $wpdb->prepare( 'SELECT song_id, SUM(amount) AS a FROM ' . Songpress_Install::table( 'earnings' ) . " WHERE src <> 'band' AND song_id IN (SELECT id FROM {$t} WHERE family_id = %d) GROUP BY song_id", (int) $r->family_id ) ) as $e ) { // phpcs:ignore WordPress.DB
+				$own[ (int) $e->song_id ] = (float) $e->a;
+			}
+		}
 		$rows = '';
 		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$t} WHERE family_id = %d AND version_no > 0 ORDER BY version_no", (int) $r->family_id ) ) as $v ) {
 			$isrc = self::code( $v->id, 'isrc' );
 			if ( '' === $isrc && 'released' !== strtolower( (string) $v->status ) && 'released' !== strtolower( trim( (string) $v->stage ) ) ) {
 				continue;
 			}
-			$rows .= '<tr' . ( (int) $v->id === $asked_id ? ' class="me"' : '' ) . '><td>' . esc_html( $v->serial ) . '</td><td>' . esc_html( '' !== trim( (string) $v->release_title ) ? $v->release_title : Songpress_Songs::display_title( $v ) ) . '</td><td>' . esc_html( (string) ( $v->work_type ?? '' ) ) . '</td><td>' . esc_html( $v->artist ) . '</td><td>' . esc_html( $v->album ) . '</td><td>' . esc_html( $v->release_date ) . '</td><td>' . esc_html( $isrc ) . '</td><td>' . esc_html( self::code( $v->id, 'upc' ) ) . '</td></tr>';
+			$rows .= '<tr' . ( (int) $v->id === $asked_id ? ' class="me"' : '' ) . '><td>' . esc_html( $v->serial ) . '</td><td>' . esc_html( '' !== trim( (string) $v->release_title ) ? $v->release_title : Songpress_Songs::display_title( $v ) ) . '</td><td>' . esc_html( (string) ( $v->work_type ?? '' ) ) . '</td><td>' . esc_html( $v->artist ) . '</td><td>' . esc_html( $v->album ) . '</td><td>' . esc_html( $v->release_date ) . '</td><td>' . esc_html( $isrc ) . '</td><td>' . esc_html( self::code( $v->id, 'upc' ) ) . '</td>' . ( $money ? '<td class="r">' . esc_html( self::money( $own[ (int) $v->id ] ?? 0 ) ) . '</td>' : '' ) . '</tr>';
 		}
 		$o .= '<div class="rel"><p class="lab">' . esc_html__( 'Releases', 'songpress' ) . '</p>';
-		$o .= '' !== $rows ? '<table class="grid"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Release', 'songpress' ) . '</th><th>' . esc_html__( 'Type', 'songpress' ) . '</th><th>' . esc_html__( 'Band', 'songpress' ) . '</th><th>' . esc_html__( 'Album', 'songpress' ) . '</th><th>' . esc_html__( 'Date', 'songpress' ) . '</th><th>ISRC</th><th>UPC</th></tr></thead><tbody>' . $rows . '</tbody></table>' : '<p class="mut">' . esc_html__( 'No releases yet.', 'songpress' ) . '</p>';
+		$o .= '' !== $rows ? '<table class="grid"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Release', 'songpress' ) . '</th><th>' . esc_html__( 'Type', 'songpress' ) . '</th><th>' . esc_html__( 'Band', 'songpress' ) . '</th><th>' . esc_html__( 'Album', 'songpress' ) . '</th><th>' . esc_html__( 'Date', 'songpress' ) . '</th><th>ISRC</th><th>UPC</th>' . ( $money ? '<th class="r">' . esc_html__( 'Earned to date', 'songpress' ) . '</th>' : '' ) . '</tr></thead><tbody>' . $rows . ( $money ? '<tr class="tot"><td colspan="8" class="r">' . esc_html__( 'Total for this work', 'songpress' ) . '</td><td class="r">' . esc_html( self::money( array_sum( $own ) ) ) . '</td></tr>' : '' ) . '</tbody></table>' . ( $money ? '<p class="mut note">' . esc_html( sprintf( /* translators: %s: date */ __( 'Earnings are the income received for each release (DistroKid, MLC, ASCAP, CCLI) through %s.', 'songpress' ), wp_date( get_option( 'date_format' ) ) ) ) . '</p>' : '' ) : '<p class="mut">' . esc_html__( 'No releases yet.', 'songpress' ) . '</p>';
 		return $o . '</div></section>';
 	}
 
@@ -224,9 +283,11 @@ class Songpress_Export {
 			$rows  = $res['rows'];
 			$total = (int) $res['total'];
 		}
+		$earn = $mine || Songpress_Caps::can( 'money' ); // your own share, or the full income for people who may see money
+		$emap = $earn ? self::earned_map( array_map( 'intval', wp_list_pluck( $rows, 'id' ) ), $mine ? Songpress_Profiles::key( wp_get_current_user()->display_name ) : '' ) : array();
 		$who = $mine ? wp_get_current_user()->display_name : '';
 		$o  = '<header class="lh"><div><h1>' . esc_html( $mine && '' !== $who ? $who : get_bloginfo( 'name' ) ) . '</h1><div class="meta">' . esc_html( sprintf( /* translators: 1: songs shown, 2: songs in the list, 3: date */ ( $mine ? __( 'My catalog · %1$s of %2$s works · exported %3$s', 'songpress' ) : __( 'Works list · %1$s of %2$s works · exported %3$s', 'songpress' ) ), number_format_i18n( count( $rows ) ), number_format_i18n( $total ), wp_date( get_option( 'date_format' ) ) ) ) . '</div></div></header>';
-		$o .= '<table class="grid list"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Title', 'songpress' ) . '</th><th>' . esc_html__( 'Writers', 'songpress' ) . '</th><th>' . esc_html__( 'Publishers', 'songpress' ) . '</th><th>' . esc_html__( 'Band and album', 'songpress' ) . '</th><th>' . esc_html__( 'Release date', 'songpress' ) . '</th><th>' . esc_html__( 'Codes', 'songpress' ) . '</th><th>' . esc_html__( 'Status', 'songpress' ) . '</th></tr></thead><tbody>';
+		$o .= '<table class="grid list"><thead><tr><th>' . esc_html__( 'No.', 'songpress' ) . '</th><th>' . esc_html__( 'Title', 'songpress' ) . '</th><th>' . esc_html__( 'Writers', 'songpress' ) . '</th><th>' . esc_html__( 'Publishers', 'songpress' ) . '</th><th>' . esc_html__( 'Band and album', 'songpress' ) . '</th><th>' . esc_html__( 'Release date', 'songpress' ) . '</th><th>' . esc_html__( 'Codes', 'songpress' ) . '</th><th>' . esc_html__( 'Status', 'songpress' ) . '</th>' . ( $earn ? '<th class="r">' . esc_html( $mine ? __( 'My earnings to date', 'songpress' ) : __( 'Earned to date', 'songpress' ) ) . '</th>' : '' ) . '</tr></thead><tbody>';
 		$people = function ( $song_id, $role ) {
 			$l = array();
 			foreach ( self::credit_lines( $song_id, $role ) as $c ) {
@@ -244,9 +305,12 @@ class Songpress_Export {
 				}
 			}
 			$band = esc_html( $s->artist ) . ( '' !== trim( (string) $s->album ) ? ( '' !== trim( (string) $s->artist ) ? '<br>' : '' ) . '<span class="mut">' . esc_html( $s->album ) . '</span>' : '' );
-			$o .= '<tr><td class="num">' . esc_html( $s->serial ) . '</td><td><span class="b">' . esc_html( $title ) . '</span>' . ( '' !== $sub ? '<br><span class="mut">' . esc_html( $sub ) . '</span>' : '' ) . '</td><td>' . $people( $s->id, 'writer' ) . '</td><td>' . $people( $s->id, 'publisher' ) . '</td><td>' . $band . '</td><td class="num">' . esc_html( $s->release_date ) . '</td><td class="codes">' . implode( '<br>', $codes ) . '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td></tr>';
+			$o .= '<tr><td class="num">' . esc_html( $s->serial ) . '</td><td><span class="b">' . esc_html( $title ) . '</span>' . ( '' !== $sub ? '<br><span class="mut">' . esc_html( $sub ) . '</span>' : '' ) . '</td><td>' . $people( $s->id, 'writer' ) . '</td><td>' . $people( $s->id, 'publisher' ) . '</td><td>' . $band . '</td><td class="num">' . esc_html( $s->release_date ) . '</td><td class="codes">' . implode( '<br>', $codes ) . '</td><td>' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</td>' . ( $earn ? '<td class="r num">' . esc_html( self::money( $emap[ (int) $s->id ] ?? 0 ) ) . '</td>' : '' ) . '</tr>';
 		}
 		$o .= '</tbody></table>';
+		if ( $earn ) {
+			$o .= '<p class="mut note">' . esc_html( sprintf( /* translators: %s: date */ __( 'Earnings are the income received through %s (DistroKid, MLC, ASCAP, CCLI). An original work shows the total of its releases.', 'songpress' ), wp_date( get_option( 'date_format' ) ) ) ) . ( $mine ? ' ' . esc_html__( 'Only your own share is shown.', 'songpress' ) : '' ) . '</p>';
+		}
 		if ( $total > count( $rows ) && ! $ids && ! $mine ) {
 			$o .= '<p class="mut note">' . esc_html( sprintf( /* translators: %d: number of works */ __( 'Showing the first %d works. Narrow the list with a search or tick songs to export the rest.', 'songpress' ), self::LIMIT ) ) . '</p>';
 		}
@@ -263,7 +327,7 @@ class Songpress_Export {
 			. '.cols{display:grid;grid-template-columns:200px 1fr;gap:30px;margin-top:20px}.lab{font-size:8.5px;text-transform:uppercase;letter-spacing:.08em;color:#999;margin:14px 0 5px}.cols aside .lab:first-child,.main .lab:first-child{margin-top:0}'
 			. 'table{border-collapse:collapse;width:100%}.kv td{padding:2px 0;vertical-align:top}.r{text-align:right}.mut{color:#777}.ly{font-size:12px;line-height:1.65}'
 			. '.rel{margin-top:26px;border-top:1px solid #e6e6e6;padding-top:6px}.grid{font-size:10.5px}.grid th{text-align:left;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:#888;font-weight:500;border-bottom:1px solid #ddd;padding:5px 6px}.grid td{padding:5px 6px;vertical-align:top}.grid tbody tr:nth-child(even){background:#f6f6f4}.grid tr.me td{font-weight:600}'
-			. '.list{margin-top:12px}.list td{font-size:10px}.codes{font-variant-numeric:tabular-nums;white-space:nowrap}.num{color:#666;font-variant-numeric:tabular-nums;white-space:nowrap}.b{font-weight:600}.note{margin-top:12px}'
+			. '.list{margin-top:12px}.list td{font-size:10px}.codes{font-variant-numeric:tabular-nums;white-space:nowrap}.num{color:#666;font-variant-numeric:tabular-nums;white-space:nowrap}.b{font-weight:600}.note{margin-top:12px}.tot td{font-weight:700;border-top:1px solid #ddd;padding-top:8px}'
 			. '@media(max-width:700px){.sheet{padding:16px;overflow-x:auto}.cols{grid-template-columns:1fr}}@page{size:' . ( 'landscape' === $orient ? 'letter landscape' : 'letter' ) . ';margin:14mm}@media print{body{background:#fff}.bar{display:none}.sheet{margin:0;padding:0;box-shadow:none;max-width:none}.grid thead{display:table-header-group}tr{break-inside:avoid}}';
 		return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . esc_html( $title . ' · ' . get_bloginfo( 'name' ) ) . '</title><style>' . $css . '</style></head><body>'
 			. '<div class="bar"><button type="button" onclick="window.print()">' . esc_html__( 'Print / Save PDF', 'songpress' ) . '</button><span>' . esc_html__( 'Choose Save as PDF in the print window.', 'songpress' ) . '</span></div><div class="sheet">' . $body . '</div></body></html>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above and in the builders.

@@ -1104,6 +1104,17 @@ check( 'export: lyrics from ChordPro drop chords and directives', Songpress_Expo
 $ex2 = (object) array( 'lyrics' => 'Plain words', 'chords_lyrics' => 'G Plain', 'chordpro' => '' );
 check( 'export: the lyrics level wins', Songpress_Export::lyrics_of( $ex2 ), 'Plain words' );
 
+// export earnings: a work shows its releases' total; a person's own share only
+$xroot = Songpress_Songs::create( array( 'title' => 'Earn Test' ), 1 );
+$xr1 = Songpress_Songs::create_version( $xroot, 1 );
+$xr2 = Songpress_Songs::create_version( $xroot, 1 );
+$wpdb_->insert( 'wp_songpress_earnings', array( 'song_id' => $xr1, 'quarter' => '2031Q1', 'src' => 'distrokid', 'amount' => 100 ) );
+$wpdb_->insert( 'wp_songpress_earnings', array( 'song_id' => $xr2, 'quarter' => '2031Q1', 'src' => 'distrokid', 'amount' => 25.5 ) );
+$wpdb_->insert( 'wp_songpress_earnings', array( 'song_id' => $xr2, 'quarter' => '2031Q1', 'src' => 'band', 'amount' => 999 ) );
+$xem = Songpress_Export::earned_map( array( $xr1, $xr2, $xroot ) );
+check( 'export earnings: a release shows its own income', array( $xem[ $xr1 ], $xem[ $xr2 ] ), array( 100.0, 25.5 ) );
+check( 'export earnings: the work shows all its releases, band payments left out', $xem[ $xroot ], 125.5 );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
