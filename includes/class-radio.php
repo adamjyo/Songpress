@@ -211,6 +211,8 @@ class Songpress_Radio {
 				$tok = (string) $s->share_token;
 				$tracks[ $id ] = array(
 					't'  => Songpress_Songs::display_title( $s ),
+					'n'  => (string) $s->serial,
+					'g'  => (string) $s->genre,
 					'b'  => self::by( $s ),
 					'a'  => Songpress_Media::art_url( $s, 'medium' ),
 					's'  => Songpress_Media::audio_url( $s ),

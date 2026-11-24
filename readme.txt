@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.69.6
+Stable tag: 0.69.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.69.7 =
+* Radio: songs in a list now show the serial number above the title, the genre after the title, and the band name below it.
 
 = 0.69.6 =
 * Radio: "Everything" is now "All releases": every released song with audio, newest first (works with no release date, or one in the future, are left out).
