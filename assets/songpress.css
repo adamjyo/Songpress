@@ -1280,3 +1280,15 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-avatar{border-radius:0;border:0;background:none;overflow:visible}
 .songpress-avatar img{object-fit:contain;border-radius:0}
 .songpress-list .sp-face{border-radius:0!important}
+
+/* My information (Profile) */
+.songpress-myinfo { margin: 14px 0; border: 1px solid var(--sp-line, rgba(127,127,127,.3)); border-radius: 12px; padding: 0 14px; }
+.songpress-myinfo > summary { cursor: pointer; padding: 12px 0; font-weight: 600; list-style: none; }
+.songpress-myinfo > summary::-webkit-details-marker { display: none; }
+.songpress-myinfo > summary::after { content: "+"; float: right; color: var(--sp-accent, currentColor); }
+.songpress-myinfo[open] > summary::after { content: "–"; }
+.songpress-myform { display: grid; gap: 10px; padding-bottom: 14px; }
+.songpress-myform .songpress-fld { display: grid; gap: 4px; font-size: 13px; opacity: .95; }
+.songpress-myform input, .songpress-myform textarea { width: 100%; box-sizing: border-box; font-size: 16px; padding: 10px; border-radius: 8px; border: 1px solid rgba(127,127,127,.4); background: transparent; color: inherit; }
+.songpress-myform .songpress-btn { justify-self: start; background: var(--sp-accent, #e9a847); color: #111; border: 0; border-radius: 999px; padding: 10px 22px; font-weight: 600; }
+.songpress-myinfo-msg { font-size: 13px; }

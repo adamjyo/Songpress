@@ -38,9 +38,9 @@ class Songpress_Profiles {
 		$t   = Songpress_Install::table( 'profiles' );
 		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$t} WHERE kind = %s AND name_key = %s", $kind, $key ) );
 		$in  = array();
-		foreach ( array( 'aliases', 'bio', 'email', 'phone', 'website', 'ipi', 'pro' ) as $k ) {
+		foreach ( array( 'aliases', 'bio', 'email', 'phone', 'website', 'ipi', 'pro', 'birthday', 'address' ) as $k ) {
 			if ( isset( $f[ $k ] ) && '' !== trim( (string) $f[ $k ] ) ) {
-				$in[ $k ] = 'bio' === $k || 'aliases' === $k ? sanitize_textarea_field( $f[ $k ] ) : ( 'website' === $k ? esc_url_raw( $f[ $k ] ) : sanitize_text_field( $f[ $k ] ) );
+				$in[ $k ] = 'bio' === $k || 'aliases' === $k || 'address' === $k ? sanitize_textarea_field( $f[ $k ] ) : ( 'website' === $k ? esc_url_raw( $f[ $k ] ) : sanitize_text_field( $f[ $k ] ) );
 			}
 		}
 		if ( array_key_exists( 'payee', $f ) ) {
@@ -78,6 +78,74 @@ class Songpress_Profiles {
 		}
 		$wpdb->insert( $t, array_merge( array( 'kind' => $kind, 'name' => $name, 'name_key' => $key ), $in ) );
 		return (int) $wpdb->insert_id;
+	}
+
+	/* ---------- a signed-in person edits their own details (the phone app and the desktop app) ---------- */
+
+	const MINE = array( 'email', 'phone', 'birthday', 'address', 'website', 'ipi', 'pro', 'bio' );
+
+	public static function init_mine() {
+		add_action( 'wp_ajax_songpress_my_profile', array( __CLASS__, 'ajax_mine' ) );
+	}
+
+	/** The form on the Profile screen. Fields are saved as typed, so a field can be cleared. */
+	public static function mine_form( $user ) {
+		$p   = self::find( $user->display_name );
+		$v   = function ( $k ) use ( $p, $user ) {
+			if ( $p && isset( $p->$k ) && '' !== (string) $p->$k ) {
+				return (string) $p->$k;
+			}
+			return 'email' === $k ? (string) $user->user_email : '';
+		};
+		$f   = function ( $k, $label, $type = 'text', $extra = '' ) use ( $v ) {
+			return '<label class="songpress-fld"><span>' . esc_html( $label ) . '</span><input type="' . esc_attr( $type ) . '" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v( $k ) ) . '"' . $extra . '></label>';
+		};
+		$o   = '<details class="songpress-myinfo"><summary>' . esc_html__( 'My information', 'songpress' ) . '</summary><form class="songpress-myform" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '">'
+			. '<input type="hidden" name="action" value="songpress_my_profile"><input type="hidden" name="n" value="' . esc_attr( wp_create_nonce( 'songpress_my_profile' ) ) . '">'
+			. $f( 'email', __( 'Email', 'songpress' ), 'email', ' autocomplete="email"' )
+			. $f( 'phone', __( 'Phone', 'songpress' ), 'tel', ' autocomplete="tel"' )
+			. $f( 'birthday', __( 'Birthday', 'songpress' ), 'date', ' autocomplete="bday"' )
+			. '<label class="songpress-fld"><span>' . esc_html__( 'Address', 'songpress' ) . '</span><textarea name="address" rows="3" autocomplete="street-address">' . esc_textarea( $v( 'address' ) ) . '</textarea></label>'
+			. $f( 'website', __( 'Website', 'songpress' ), 'url', ' autocomplete="url"' )
+			. $f( 'ipi', __( 'IPI number', 'songpress' ), 'text', ' inputmode="numeric"' )
+			. $f( 'pro', __( 'PRO (ASCAP, BMI...)', 'songpress' ) )
+			. '<label class="songpress-fld"><span>' . esc_html__( 'Bio', 'songpress' ) . '</span><textarea name="bio" rows="4">' . esc_textarea( $v( 'bio' ) ) . '</textarea></label>'
+			. '<button class="songpress-btn" type="submit">' . esc_html__( 'Save', 'songpress' ) . '</button> <span class="songpress-myinfo-msg" role="status"></span></form>'
+			. '<script>(function(){var f=document.currentScript.parentNode.querySelector(".songpress-myform");if(!f)return;f.addEventListener("submit",function(e){e.preventDefault();var m=f.querySelector(".songpress-myinfo-msg");m.textContent="…";fetch(f.dataset.ajax,{method:"POST",credentials:"same-origin",body:new FormData(f)}).then(function(r){return r.json()}).then(function(j){m.textContent=j&&j.success?' . wp_json_encode( __( 'Saved.', 'songpress' ) ) . ':((j&&j.data&&j.data.msg)||' . wp_json_encode( __( 'Could not save.', 'songpress' ) ) . ')}).catch(function(){m.textContent=' . wp_json_encode( __( 'Could not save.', 'songpress' ) ) . '})})})();</script></details>';
+		return $o;
+	}
+
+	public static function ajax_mine() {
+		check_ajax_referer( 'songpress_my_profile', 'n' );
+		if ( ! is_user_logged_in() || ! Songpress_Caps::can_view() ) {
+			wp_send_json_error( array( 'msg' => __( 'Not allowed.', 'songpress' ) ), 403 );
+		}
+		global $wpdb;
+		$u = wp_get_current_user();
+		self::upsert( 'person', $u->display_name, array() ); // make sure the row exists
+		$row = self::find( $u->display_name );
+		if ( ! $row ) {
+			wp_send_json_error( array( 'msg' => __( 'Could not save.', 'songpress' ) ) );
+		}
+		$in = array();
+		foreach ( self::MINE as $k ) {
+			$x = isset( $_POST[ $k ] ) ? wp_unslash( $_POST[ $k ] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+			if ( 'bio' === $k || 'address' === $k ) {
+				$in[ $k ] = sanitize_textarea_field( $x );
+			} elseif ( 'website' === $k ) {
+				$in[ $k ] = esc_url_raw( $x );
+			} elseif ( 'email' === $k ) {
+				$in[ $k ] = sanitize_email( $x );
+			} elseif ( 'birthday' === $k ) {
+				$in[ $k ] = preg_match( '/^\d{4}-\d{2}-\d{2}$/', $x ) ? $x : '';
+			} else {
+				$in[ $k ] = sanitize_text_field( $x );
+			}
+		}
+		$in['updated_at'] = current_time( 'mysql' );
+		$wpdb->update( Songpress_Install::table( 'profiles' ), $in, array( 'id' => (int) $row->id ) );
+		self::reset_cache();
+		wp_send_json_success();
 	}
 
 	/** Which kind of profile a credit role or field points at. A band is never looked up as a person, or the reverse. */
