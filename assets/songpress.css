@@ -1348,3 +1348,6 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-mysearch{display:block;width:100%;height:46px;padding:0 14px;margin:8px 0 10px;border-radius:12px;border:1px solid #2a2d33;background:var(--sp-field);color:var(--sp-text);font-size:16px;font-family:inherit;box-shadow:none;box-sizing:border-box}
 .songpress-mysearch::placeholder{color:var(--sp-mute);opacity:1}.songpress-mysearch:focus{outline:2px solid var(--sp-accent);outline-offset:1px}
 .songpress-mysongs li[hidden]{display:none}
+/* 0.72.51: the full-screen Radio player stops above the bottom tabs, so they stay in reach */
+html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+.songpress-tabs.songpress-tabs-fixed{z-index:100000}
