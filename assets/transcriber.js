@@ -181,21 +181,32 @@
 
   /* ---------- putting the chart in a work ---------- */
 
-  var wq = $('tr-wq'), wsel = $('tr-work'), put = $('tr-put'), pm = $('tr-putmsg'), wtm, replacing = false;
+  var wq = $('tr-wq'), wsel = $('tr-work'), wl = $('tr-wl'), put = $('tr-put'), pm = $('tr-putmsg'), wtm, replacing = false, chosen = '';
   function post(action, fields) {
     var fd = new FormData(); fd.append('action', action); fd.append('n', C.nonce);
     Object.keys(fields).forEach(function (k) { fd.append(k, fields[k]); });
     return fetch(C.ajax, { method: 'POST', body: fd, credentials: 'same-origin' }).then(function (r) { return r.json(); });
   }
-  function fillWorks(list, pick) {
-    var keep = pick || wsel.value; wsel.innerHTML = '';
-    var o = document.createElement('option'); o.value = ''; o.textContent = list.length ? 'Choose a work' : 'No works found'; wsel.appendChild(o);
-    list.forEach(function (w) { var x = document.createElement('option'); x.value = w.id; x.textContent = w.title + (w.has ? '  (has a chart)' : ''); wsel.appendChild(x); });
-    if (keep) wsel.value = keep; put.disabled = !wsel.value;
+  function label(w) { return (w.serial ? w.serial + '  ' : '') + w.title; }
+  function pick(w) {
+    wsel.value = String(w.id); chosen = label(w); wq.value = chosen; wl.hidden = true; replacing = false;
+    put.textContent = 'Put the chart in this work'; put.disabled = false; pm.textContent = '';
   }
-  function findWorks() { post('songpress_tr_works', { q: wq.value }).then(function (j) { if (j && j.success) fillWorks(j.data.works); }); }
-  wq.addEventListener('input', function () { clearTimeout(wtm); wtm = setTimeout(findWorks, 300); });
-  wsel.addEventListener('change', function () { replacing = false; put.textContent = 'Put the chart in this work'; put.disabled = !wsel.value; pm.textContent = ''; });
+  function fillWorks(list) {
+    wl.innerHTML = '';
+    if (!list.length) { var n = document.createElement('li'); n.className = 'none'; n.textContent = 'No works found'; wl.appendChild(n); wl.hidden = false; return; }
+    list.forEach(function (w) {
+      var li = document.createElement('li'), b = document.createElement('button'); b.type = 'button';
+      var sn = document.createElement('b'); sn.textContent = w.serial || ''; b.appendChild(sn); b.appendChild(document.createTextNode(w.title + (w.has ? '  (has a chart)' : '')));
+      b.addEventListener('click', function () { pick(w); }); li.appendChild(b); wl.appendChild(li);
+    });
+    wl.hidden = false;
+  }
+  function findWorks() { post('songpress_tr_works', { q: wq.value.trim() }).then(function (j) { if (j && j.success && document.activeElement === wq) fillWorks(j.data.works); }); }
+  wq.addEventListener('input', function () { wsel.value = ''; put.disabled = true; clearTimeout(wtm); wtm = setTimeout(findWorks, 250); });
+  wq.addEventListener('focus', function () { if (!wsel.value) findWorks(); else wq.select(); });
+  document.addEventListener('click', function (e) { if (!wl.hidden && !e.target.closest('#tr-wl') && e.target !== wq) wl.hidden = true; });
+  wq.addEventListener('keydown', function (e) { if (e.key === 'Escape') wl.hidden = true; });
   put.addEventListener('click', function () {
     if (!wsel.value) return;
     put.disabled = true; pm.className = 'msg'; pm.textContent = 'Saving…';
@@ -206,8 +217,7 @@
       pm.className = 'msg err'; pm.textContent = (j && j.data && j.data.msg) || 'Could not save.';
     }).catch(function () { put.disabled = false; pm.className = 'msg err'; pm.textContent = 'Could not save.'; });
   });
-  if (C.song) { fillWorks([{ id: C.song.id, title: C.song.title, has: false }], String(C.song.id)); wsel.value = String(C.song.id); put.disabled = false; }
-  findWorks();
+  if (C.song) pick({ id: C.song.id, serial: '', title: C.song.title });
 
   /* ---------- inside the work editor: take its text and give the chart back ---------- */
 

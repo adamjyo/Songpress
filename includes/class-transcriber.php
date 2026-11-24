@@ -120,15 +120,19 @@ class Songpress_Transcriber {
 			wp_send_json_error( array( 'msg' => __( 'Log in to choose a work.', 'songpress' ) ), 403 );
 		}
 		$q    = sanitize_text_field( wp_unslash( $_POST['q'] ?? '' ) );
-		$args = array( 'search' => $q, 'per_page' => 30, 'page' => 1 );
+		$args = array( 'search' => $q, 'per_page' => 80, 'page' => 1 );
 		if ( ! Songpress_Caps::can( 'edit_any' ) ) {
 			$args['user_id'] = get_current_user_id();
 		}
 		$res  = Songpress_Songs::query( $args );
 		$out  = array();
 		foreach ( (array) $res['rows'] as $r ) {
-			if ( Songpress_Caps::can_edit_song( (int) $r->id ) ) {
-				$out[] = array( 'id' => (int) $r->id, 'title' => (string) Songpress_Songs::display_title( $r ), 'has' => '' !== trim( (string) $r->chordpro ) );
+			$hay = strtolower( $r->serial . ' ' . Songpress_Songs::display_title( $r ) . ' ' . $r->title );
+			if ( '' !== $q && false === strpos( $hay, strtolower( $q ) ) ) { // the search box is for a serial number or a title, not for words in lyrics or credits
+				continue;
+			}
+			if ( count( $out ) < 30 && Songpress_Caps::can_edit_song( (int) $r->id ) ) {
+				$out[] = array( 'id' => (int) $r->id, 'serial' => (string) $r->serial, 'title' => (string) Songpress_Songs::display_title( $r ), 'has' => '' !== trim( (string) $r->chordpro ) );
 			}
 		}
 		wp_send_json_success( array( 'works' => $out ) );
@@ -258,7 +262,7 @@ class Songpress_Transcriber {
 		$o .= '<div class="row"><span class="msg" id="tr-msg"></span><progress id="tr-prog" max="100" value="0" hidden></progress></div>';
 		$o .= '<div id="tr-found" hidden><h2>' . esc_html__( '3. What it heard', 'songpress' ) . '</h2><div class="msg" id="tr-sum"></div><audio id="tr-audio" controls></audio><div class="ct-chips" id="tr-chips" hidden></div><div class="row"><button type="button" class="ct-b ct-go" id="tr-build">' . esc_html__( 'Write the chart', 'songpress' ) . '</button><label><small>' . esc_html__( 'Chart is rebuilt into the editor below', 'songpress' ) . '</small></label></div></div>';
 		$o .= '<details id="tr-tap" hidden><summary>' . esc_html__( 'Line up the lyrics by tapping instead', 'songpress' ) . '</summary><p class="msg">' . esc_html__( 'Play the recording and press the big button (or the space bar) the moment each line starts.', 'songpress' ) . '</p><div class="ct-lines" id="tr-lines"></div><div class="row"><button type="button" class="ct-b ct-go" id="tr-tapbtn">' . esc_html__( 'Next line starts now', 'songpress' ) . '</button><button type="button" class="ct-b" id="tr-undo">' . esc_html__( 'Undo', 'songpress' ) . '</button><button type="button" class="ct-b" id="tr-reset">' . esc_html__( 'Start over', 'songpress' ) . '</button></div></details>';
-		$o .= '<h2>' . esc_html__( '4. Put the chart in a work', 'songpress' ) . '</h2><div class="row"><input type="search" id="tr-wq" placeholder="' . esc_attr__( 'Find a work by title…', 'songpress' ) . '" size="26" autocomplete="off"><select id="tr-work" class="ct-b" aria-label="' . esc_attr__( 'Work', 'songpress' ) . '"><option value="">' . esc_html__( 'Choose a work', 'songpress' ) . '</option></select><button type="button" class="ct-b ct-go" id="tr-put" disabled>' . esc_html__( 'Put the chart in this work', 'songpress' ) . '</button></div><div class="row"><span class="msg" id="tr-putmsg" aria-live="polite"></span></div>';
+		$o .= '<h2>' . esc_html__( '4. Put the chart in a work', 'songpress' ) . '</h2><div class="row"><input type="search" id="tr-wq" placeholder="' . esc_attr__( 'Search by serial number or title…', 'songpress' ) . '" size="34" autocomplete="off" aria-label="' . esc_attr__( 'Search works by serial number or title', 'songpress' ) . '"><button type="button" class="ct-b ct-go" id="tr-put" disabled>' . esc_html__( 'Put the chart in this work', 'songpress' ) . '</button></div><div class="row"><span class="msg" id="tr-putmsg" aria-live="polite"></span></div><ul class="ct-wl" id="tr-wl" hidden></ul><input type="hidden" id="tr-work" value="">';
 		return $o . '</section>';
 	}
 }

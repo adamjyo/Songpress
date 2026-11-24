@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.69.1
+Stable tag: 0.69.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.69.2 =
+* Transcriber: choosing a work is now a search box. Type a serial number or part of a title and pick from the list that appears.
 
 = 0.69.1 =
 * The slide-down player hides itself after a few seconds (any touch on it keeps it open). A small tab in the top middle, in the accent color, brings it back.
