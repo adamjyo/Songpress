@@ -132,6 +132,13 @@ class Songpress_Editor {
 			}
 			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
 		$o .= '<script>(function(){var s=document.getElementById("spe-stage"),t=document.querySelector("input[name=title]");if(!s||!t)return;function f(){t.required=s.value.toLowerCase()!=="starter"}s.addEventListener("change",f);f()})()</script>';
+		if ( $root || ! $song ) { // the original work carries the genre; a new version starts with it (the Release panel shows it on a version)
+			$o .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' ) . '<datalist id="spe-genres">';
+			foreach ( Songpress_Songs::genres() as $gn ) {
+				$o .= '<option value="' . esc_attr( $gn ) . '">';
+			}
+			$o .= '</datalist>';
+		}
 		$o .= self::input( 'writing_date', __( 'Written on', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= self::input( 'copyright_date', __( 'Copyright date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"', 'adv' );
 		$o .= '<label class="spe-field wide adv"><span>' . esc_html__( 'Other titles', 'songpress' ) . '</span><textarea name="alt_titles" rows="2">' . esc_textarea( self::f( $song, 'alt_titles' ) ) . '</textarea></label>';
