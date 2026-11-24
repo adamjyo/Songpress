@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.70.3
+Stable tag: 0.70.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.70.4 =
+* People and band icons (the user icon in the top bar, the Profile picture, and the icons on works and lists) are shown as they are, no longer cut into a circle. A person with no photo shows their initials in a rounded square.
 
 = 0.70.3 =
 * Player banner: the logo is the plain "Sp" mark in the card's text color, no circle around it.

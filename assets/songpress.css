@@ -1271,3 +1271,12 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-pp small{font-size:12.5px;line-height:1.2;color:var(--sp-soft);overflow-wrap:anywhere}
 .songpress-pp .sp-face{width:64px!important;height:64px!important;font-size:22px!important;margin:0!important}
 .songpress-top .songpress-reacts,.songpress-top .sp-rx-bar{margin-top:16px}
+
+/* People and band icons are shown as they are, never cut into a circle */
+.sp-app img.sp-face{border-radius:0!important;object-fit:contain!important;background:none!important}
+.sp-app .sp-face-ini{border-radius:14px!important}
+.songpress-userpic{border-radius:0;object-fit:contain;background:none}
+.songpress-userpic-ini{border-radius:10px;background:var(--sp-chip)}
+.songpress-avatar{border-radius:0;border:0;background:none;overflow:visible}
+.songpress-avatar img{object-fit:contain;border-radius:0}
+.songpress-list .sp-face{border-radius:0!important}
