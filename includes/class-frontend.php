@@ -652,7 +652,8 @@ class Songpress_Frontend {
 		$res  = array( 'rows' => $rows, 'total' => count( $rows ) );
 		$rel  = 0;
 		foreach ( $rows as $s ) {
-			if ( 'released' === $s->status ) {
+			$d = trim( (string) $s->release_date );
+			if ( 'released' === $s->status || ( '' !== $d && $d <= current_time( 'Y-m-d' ) ) ) { // released by status, or dated on/before today (as Radio counts it)
 				$rel++;
 			}
 		}
