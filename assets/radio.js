@@ -50,7 +50,7 @@
   function count(l) { return l.ids.length === 1 ? I.song1 : l.ids.length + ' ' + I.songs; }
 
   /* ---------- playback ---------- */
-  var au = window.SPAU || (window.SPAU = new Audio()); au.preload = 'none'; // one audio element for the whole app, so a song carries on across pages
+  var au = window.SPAU; if (!au) { au = window.SPAU = new Audio(); au.preload = 'none'; } // never touch preload on an element that is already playing: iOS can stall it // one audio element for the whole app, so a song carries on across pages
   var Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' };
   function curId() { return Q.pos >= 0 ? Q.order[Q.pos] : 0; }
   function build(first) {
@@ -427,12 +427,14 @@
     function abs(u) { try { return new URL(u, location.href).href; } catch (e) { return u; } }
     var cur = au.currentSrc || au.src, snap = window.SPRD_SNAP; window.SPRD_SNAP = null;
     if (cur && !au.ended) { // the same audio element is already playing a track: carry on with it, no restart
+      try { sessionStorage.removeItem('sp_np'); } catch (e) {} // a live track beats the saved one: never restart it
       var lid = 0; Object.keys(T).forEach(function (k) { if (!lid && T[k].s && abs(T[k].s) === abs(cur)) lid = +k; });
       if (lid) {
         if (snap && window.SPCTL === 'radio' && snap.order.indexOf(lid) > -1) { Q.base = snap.base; Q.order = snap.order; Q.pos = snap.order.indexOf(lid); Q.key = snap.key; Q.shuffle = snap.shuffle; Q.repeat = snap.repeat; }
         else { var al = byK('all') || L[0]; if (al) { Q.base = al.ids.filter(function (x) { return T[x] && T[x].s; }); Q.key = al.k; Q.shuffle = false; build(lid); Q.pos = Q.order.indexOf(lid); } }
         if (Q.pos >= 0) { claim(); meta(); ui(true); if (!snap) openNP(); return; }
       }
+      return; // a track that is not in Radio's lists keeps playing as it is
     }
     var d = null; try { d = JSON.parse(sessionStorage.getItem('sp_np') || 'null'); sessionStorage.removeItem('sp_np'); } catch (e) {}
     if (!d || !d.url || Date.now() - d.ts > 120000) return;

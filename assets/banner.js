@@ -79,7 +79,7 @@
   }
   function ownAudio() {
     if (own) return own;
-    own = window.SPAU || (window.SPAU = new Audio()); own.preload = 'none'; // shared with Radio, so a song carries on across pages
+    own = window.SPAU; if (!own) { own = window.SPAU = new Audio(); own.preload = 'none'; } // shared with Radio, so a song carries on across pages
     own.addEventListener('play', function () { paint(); });
     // moving around the app must never stop the music: a pause that nobody asked for, just after a page change, is undone
     own.addEventListener('pause', function () { if (!own.ended && Date.now() - (window.SPNAVAT || 0) < 4000 && Date.now() - (window.SPUSERPAUSE || 0) > 1500) { var p = own.play(); if (p && p.catch) p.catch(function () {}); } });
