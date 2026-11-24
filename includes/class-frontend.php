@@ -540,7 +540,7 @@ class Songpress_Frontend {
 		if ( '' !== trim( (string) $under ) ) {
 			$out .= '<p class="songpress-sub songpress-genre-line">' . esc_html( $under ) . '</p>';
 		}
-		$out .= '</div></div>';
+		$out .= '</div>'; // the text column; the card stays open for the credits row
 		// Under the card, centred: the band, the writers and the performers, each on its own labelled row.
 		$names = function ( $role ) use ( $id ) {
 			$seen = array();
@@ -574,7 +574,7 @@ class Songpress_Frontend {
 			$cg .= '</div>';
 		}
 		// Under the card: the credits, the streaming links (centred), the player, then the favourite / rate / playlist buttons.
-		$out .= '' === $cg ? '' : '<div class="songpress-credits">' . $cg . '</div>';
+		$out .= ( '' === $cg ? '' : '<div class="songpress-credits">' . $cg . '</div>' ) . '</div>'; // closes the card
 		$out .= Songpress_Editor::stream_links_html( Songpress_Songs::links( $id ) );
 		$audio = Songpress_Media::audio_url( $s );
 		if ( '' !== $audio ) {

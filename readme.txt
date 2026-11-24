@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.41
+Stable tag: 0.72.42
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.42 =
+* A work page: the Written / Performed row (small photos with the names beside them) now sits inside the header card, under the album art and title.
 
 = 0.72.41 =
 * Phone: the back arrow moved into the top bar, before the picture, on a work and on the profile (no more separate Back line). On a work the Written / Performed line now sits above the streaming links.

@@ -1335,3 +1335,6 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-userl{display:flex;align-items:center;gap:4px;min-width:0}
 .songpress-userback{display:inline-flex;align-items:center;justify-content:center;width:30px;height:44px;margin-left:-6px;font-size:34px;line-height:1;color:var(--sp-accent);text-decoration:none}
 .songpress-top>.spe-streams{margin-top:12px}
+/* 0.72.42: the credits row sits inside the header card, under the art and the title */
+.songpress-card2{flex-wrap:wrap}
+.songpress-card2 .songpress-credits{flex:0 0 100%;width:100%;margin:0;padding-top:12px;border-top:1px solid var(--sp-line)}
