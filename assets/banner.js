@@ -26,7 +26,7 @@
     accent(bar); document.body.appendChild(bar);
     ['touchstart', 'click'].forEach(function (n) { bar.addEventListener(n, function () { if (bar.classList.contains('in')) arm(); }, { passive: true }); });
     bar.querySelector('.bn-prev').innerHTML = SVG.prev; bar.querySelector('.bn-next').innerHTML = SVG.next;
-    bar.querySelector('.bn-pp').addEventListener('click', function () { if (!au) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause(); });
+    bar.querySelector('.bn-pp').addEventListener('click', function () { if (!au) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else { window.SPUSERPAUSE = Date.now(); au.pause(); } });
     bar.querySelector('.bn-prev').addEventListener('click', function () { move(-1); });
     bar.querySelector('.bn-next').addEventListener('click', function () { move(1); });
     bar.querySelector('.bn-hide').addEventListener('click', hide);
@@ -81,6 +81,8 @@
     if (own) return own;
     own = window.SPAU || (window.SPAU = new Audio()); own.preload = 'none'; // shared with Radio, so a song carries on across pages
     own.addEventListener('play', function () { paint(); });
+    // moving around the app must never stop the music: a pause that nobody asked for, just after a page change, is undone
+    own.addEventListener('pause', function () { if (!own.ended && Date.now() - (window.SPNAVAT || 0) < 4000 && Date.now() - (window.SPUSERPAUSE || 0) > 1500) { var p = own.play(); if (p && p.catch) p.catch(function () {}); } });
     own.addEventListener('pause', function () { paint(); });
     own.addEventListener('ended', function () { if (window.SPCTL === 'radio') return; if (!single) move(1); else paint(); });
     own.addEventListener('error', function () { if (window.SPCTL !== 'radio' && !single && idx >= 0) setTimeout(function () { move(1); }, 500); });
@@ -100,7 +102,7 @@
   function bindMS() {
     if (!('mediaSession' in navigator)) return;
     var h = function (n, f) { try { navigator.mediaSession.setActionHandler(n, f); } catch (e) {} };
-    h('play', function () { if (au) au.play(); }); h('pause', function () { if (au) au.pause(); }); h('nexttrack', function () { move(1); }); h('previoustrack', function () { move(-1); });
+    h('play', function () { if (au) au.play(); }); h('pause', function () { window.SPUSERPAUSE = Date.now(); if (au) au.pause(); }); h('nexttrack', function () { move(1); }); h('previoustrack', function () { move(-1); });
   }
   bindMS();
   window.SPBAN = { hide: function () { if (bar) { bar.hidden = true; bar.classList.remove('in'); } if (pull) pull.hidden = true; } };
@@ -118,7 +120,7 @@
     e.preventDefault();
     if (au && au !== own) { try { au.pause(); } catch (x) {} }
     au = ownAudio(); single = false;
-    if (btn === b && own.src) { if (own.paused) { var p = own.play(); if (p && p.catch) p.catch(function () {}); showBar(); } else own.pause(); return; }
+    if (btn === b && own.src) { if (own.paused) { var p = own.play(); if (p && p.catch) p.catch(function () {}); showBar(); } else { window.SPUSERPAUSE = Date.now(); own.pause(); } return; }
     list = collect(); var n = -1; list.forEach(function (it, i) { if (it.btn === b) n = i; });
     if (n < 0) return;
     start(n, true);
@@ -172,15 +174,16 @@
       if (push) window.scrollTo(0, 0);
       if (window.SPRX && window.SPRX.rescan) window.SPRX.rescan();
       relink();
+      window.SPNAVAT = Date.now();
+      document.dispatchEvent(new Event('sp:swapped'));
       return true;
     };
-    var go = function (url, push) {
-      if (busy) return; busy = true;
+    var go = function (url, push, again) {
+      if (busy) return; busy = true; window.SPNAVAT = Date.now();
       fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'songpress' } }).then(function (r) { return r.ok ? r.text() : Promise.reject(); }).then(function (h) {
-        busy = false; if (!swap(h, url, push)) location.href = url;
-      }).catch(function () { busy = false; location.href = url; });
+        busy = false; if (!swap(h, url, push)) { if (au && !au.paused) return; location.href = url; } // a full reload would cut the music: only when nothing is playing
+      }).catch(function () { busy = false; if (au && !au.paused && !again) setTimeout(function () { go(url, push, true); }, 700); else if (!au || au.paused) location.href = url; });
     };
-    window.SPGO = function (u) { var x = new URL(u, location.href); if (ok(x)) go(x.href, true); else location.href = x.href; }; // the bottom tabs use this so a tab switch keeps the player going
     document.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !playingNow()) return;
       var a = e.target.closest && e.target.closest('.songpress.sp-app a[href]'); if (!a || a.target || a.hasAttribute('download') || a.getAttribute('onclick')) return;

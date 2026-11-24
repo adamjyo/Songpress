@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.56
+Stable tag: 0.72.57
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.57 =
+* Phone: tapping a bottom tab or a link now leaves the full-screen player behind (the music carries on). Audio only stops when you press pause or start another track: a pause nobody asked for right after a screen change is undone, and a failed page load no longer reloads the app while music is playing.
 
 = 0.72.56 =
 * Phone Radio: the down-arrow at the top of the full-screen player is gone; swipe back from the left edge to close it.

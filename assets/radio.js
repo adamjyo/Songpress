@@ -79,11 +79,11 @@
     var n = Q.order.length; if (!n) return;
     if (dir < 0 && au.currentTime > 4) { au.currentTime = 0; return; }
     var np = Q.pos + dir;
-    if (np >= n) { if (Q.repeat === 'all' || !auto) np = 0; else { au.pause(); au.currentTime = 0; ui(); return; } }
+    if (np >= n) { if (Q.repeat === 'all' || !auto) np = 0; else { window.SPUSERPAUSE = Date.now(); au.pause(); au.currentTime = 0; ui(); return; } }
     if (np < 0) np = n - 1;
     load(np);
   }
-  function toggle() { if (Q.pos < 0) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else au.pause(); }
+  function toggle() { if (Q.pos < 0) return; if (au.paused) { var p = au.play(); if (p && p.catch) p.catch(function () {}); } else { window.SPUSERPAUSE = Date.now(); au.pause(); } }
   function setShuffle(on) { Q.shuffle = on; var id = curId(); if (Q.pos >= 0) { if (on) build(id); else { Q.order = Q.base.slice(); Q.pos = Q.order.indexOf(id); } } ui(); }
   function cycleRepeat() { Q.repeat = Q.repeat === 'off' ? 'all' : (Q.repeat === 'all' ? 'one' : 'off'); ui(); }
   au.addEventListener('ended', function () { if (!alive || window.SPCTL !== 'radio') return; if (Q.repeat === 'one') { au.currentTime = 0; var p = au.play(); if (p && p.catch) p.catch(function () {}); } else step(1, true); });
@@ -237,7 +237,7 @@
       var dl = el('button', 'sp-rd-danger', I.del); dl.type = 'button'; var armed = 0;
       dl.addEventListener('click', function () {
         if (!armed) { armed = 1; dl.textContent = I.delarm; setTimeout(function () { armed = 0; dl.textContent = I.del; }, 4000); return; }
-        radioPost({ op: 'delete', id: l.id }).then(function () { L.splice(L.indexOf(l), 1); if (Q.key === l.k) { au.pause(); Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: Q.repeat }; ui(); } go({ name: 'index' }); }).catch(function (e) { toast(e.message); });
+        radioPost({ op: 'delete', id: l.id }).then(function () { L.splice(L.indexOf(l), 1); if (Q.key === l.k) { window.SPUSERPAUSE = Date.now(); au.pause(); Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: Q.repeat }; ui(); } go({ name: 'index' }); }).catch(function (e) { toast(e.message); });
       });
       main.appendChild(dl);
     }
@@ -332,6 +332,10 @@
     document.addEventListener('touchend', function () { end(true); }); document.addEventListener('touchcancel', function () { end(false); });
   })();
   nHandle.addEventListener('click', closeNP);
+  // going to another screen (a bottom tab, a link) leaves the full-screen player behind; the music carries on
+  function leaveNP() { if (!alive || np.hidden) return; npPushed = false; hideNP(); }
+  document.addEventListener('click', function (e) { if (alive && !np.hidden && e.target.closest && e.target.closest('.songpress-tabs a, .songpress-userbar a')) leaveNP(); }, true);
+  document.addEventListener('sp:swapped', leaveNP);
   document.addEventListener('keydown', function (e) { if (alive && e.key === 'Escape' && !np.hidden && !document.querySelector('.sp-rx-wrap')) closeNP(); });
   cPP.addEventListener('click', toggle); cPrev.addEventListener('click', function () { step(-1); }); cNext.addEventListener('click', function () { step(1); });
   bSh.addEventListener('click', function () { setShuffle(!Q.shuffle); }); bRp.addEventListener('click', cycleRepeat);
