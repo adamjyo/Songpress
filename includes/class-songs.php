@@ -368,6 +368,33 @@ class Songpress_Songs {
 		return $id;
 	}
 
+	/** Turns a version into a work of its own: it gets a new NNNN number, becomes version 0 (a root) and leaves its old family. Returns the new serial, or a WP_Error. */
+	public static function make_root( $song_id ) {
+		global $wpdb;
+		$t    = self::table_songs();
+		$song = self::get( (int) $song_id );
+		if ( ! $song ) {
+			return new WP_Error( 'songpress_missing', __( 'That song does not exist.', 'songpress' ) );
+		}
+		if ( 0 === (int) $song->version_no ) {
+			return new WP_Error( 'songpress_root', __( 'This is already a work of its own.', 'songpress' ) );
+		}
+		$from = $song->serial;
+		$res  = Songpress_Serial::allocate( true, 0, function ( $fid, $fno, $ver, $serial ) use ( $wpdb, $t, $song ) {
+			$set = array( 'family_id' => $fid, 'version_no' => 0, 'serial' => $serial );
+			if ( 'released' === $song->status ) { // a work of its own can not be marked Released; its releases are versions
+				$set['status'] = 'finished';
+			}
+			$wpdb->update( $t, $set, array( 'id' => (int) $song->id ) );
+			return $serial;
+		} );
+		if ( is_wp_error( $res ) ) {
+			return $res;
+		}
+		Songpress_History::log( (int) $song_id, 'made_root', array( 'from' => $from, 'serial' => $res ) );
+		return $res;
+	}
+
 	/** Copy of an existing song as the next version of its family. @return int|WP_Error song id */
 	public static function create_version( $from_id, $owner_id ) {
 		$from = self::get( $from_id );

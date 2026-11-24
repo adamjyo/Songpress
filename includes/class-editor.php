@@ -698,6 +698,10 @@ class Songpress_Editor {
 			$o .= '<p class="spe-help">' . esc_html__( 'A version is a new recording, arrangement or release of this song. It gets the next number, like 0012-01. Writers and splits start as a copy of this one. Performers and producers start empty. Nothing you change on a version affects the original or the other versions.', 'songpress' ) . '</p>';
 			$o .= self::post_form( 'songpress_new_version', 'songpress_new_version', $id, array(), __( 'Add a version', 'songpress' ) );
 		}
+		if ( (int) $song->version_no > 0 && Songpress_Caps::can( 'edit_any' ) ) {
+			$o .= '<h4>' . esc_html__( 'Make this its own work', 'songpress' ) . '</h4><p class="spe-help">' . esc_html__( 'Moves this version out of its family. It gets a new number, becomes the original work of its own (a root), and no longer shows as a version of the old one. Its credits and splits stay as they are.', 'songpress' ) . '</p>';
+			$o .= str_replace( '<form method="post"', '<form method="post" onsubmit="return confirm(' . esc_attr( wp_json_encode( __( 'Make this version its own work? It gets a new number.', 'songpress' ) ) ) . ')"', self::post_form( 'songpress_make_root', 'songpress_make_root', $id, array(), __( 'Make it a work', 'songpress' ) ) );
+		}
 		if ( Songpress_Songs::ARCHIVING && Songpress_Caps::can( 'archive' ) ) {
 			$archived = ! empty( $song->archived_at );
 			$o       .= '<h4>' . esc_html__( 'Archive', 'songpress' ) . '</h4>';

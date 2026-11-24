@@ -9,6 +9,7 @@ class Songpress_Admin {
 		add_action( 'wp_ajax_songpress_autosave', array( __CLASS__, 'handle_autosave' ) );
 		add_action( 'wp_ajax_songpress_sheet', array( __CLASS__, 'handle_sheet_ajax' ) );
 		add_action( 'admin_post_songpress_new_version', array( __CLASS__, 'handle_new_version' ) );
+		add_action( 'admin_post_songpress_make_root', array( __CLASS__, 'handle_make_root' ) );
 		add_action( 'admin_post_songpress_import_check', array( __CLASS__, 'handle_import_check' ) );
 		add_action( 'admin_post_songpress_import_run', array( __CLASS__, 'handle_import_run' ) );
 		add_action( 'admin_post_songpress_settings', array( __CLASS__, 'handle_settings' ) );
@@ -701,6 +702,19 @@ class Songpress_Admin {
 			$args['shares'] = rtrim( rtrim( number_format( $sum, 4, '.', '' ), '0' ), '.' );
 		}
 		self::back( 'songpress-song', $args );
+	}
+
+	public static function handle_make_root() {
+		check_admin_referer( 'songpress_make_root' );
+		$id = absint( $_POST['song_id'] ?? 0 );
+		if ( ! Songpress_Caps::can_edit_song( $id ) || ! Songpress_Caps::can( 'edit_any' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ), '', 403 );
+		}
+		$r = Songpress_Songs::make_root( $id );
+		if ( is_wp_error( $r ) ) {
+			self::back( 'songpress-song', array( 'song' => $id, 'err' => rawurlencode( $r->get_error_message() ) ) );
+		}
+		self::back( 'songpress-song', array( 'song' => $id, 'saved' => 1 ) );
 	}
 
 	public static function handle_new_version() {

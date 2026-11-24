@@ -1036,6 +1036,13 @@ foreach ( array_merge( glob( SONGPRESS_DIR . 'includes/*.php' ), glob( SONGPRESS
 }
 check( 'no escaped placeholder in a single-quoted string', $bad, array() );
 
+// a version can be made its own work (a root)
+$mr = Songpress_Songs::make_root( $v3 );
+$gm = Songpress_Songs::get( $v3 );
+check( 'make_root: version becomes a root', array( (int) $gm->version_no, $gm->serial === $mr ), array( 0, true ) );
+check( 'make_root: leaves the old family', (int) $gm->family_id !== (int) Songpress_Songs::get( $v1 )->family_id, true );
+check( 'make_root: a root cannot be made a root again', is_wp_error( Songpress_Songs::make_root( $v3 ) ), true );
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
