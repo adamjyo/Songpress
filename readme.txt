@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.54
+Stable tag: 0.72.55
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.55 =
+* Phone Radio: the mini player now sits at the top and tucks itself away a few seconds after it appears (new track, play or pause) or after you touch it. A small tab at the top brings it back.
 
 = 0.72.54 =
 * Phone: one audio player for the whole app. A song keeps playing when you open Radio (it carries on in the Radio player, no restart), when you leave Radio (the mini player stays at the bottom), and across every other screen. It only changes when you start another track; starting one on the Works list stops Radio's queue and the other way round.

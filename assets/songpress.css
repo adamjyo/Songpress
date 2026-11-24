@@ -1165,7 +1165,7 @@ body.admin-bar .sp-side{top:32px;height:calc(100vh - 32px);height:calc(100dvh - 
 .sp-rd-prow .tx{flex:1;min-width:0}
 .sp-rd-add{width:44px;height:44px;border-radius:50%;border:1px solid var(--sp-line);background:#262830;color:var(--sp-accent)!important;display:flex;align-items:center;justify-content:center;padding:0;flex:none}
 .sp-rd-danger{display:block;width:100%;min-height:48px;margin-top:24px;border:1px solid #4a2523;border-radius:14px;background:#1d1414;color:#e5534b!important;font-weight:600}
-.sp-rd-mini{position:fixed;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:9990;display:flex;align-items:center;gap:6px;padding:6px 6px 8px 8px;border:1px solid #2e3138;border-radius:16px;background:#1b1d22;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:624px;margin:0 auto;overflow:hidden}
+.sp-rd-mini{position:fixed;left:8px;right:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:9990;transition:transform .28s ease,opacity .28s ease;display:flex;align-items:center;gap:6px;padding:6px 6px 8px 8px;border:1px solid #2e3138;border-radius:16px;background:#1b1d22;box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:624px;margin:0 auto;overflow:hidden}
 .sp-rd-mini[hidden]{display:none}
 .sp-rd-mopen{flex:1;min-width:0;display:flex;align-items:center;gap:10px;border:0;background:none;text-align:left;padding:0;min-height:44px}
 .sp-rd-mopen .tx{flex:1;min-width:0}.sp-rd-mopen b{display:block;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sp-rd-mopen small{display:block;font-size:12px;color:#9a9ea6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1232,7 +1232,7 @@ html.sp-np-open,html.sp-np-open body{overflow:hidden}
 .songpress-tabs button{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--sp-mute);font:inherit;font-size:12px;background:none;border:0;padding:0;cursor:pointer}
 .songpress-tabs.songpress-tabs-fixed{position:fixed;left:0;right:0;bottom:0;margin:0;gap:0;flex-wrap:nowrap;z-index:9980;padding-bottom:env(safe-area-inset-bottom,0px);background:#141518;border-top:1px solid var(--sp-line)}
 .sp-app:has(.songpress-tabs-fixed){padding-bottom:84px}
-html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+
 
 .sp-cp-credit{margin:.2em 0;color:var(--sp-mute,#646970)}.sp-cp-credit strong{margin-right:.5em;font-size:.75em;letter-spacing:.08em;text-transform:uppercase}
 
@@ -1354,3 +1354,8 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 /* 0.72.54: the Radio mini player lives on the page body (it stays when you leave Radio), so it carries its own button and icon rules */
 .sp-rd-mini button{font:inherit;color:inherit;cursor:pointer}
 .sp-rd-mini .ic{display:inline-flex}
+
+/* 0.72.55: the Radio mini player sits at the top and tucks away after a few seconds */
+.sp-rd-mini.away{transform:translateY(calc(-100% - 24px));opacity:0;pointer-events:none}
+.sp-rd-pull{position:fixed;top:calc(4px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:9990;width:56px;height:28px;border:0;border-radius:0 0 14px 14px;background:#1b1d22;color:#eceef1;display:flex;align-items:center;justify-content:center;padding:0;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.sp-rd-pull[hidden]{display:none}

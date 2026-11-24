@@ -108,10 +108,17 @@
   var view = { name: 'index', k: '', edit: false };
   var main = el('div', 'sp-rd-main'), mini = el('div', 'sp-rd-mini'), np = el('div', 'sp-rd-np');
   mini.hidden = true; np.hidden = true;
-  root.appendChild(main); document.body.appendChild(mini); document.body.appendChild(np); // the mini player lives on the page, so it stays when you leave Radio
+  /* the mini player lives at the top and tucks itself away a few seconds after it appears or is touched; the little tab brings it back */
+  var awayT = 0, pull = el('button', 'sp-rd-pull'); pull.type = 'button'; pull.hidden = true; pull.setAttribute('aria-label', I.open || 'Player');
+  pull.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+  function away() { if (!alive || mini.hidden) return; mini.classList.add('away'); pull.hidden = false; }
+  function peek() { mini.classList.remove('away'); pull.hidden = true; clearTimeout(awayT); awayT = setTimeout(away, 4000); }
+  pull.addEventListener('click', peek); mini.addEventListener('pointerdown', function () { clearTimeout(awayT); awayT = setTimeout(away, 4000); }, true);
+  var wasPlaying = null;
+  root.appendChild(main); document.body.appendChild(mini); document.body.appendChild(pull); document.body.appendChild(np); // the mini player lives on the page, so it stays when you leave Radio
   window.SPRD_DESTROY = function () {
     alive = false; window.SPRD_SNAP = Q.pos >= 0 ? { key: Q.key, base: Q.base, order: Q.order, pos: Q.pos, shuffle: Q.shuffle, repeat: Q.repeat } : null;
-    try { mini.remove(); np.remove(); } catch (e) {} document.documentElement.classList.remove('sp-np-open', 'sp-rd-has-mini');
+    clearTimeout(awayT); try { mini.remove(); pull.remove(); np.remove(); } catch (e) {} document.documentElement.classList.remove('sp-np-open', 'sp-rd-has-mini');
   };
   window.SPRD_YIELD = function () { if (!alive) return; Q = { base: [], order: [], pos: -1, key: '', shuffle: false, repeat: 'off' }; hideNP(); ui(); }; // a track was started on the Works list
 
@@ -387,6 +394,7 @@
   function ui(force) {
     var id = curId(), t = id ? T[id] : null, playing = !au.paused && !!id;
     mini.hidden = !t; document.documentElement.classList.toggle('sp-rd-has-mini', !!t);
+    if (!t) { pull.hidden = true; clearTimeout(awayT); } else if (wasPlaying !== playing || shownId !== id) { peek(); } wasPlaying = playing;
     if (t) {
       if (force || shownId !== id) {
         shownId = id; mArt.innerHTML = ''; mArt.appendChild(art(id)); mT.innerHTML = ''; mT.appendChild(el('b', '', t.t)); mT.appendChild(el('small', '', t.b));
