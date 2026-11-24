@@ -184,12 +184,13 @@
         busy = false; if (!swap(h, url, push)) { if (au && !au.paused) return; location.href = url; } // a full reload would cut the music: only when nothing is playing
       }).catch(function () { busy = false; if (au && !au.paused && !again) setTimeout(function () { go(url, push, true); }, 700); else if (!au || au.paused) location.href = url; });
     };
+    window.SPGO = function (u) { var x = new URL(u, location.href); if (ok(x)) go(x.href, true); else location.href = x.href; }; // the bottom tabs use this so a tab switch keeps the player going
     document.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !playingNow()) return;
       var a = e.target.closest && e.target.closest('.songpress.sp-app a[href]'); if (!a || a.target || a.hasAttribute('download') || a.getAttribute('onclick')) return;
       var u; try { u = new URL(a.href, location.href); } catch (x) { return; }
-      if (!ok(u) || (u.pathname + u.search === location.pathname + location.search)) return;
-      e.preventDefault(); go(u.href, true);
+      if (!ok(u)) return;
+      e.preventDefault(); go(u.href, u.pathname + u.search !== location.pathname + location.search); // the tab you are already on just refreshes in place
     });
     document.addEventListener('submit', function (e) {
       var f = e.target; if (e.defaultPrevented || !playingNow() || !f.closest || !f.closest('.songpress.sp-app') || (f.method || 'get').toLowerCase() !== 'get' || f.target) return;

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.60
+Stable tag: 0.72.61
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.61 =
+* Phone: fixed tapping the bottom tabs stopping the music. The helper that lets tabs switch screens without reloading had been lost in an earlier update, so every tab tap reloaded the whole app. Tapping the tab you are already on now just refreshes it in place.
 
 = 0.72.60 =
 * Phone: opening Radio while a song plays no longer touches the audio. The player no longer resets the element's preload setting (which can stall it on iPhone), a playing track is never restarted from a saved position, and the player script now loads on the Profile screen too.
