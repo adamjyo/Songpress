@@ -648,14 +648,13 @@ class Songpress_Frontend {
 			$fk          = (int) $r->family_id ? (int) $r->family_id : -(int) $r->id; // one per work (the NNNN of NNNN-VV), whether or not its original row exists
 			$orig[ $fk ] = 1;
 		}
-		$res  = array( 'rows' => $rows, 'total' => count( $rows ) );
-		$rel  = 0;
-		foreach ( $rows as $s ) {
+		$today = current_time( 'Y-m-d' );
+		$rows  = array_values( array_filter( $rows, function ( $s ) use ( $today ) { // the list is releases only: released by status, or dated on/before today
 			$d = trim( (string) $s->release_date );
-			if ( 'released' === $s->status || ( '' !== $d && $d <= current_time( 'Y-m-d' ) ) ) { // released by status, or dated on/before today (as Radio counts it)
-				$rel++;
-			}
-		}
+			return 'released' === $s->status || ( '' !== $d && $d <= $today );
+		} ) );
+		$res   = array( 'rows' => $rows, 'total' => count( $rows ) );
+		$rel   = count( $rows );
 		$ini = '';
 		foreach ( array_slice( preg_split( '/\s+/', trim( $u->display_name ) ), 0, 2 ) as $w ) {
 			$ini .= function_exists( 'mb_substr' ) ? mb_strtoupper( mb_substr( $w, 0, 1 ) ) : strtoupper( substr( $w, 0, 1 ) );
