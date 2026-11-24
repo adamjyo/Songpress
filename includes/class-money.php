@@ -675,11 +675,17 @@ class Songpress_Money {
 			}
 			$on   = isset( $ix['paid_on'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) ( $c[ $ix['paid_on'] ] ?? '' ) ) ? $c[ $ix['paid_on'] ] : null;
 			$note = isset( $ix['notes'] ) ? sanitize_text_field( $c[ $ix['notes'] ] ?? '' ) : '';
+			$add  = isset( $ix['add'] ) && in_array( strtolower( trim( (string) ( $c[ $ix['add'] ] ?? '' ) ) ), array( '1', 'yes', 'y', 'true' ), true );
 			$y    = (int) substr( $q, 0, 4 );
 			$qn   = (int) substr( $q, -1 );
-			$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, amount, paid FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $y, $qn, $key ) ); // phpcs:ignore WordPress.DB
+			$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, amount, paid, notes FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $y, $qn, $key ) ); // phpcs:ignore WordPress.DB
 			if ( ! $have ) {
 				$wpdb->insert( $p, array( 'pay_year' => $y, 'pay_quarter' => $qn, 'kind' => 'writer', 'party' => $party, 'party_key' => $key, 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $note, 'updated_at' => current_time( 'mysql' ) ) );
+				$added++;
+			} elseif ( '' !== $note && false !== strpos( (string) $have->notes, $note ) ) { // this very line was added before
+				$same++;
+			} elseif ( ! empty( $add ) ) { // an "add" line joins what is already paid that quarter, with its own note
+				$wpdb->update( $p, array( 'amount' => round( (float) $have->amount + $amount, 2 ), 'paid' => 1, 'paid_on' => $on ?: null, 'notes' => ( '' !== trim( (string) $have->notes ) ? trim( (string) $have->notes ) . "\n" : '' ) . $note, 'updated_at' => current_time( 'mysql' ) ), array( 'id' => (int) $have->id ) );
 				$added++;
 			} elseif ( abs( (float) $have->amount - $amount ) < 0.005 && (int) $have->paid ) {
 				$same++;
