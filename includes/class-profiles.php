@@ -299,7 +299,7 @@ class Songpress_Profiles {
 		$src  = self::photo_url( $p );
 		$st   = 'width:' . (int) $px . 'px;height:' . (int) $px . 'px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px';
 		if ( '' !== $src ) {
-			if ( $p && (int) $p->photo_id && get_post_meta( (int) $p->photo_id, '_sp_icon', true ) ) {
+			if ( $p && (int) $p->photo_id && function_exists( 'get_post_meta' ) && get_post_meta( (int) $p->photo_id, '_sp_icon', true ) ) {
 				$st .= ';object-view-box:inset(1.6% 13.5% 26.1% 13.5%)'; // small round faces show just the circle, not the name under it
 			}
 			return '<img class="sp-face" src="' . esc_url( $src ) . '" alt="" loading="lazy" style="' . esc_attr( $st ) . '">';

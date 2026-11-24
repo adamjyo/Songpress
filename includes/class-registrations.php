@@ -45,10 +45,10 @@ class Songpress_Registrations {
 		$s  = Songpress_Install::table( 'songs' );
 		$i  = Songpress_Install::table( 'identifiers' );
 		$fam = array();
-		foreach ( $wpdb->get_results( "SELECT id, family_id, version_no, serial, title, release_date, archived_at FROM {$s} ORDER BY family_id, version_no" ) as $r ) { // phpcs:ignore WordPress.DB
+		foreach ( $wpdb->get_results( "SELECT id, family_id, version_no, serial, title, release_date, archived_at, ( chordpro IS NOT NULL AND TRIM(chordpro) <> '' ) AS has_cp FROM {$s} ORDER BY family_id, version_no" ) as $r ) { // phpcs:ignore WordPress.DB
 			$f = (int) $r->family_id;
 			if ( ! isset( $fam[ $f ] ) ) {
-				$fam[ $f ] = (object) array( 'family_id' => $f, 'id' => 0, 'serial' => '', 'title' => '', 'release' => '', 'codes' => array(), 'marks' => array(), 'ids' => array() );
+				$fam[ $f ] = (object) array( 'family_id' => $f, 'id' => 0, 'serial' => '', 'title' => '', 'release' => '', 'codes' => array(), 'marks' => array(), 'ids' => array(), 'has_cp' => false );
 			}
 			$fam[ $f ]->ids[ (int) $r->id ] = true; // archived versions still count for codes
 			if ( empty( $r->archived_at ) ) {
@@ -56,6 +56,9 @@ class Songpress_Registrations {
 					$fam[ $f ]->id     = (int) $r->id;
 					$fam[ $f ]->serial = $r->serial;
 					$fam[ $f ]->title  = $r->title;
+				}
+				if ( (int) $r->has_cp ) {
+					$fam[ $f ]->has_cp = true;
 				}
 				if ( '' !== (string) $r->release_date && (string) $r->release_date > $fam[ $f ]->release ) {
 					$fam[ $f ]->release = (string) $r->release_date;
@@ -83,6 +86,14 @@ class Songpress_Registrations {
 			}
 		}
 		return array_values( $fam );
+	}
+
+	/** The two plain facts shown beside the registries: released (any version has a release date) and ChordPro (any version has a chord sheet). Green or red only. */
+	public static function facts( $w ) {
+		return array(
+			'released' => array( __( 'Released', 'songpress' ), '' !== (string) $w->release ),
+			'chordpro' => array( 'ChordPro', ! empty( $w->has_cp ) ),
+		);
 	}
 
 	/** What a work looks like at one society: array(state, code, reference, days, note, started). Pure given a work. */
@@ -230,8 +241,12 @@ class Songpress_Registrations {
 		foreach ( self::SOCIETIES as $k => $d ) {
 			$tot[ $k ] = array( 'green' => 0, 'gold' => 0, 'red' => 0 );
 		}
+		$ftot = array( 'released' => array( 0, 0 ), 'chordpro' => array( 0, 0 ) );
 		$rows = array();
 		foreach ( $works as $w ) {
+			foreach ( self::facts( $w ) as $fk => $fv ) {
+				$ftot[ $fk ][ $fv[1] ? 0 : 1 ]++;
+			}
 			$st    = array();
 			$gold  = false;
 			$wait  = false;
@@ -270,7 +285,10 @@ class Songpress_Registrations {
 		foreach ( self::SOCIETIES as $k => $d ) {
 			$o .= '<li>' . esc_html( $d[0] ) . '<strong><span class="spr-g">' . (int) $tot[ $k ]['green'] . '</span> · <span class="spr-y">' . (int) $tot[ $k ]['gold'] . '</span> · <span class="spr-r">' . (int) $tot[ $k ]['red'] . '</span></strong></li>';
 		}
-		$o .= '</ul><p class="spe-help">' . esc_html__( 'Green: the work has the registry\'s code. Gold: you marked it in progress. Red: not filed. The code on the song is never changed from here.', 'songpress' ) . '</p><p class="spr-tabs">';
+		foreach ( array( 'released' => __( 'Released', 'songpress' ), 'chordpro' => 'ChordPro' ) as $fk => $fl ) {
+			$o .= '<li>' . esc_html( $fl ) . '<strong><span class="spr-g">' . (int) $ftot[ $fk ][0] . '</span> · <span class="spr-r">' . (int) $ftot[ $fk ][1] . '</span></strong></li>';
+		}
+		$o .= '</ul><p class="spe-help">' . esc_html__( 'Green: the work has the registry\'s code. Gold: you marked it in progress. Red: not filed. Released and ChordPro are green when any version of the work has a release date or a chord sheet, red when none does. The code on the song is never changed from here.', 'songpress' ) . '</p><p class="spr-tabs">';
 		foreach ( array( 'progress' => __( 'In progress', 'songpress' ), 'waiting' => __( 'Waiting 30+ days', 'songpress' ), 'unfiled' => __( 'Released, not filed', 'songpress' ), 'all' => __( 'All works', 'songpress' ) ) as $k => $l ) {
 			$o .= '<a class="spe-btn' . ( $k === $rf ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'sp_page' => 'registrations', 'rf' => $k ), $base ) ) . '">' . esc_html( $l ) . '</a> ';
 		}
@@ -284,6 +302,9 @@ class Songpress_Registrations {
 			foreach ( self::SOCIETIES as $k => $d ) {
 				$s  = $st[ $k ];
 				$o .= '<span class="spr-chip ' . esc_attr( $s['state'] ) . '" title="' . esc_attr( $s['code'] ) . '">' . esc_html( $d[0] ) . ( null !== $s['days'] ? ' ' . (int) $s['days'] . 'd' : '' ) . '</span>';
+			}
+			foreach ( self::facts( $w ) as $fv ) {
+				$o .= '<span class="spr-chip ' . ( $fv[1] ? 'green' : 'red' ) . '">' . esc_html( $fv[0] ) . '</span>';
 			}
 			$o .= '</span></summary><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_registration_save', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_registration_save"><input type="hidden" name="family_id" value="' . (int) $w->family_id . '"><input type="hidden" name="rf" value="' . esc_attr( $rf ) . '"><input type="hidden" name="sp_return" value="' . esc_attr( $base ) . '">';
 			foreach ( self::SOCIETIES as $k => $d ) {
