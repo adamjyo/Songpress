@@ -11,7 +11,7 @@ class Songpress_Backup {
 
 	const KEEP     = 15;
 	const SKIP     = array( 'audit', 'history' );
-	const RISKY    = array( 'songpress_statement', 'songpress_notes_import', 'songpress_person_tidy', 'songpress_person_rename', 'songpress_session_delete', 'songpress_agreement_delete', 'songpress_art_delete', 'songpress_import_run', 'songpress_profiles_load', 'songpress_make_accounts', 'songpress_link_writers', 'songpress_start_fresh' );
+	const RISKY    = array( 'songpress_statement', 'songpress_notes_import', 'songpress_person_tidy', 'songpress_person_rename', 'songpress_money_pay_csv', 'songpress_session_delete', 'songpress_agreement_delete', 'songpress_art_delete', 'songpress_import_run', 'songpress_profiles_load', 'songpress_make_accounts', 'songpress_link_writers', 'songpress_start_fresh' );
 	const THROTTLE = 600;
 
 	public static function init() {

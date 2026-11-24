@@ -40,6 +40,7 @@ class Songpress_Money {
 	const SRC_CODES = array( 'D' => 'distrokid', 'M' => 'mlc', 'A' => 'ascap', 'C' => 'ccli' );
 
 	public static function init() {
+		add_action( 'wp_ajax_songpress_money_pay_csv', array( __CLASS__, 'handle_pay_csv' ) ); // admin-post.php is blocked on some hosts
 		foreach ( array( 'import', 'pay', 'payment', 'payment_update', 'payment_delete', 'expense_add', 'expense_delete', 'band_payee', 'stats_import' ) as $a ) {
 			add_action( 'admin_post_songpress_money_' . $a, array( __CLASS__, 'handle_' . $a ) );
 		}
@@ -632,6 +633,72 @@ class Songpress_Money {
 			self::go( 'uploads', array( 'type' => 'dk_stats', 'm_err' => $r['error'] ) );
 		}
 		self::go( 'uploads', array( 'type' => 'dk_stats', 'm_ok' => sprintf( /* translators: 1: days, 2: day-and-service lines */ __( 'Saved %1$d days of streams (%2$d lines).', 'songpress' ), $r['days'], $r['rows'] ) ) );
+	}
+
+	/**
+	 * Payments from a spreadsheet: a CSV with person, quarter (2025 Q3), amount, paid_on (optional), notes (optional).
+	 * A payment that is already there is left alone; a missing one is added as paid; one that is there with a different amount is reported, not changed.
+	 */
+	public static function handle_pay_csv() {
+		self::guard( 'songpress_money_pay_csv' );
+		global $wpdb;
+		if ( empty( $_FILES['paycsv']['tmp_name'] ) || ! is_uploaded_file( $_FILES['paycsv']['tmp_name'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+			self::go( 'uploads', array( 'type' => 'payments_csv', 'm_err' => __( 'No file was received.', 'songpress' ) ) );
+		}
+		$raw = (string) file_get_contents( $_FILES['paycsv']['tmp_name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput, WordPress.WP.AlternativeFunctions
+		$raw = preg_replace( '/^\xEF\xBB\xBF/', '', $raw );
+		$ln  = preg_split( '/\r\n|\r|\n/', $raw );
+		$hd  = array_map( function ( $h ) {
+			return strtolower( trim( $h ) );
+		}, str_getcsv( (string) array_shift( $ln ) ) );
+		$ix  = array_flip( $hd );
+		if ( ! isset( $ix['person'], $ix['quarter'], $ix['amount'] ) ) {
+			self::go( 'uploads', array( 'type' => 'payments_csv', 'm_err' => __( 'The first row must have the columns person, quarter and amount.', 'songpress' ) ) );
+		}
+		$p     = self::t( 'payments' );
+		$added = 0;
+		$same  = 0;
+		$diff  = array();
+		$skip  = 0;
+		foreach ( $ln as $line ) {
+			if ( '' === trim( $line ) ) {
+				continue;
+			}
+			$c      = str_getcsv( $line );
+			$party  = sanitize_text_field( $c[ $ix['person'] ] ?? '' );
+			$q      = self::quarter( $c[ $ix['quarter'] ] ?? '' );
+			$amount = round( (float) str_replace( array( '$', ',' ), '', (string) ( $c[ $ix['amount'] ] ?? 0 ) ), 2 );
+			$key    = self::person_key( $party );
+			if ( '' === $key || '' === $q || $amount <= 0 ) {
+				$skip++;
+				continue;
+			}
+			$on   = isset( $ix['paid_on'] ) && preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) ( $c[ $ix['paid_on'] ] ?? '' ) ) ? $c[ $ix['paid_on'] ] : null;
+			$note = isset( $ix['notes'] ) ? sanitize_text_field( $c[ $ix['notes'] ] ?? '' ) : '';
+			$y    = (int) substr( $q, 0, 4 );
+			$qn   = (int) substr( $q, -1 );
+			$have = $wpdb->get_row( $wpdb->prepare( "SELECT id, amount, paid FROM {$p} WHERE pay_year = %d AND pay_quarter = %d AND kind = 'writer' AND party_key = %s", $y, $qn, $key ) ); // phpcs:ignore WordPress.DB
+			if ( ! $have ) {
+				$wpdb->insert( $p, array( 'pay_year' => $y, 'pay_quarter' => $qn, 'kind' => 'writer', 'party' => $party, 'party_key' => $key, 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $note, 'updated_at' => current_time( 'mysql' ) ) );
+				$added++;
+			} elseif ( abs( (float) $have->amount - $amount ) < 0.005 && (int) $have->paid ) {
+				$same++;
+			} elseif ( ! (int) $have->paid && abs( (float) $have->amount ) < 0.005 ) { // an empty, unpaid line: fill it in
+				$wpdb->update( $p, array( 'amount' => $amount, 'paid' => 1, 'paid_on' => $on, 'notes' => $note, 'updated_at' => current_time( 'mysql' ) ), array( 'id' => (int) $have->id ) );
+				$added++;
+			} else {
+				$diff[] = $party . ' ' . $q . ': system ' . self::money( $have->amount ) . ( (int) $have->paid ? '' : ' (unpaid)' ) . ', sheet ' . self::money( $amount );
+			}
+		}
+		Songpress_Audit::log( 'money', 'Imported payments from a spreadsheet', '', array( 'added' => $added, 'already there' => $same, 'different' => count( $diff ) ) );
+		$msg = sprintf( /* translators: 1: added 2: already there 3: different */ __( 'Added %1$d payments. %2$d were already there.', 'songpress' ), $added, $same );
+		if ( $diff ) {
+			$msg .= ' ' . sprintf( /* translators: %d: count */ __( '%d differ from the system and were not changed:', 'songpress' ), count( $diff ) ) . ' ' . implode( '; ', array_slice( $diff, 0, 12 ) ) . ( count( $diff ) > 12 ? '…' : '' );
+		}
+		if ( $skip ) {
+			$msg .= ' ' . sprintf( /* translators: %d: count */ __( '%d lines were skipped (no matching person, quarter or amount).', 'songpress' ), $skip );
+		}
+		self::go( 'uploads', array( 'type' => 'payments_csv', 'm_ok' => $msg ) );
 	}
 
 	public static function handle_pay() {
