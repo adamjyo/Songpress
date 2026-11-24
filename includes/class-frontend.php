@@ -309,7 +309,7 @@ class Songpress_Frontend {
 		}
 		if ( $desktop ) { // phones show the list with no column headings
 			$out .= '<div class="songpress-colhead" role="row">' . ( $bulk ? '<input type="checkbox" class="songpress-pickall" aria-label="' . esc_attr__( 'Select all', 'songpress' ) . '">' : '' ) . '<span class="songpress-ch-play"></span><span class="songpress-ch-main">';
-			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'label' => __( 'Label', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
+			foreach ( array( 'serial' => __( 'No.', 'songpress' ), 'title' => __( 'Title', 'songpress' ), 'genre' => __( 'Genre', 'songpress' ), 'writer' => __( 'Writers', 'songpress' ), 'artist' => __( 'Band', 'songpress' ), 'status' => __( 'Status', 'songpress' ) ) as $k => $label ) {
 				$on   = ( $k === $order );
 				$next = ( $on && 'asc' === $dir ) ? 'desc' : 'asc';
 				$out .= '<a class="songpress-ch-' . esc_attr( $k ) . ( $on ? ' on' : '' ) . '" href="' . esc_url( add_query_arg( ( $on && 'desc' === $dir ) ? array( 'sp_sort' => '', 'sp_dir' => '' ) : array( 'sp_sort' => $k, 'sp_dir' => $next ) ) ) . '"' . ( $on ? ' aria-sort="' . ( 'asc' === $dir ? 'ascending' : 'descending' ) . '"' : '' ) . '>' . esc_html( $label ) . ( $on ? ( 'asc' === $dir ? ' &#9650;' : ' &#9660;' ) : '' ) . '</a>';
@@ -371,7 +371,7 @@ class Songpress_Frontend {
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'
-				. '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>'
+				. ( $desktop ? '' : '<span class="songpress-icons songpress-labels">' . $lfaces . '</span>' )
 				. '<span class="songpress-sub">' . esc_html( Songpress_Songs::effective_status( $s ) ) . '</span>'
 				. '</a></li>';
 		}
