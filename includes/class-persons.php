@@ -335,6 +335,7 @@ class Songpress_Persons {
 			self::go( $back + array( 'sp_err' => rawurlencode( __( 'Someone with that name is already in People.', 'songpress' ) ) ) );
 		}
 		$login = '';
+		$moved = '';
 		$self  = false;
 		if ( $uid ) {
 			$u = get_userdata( $uid );
@@ -351,8 +352,26 @@ class Songpress_Persons {
 				$login = $u->user_login; // nothing changed: keep it
 			}
 			$other = '' === $login ? 0 : (int) username_exists( $login );
-			if ( '' === $login || ( $other && $other !== $uid ) ) {
-				self::go( $back + array( 'sp_err' => rawurlencode( __( 'That login is taken or not valid.', 'songpress' ) ) ) );
+			if ( '' === $login ) {
+				self::go( $back + array( 'sp_err' => rawurlencode( __( 'That login is not valid.', 'songpress' ) ) ) );
+			}
+			if ( $other && $other !== $uid ) { // taken by another account: ask, then give it to this person and rename the other one
+				$ou = get_userdata( $other );
+				if ( empty( $_POST['confirm'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+					$f = '<form method="post" action="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '">' . wp_nonce_field( 'songpress_person_rename', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_person_rename"><input type="hidden" name="confirm" value="1">';
+					foreach ( array( 'uid' => $uid, 'old' => $old, 'first' => $first, 'last' => $last, 'username' => $login ) as $k => $v ) {
+						$f .= '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( (string) $v ) . '">';
+					}
+					$f .= '<p><button type="submit">' . esc_html__( 'Yes, replace it', 'songpress' ) . '</button> <a href="' . esc_url( self::url( $back ) ) . '">' . esc_html__( 'Cancel', 'songpress' ) . '</a></p></form>';
+					wp_die( '<h1>' . esc_html__( 'That username is already used', 'songpress' ) . '</h1><p>' . esc_html( sprintf( /* translators: 1: login 2: display name */ __( '%1$s belongs to %2$s. If you continue, %1$s moves to %3$s and the other account is renamed (its name and password stay).', 'songpress' ), $login, $ou ? $ou->display_name : '', $new ) ) . '</p>' . $f, '', array( 'response' => 200 ) ); // phpcs:ignore WordPress.Security.EscapeOutput
+				}
+				$free = $login . '-old';
+				for ( $i = 2; username_exists( $free ); $i++ ) {
+					$free = $login . '-old' . $i;
+				}
+				$wpdb->update( $wpdb->users, array( 'user_login' => $free, 'user_nicename' => sanitize_title( $free ) ), array( 'ID' => $other ) );
+				clean_user_cache( $other );
+				$moved = $free;
 			}
 			$wpdb->update( $wpdb->users, array( 'user_login' => $login, 'user_nicename' => sanitize_title( $login ), 'display_name' => $new ), array( 'ID' => $uid ) );
 			update_user_meta( $uid, 'first_name', $first );
@@ -379,7 +398,7 @@ class Songpress_Persons {
 			wp_safe_redirect( Songpress_Members::invite_link( $login ) );
 			exit;
 		}
-		self::go( array( 'person' => $nk, 'sp_saved' => rawurlencode( '' !== $login ? sprintf( /* translators: 1: name 2: login */ __( 'Renamed to %1$s. Their login is now %2$s.', 'songpress' ), $new, $login ) : sprintf( __( 'Renamed to %s.', 'songpress' ), $new ) ) ) );
+		self::go( array( 'person' => $nk, 'sp_saved' => rawurlencode( '' !== $login ? sprintf( /* translators: 1: name 2: login */ __( 'Renamed to %1$s. Their login is now %2$s.', 'songpress' ), $new, $login ) . ( '' !== $moved ? ' ' . sprintf( /* translators: %s: new login of the other account */ __( 'The account that had it is now %s.', 'songpress' ), $moved ) : '' ) : sprintf( __( 'Renamed to %s.', 'songpress' ), $new ) ) ) );
 	}
 
 	/* ---------- screens ---------- */
