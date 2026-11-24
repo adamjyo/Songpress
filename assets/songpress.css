@@ -1344,3 +1344,7 @@ html:has(.songpress-tabs-fixed) .sp-rd-mini{bottom:calc(76px + env(safe-area-ins
 .songpress-coverplay .songpress-playicon{opacity:1;background:rgba(0,0,0,.28)}
 .songpress-coverplay .songpress-playicon::before{border-width:13px 0 13px 22px;margin-left:5px}
 .songpress-coverplay.on .songpress-playicon::before{border-width:0;width:22px;height:26px;margin:0;border-left:7px solid #fff;border-right:7px solid #fff}
+/* 0.72.48: search box above the releases on the phone profile */
+.songpress-mysearch{display:block;width:100%;height:46px;padding:0 14px;margin:8px 0 10px;border-radius:12px;border:1px solid #2a2d33;background:var(--sp-field);color:var(--sp-text);font-size:16px;font-family:inherit;box-shadow:none;box-sizing:border-box}
+.songpress-mysearch::placeholder{color:var(--sp-mute);opacity:1}.songpress-mysearch:focus{outline:2px solid var(--sp-accent);outline-offset:1px}
+.songpress-mysongs li[hidden]{display:none}

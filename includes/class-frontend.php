@@ -738,7 +738,7 @@ class Songpress_Frontend {
 			$dk   = Songpress_Money::my_song_totals( $u->display_name );
 			$cat  = self::main_id( 'catalog' );
 			$base = $cat ? get_permalink( $cat ) : home_url( '/' );
-			$out .= '<h3>' . esc_html__( 'Releases', 'songpress' ) . '</h3><ul class="songpress-mysongs">';
+			$out .= '<h3>' . esc_html__( 'Releases', 'songpress' ) . '</h3>' . ( wp_is_mobile() ? '<input type="search" class="songpress-mysearch" placeholder="' . esc_attr__( 'Search your works', 'songpress' ) . '" aria-label="' . esc_attr__( 'Search your works', 'songpress' ) . '" autocomplete="off"><p class="songpress-note songpress-mynone" hidden>' . esc_html__( 'No works match.', 'songpress' ) . '</p>' : '' ) . '<ul class="songpress-mysongs">';
 			foreach ( $mine as $s ) {
 				$id    = (int) $s->id;
 				$r     = array();
@@ -751,7 +751,7 @@ class Songpress_Frontend {
 				$amt   = $dk['id'][ $id ] ?? ( $dk['title'][ Songpress_Money::norm_title( $s->title ) ] ?? 0 );
 				$out  .= '<li><a href="' . esc_url( add_query_arg( 'sp_song', $id, $base ) ) . '"><span class="songpress-mytitle"><span class="songpress-serial">' . esc_html( $s->serial ) . '</span> ' . esc_html( $title ) . '</span><span class="songpress-myrole">' . esc_html( implode( ' · ', $r ) ) . '</span></a><span class="songpress-mydk">' . ( $amt ? esc_html( Songpress_Money::money( $amt ) ) : '&ndash;' ) . '</span></li>';
 			}
-			$out .= '</ul><p class="songpress-note">' . esc_html__( 'Amounts are what you have earned from each song.', 'songpress' ) . '</p>';
+			$out .= '</ul>' . ( wp_is_mobile() ? '<script>(function(){var i=document.querySelector(".songpress-mysearch"),l=document.querySelector(".songpress-mysongs"),n=document.querySelector(".songpress-mynone");if(!i||!l)return;i.addEventListener("input",function(){var q=i.value.toLowerCase().trim(),c=0;[].forEach.call(l.children,function(li){var m=!q||li.textContent.toLowerCase().indexOf(q)>-1;li.hidden=!m;if(m)c++});n.hidden=c>0})})()</script>' : '' ) . '<p class="songpress-note">' . esc_html__( 'Amounts are what you have earned from each song.', 'songpress' ) . '</p>';
 		}
 		$out .= wp_kses_post( songpress_public_donate_link() ) . self::tabs( 'profile' ) . '</div>';
 		return $out;
