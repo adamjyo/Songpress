@@ -407,7 +407,7 @@ class Songpress_Songs {
 	 * A version that became a work of its own should look like one: its release name becomes the work's title and the release-only
 	 * details (release name, band, album, release date) are cleared, with a line in the private notes so nothing is lost.
 	 */
-	public static function become_root( $song_id ) {
+	public static function become_root( $song_id, $use_release_title = true ) {
 		global $wpdb;
 		$t = self::table_songs();
 		$s = self::get( (int) $song_id );
@@ -424,7 +424,7 @@ class Songpress_Songs {
 			return false;
 		}
 		$set = array( 'release_title' => '', 'artist' => '', 'album' => '', 'release_date' => '' );
-		if ( '' !== trim( (string) $s->release_title ) ) {
+		if ( '' !== trim( (string) $s->release_title ) && ( $use_release_title || '' === trim( (string) $s->title ) ) ) {
 			$set['title'] = trim( (string) $s->release_title );
 		}
 		$set['notes'] = trim( (string) $s->notes . "\nWas a version. " . implode( '; ', $bits ) );

@@ -109,7 +109,7 @@ class Songpress_Editor {
 		$artist_hidden = '<input type="hidden" name="artist_id" value="' . (int) $cur_artist . '">';
 		$artist_html   = $artist_hidden;
 		// The original work holds only what every version shares. Everything else is entered on a version.
-		$root = 0 === $version && ! ( $song && '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
+		$root = 0 === $version; // a work of its own always looks like one; release details belong to versions
 		// Cover art and an audio player sit beside Basics on every work, the original included.
 		$media  = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="media"><h3>' . esc_html__( 'Art and audio', 'songpress' ) . '</h3><p class="spe-drop" id="spe-msg" aria-live="polite"></p><div class="spe-grid">';
 		$media .= self::media_box( 'art', __( 'Cover art', 'songpress' ), 'image/*', (int) self::f( $song, 'art_id' ), self::f( $song, 'art_url' ), ( $song && Songpress_Caps::can( 'upload' ) ) ? self::art_url( (int) $song->id ) : '' );
@@ -183,7 +183,7 @@ class Songpress_Editor {
 		/* Release: everything that belongs to one recording or release, so only versions have it. */
 		$legacy = $song && 0 === $version && ( '' !== self::f( $song, 'artist' ) . self::f( $song, 'album' ) . self::f( $song, 'release_title' ) . self::f( $song, 'release_date' ) );
 		$rel    = '<section class="spe-panel simple' . ( $root ? '' : ' spe-own' ) . '" data-panel="release"><h3 class="spe-relh">' . esc_html__( 'Release', 'songpress' ) . ( ( $song && Songpress_Caps::can( 'create' ) ) ? ' <button type="submit" form="spe-nv-form" class="spe-nvbtn" title="' . esc_attr__( 'Create a new version of this work', 'songpress' ) . '">+ ' . esc_html__( 'Create a version', 'songpress' ) . '</button>' : '' ) . '</h3>';
-		if ( $song && ( $version > 0 || $legacy ) ) {
+		if ( $song && $version > 0 ) {
 			$rel .= '<p class="spe-help">' . esc_html__( 'These belong to this version only: a new version gets its own release name, band, key, tempo and genre. The ISRC is here; the DistroKid and UPC numbers go in Publishing.', 'songpress' ) . '</p>';
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';

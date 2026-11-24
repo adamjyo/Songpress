@@ -65,14 +65,14 @@ class Songpress_Install {
 			update_option( 'songpress_type_col', '1' );
 		}
 		// Versions that were already turned into works of their own (serial changed to a plain number): make them look like works, once.
-		if ( '1' !== get_option( 'songpress_roots_fixed' ) ) {
+		if ( '1' !== get_option( 'songpress_roots_fixed3' ) ) {
 			global $wpdb;
 			$tb = self::table( 'songs' );
 			$hs = self::table( 'history' );
-			foreach ( (array) $wpdb->get_col( "SELECT DISTINCT h.song_id FROM {$hs} h JOIN {$tb} s ON s.id = h.song_id WHERE h.action = 'serial_changed' AND s.version_no = 0" ) as $sid ) { // phpcs:ignore WordPress.DB
+			foreach ( (array) $wpdb->get_col( "SELECT DISTINCT h.song_id FROM {$hs} h JOIN {$tb} s ON s.id = h.song_id WHERE h.action IN ('serial_changed','made_root') AND s.version_no = 0" ) as $sid ) { // phpcs:ignore WordPress.DB
 				Songpress_Songs::become_root( (int) $sid );
 			}
-			update_option( 'songpress_roots_fixed', '1' );
+			update_option( 'songpress_roots_fixed3', '1' );
 		}
 		// Record label credits were removed on request: delete every label credit, once.
 		if ( '1' !== get_option( 'songpress_labels_removed' ) ) {
