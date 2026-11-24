@@ -311,6 +311,13 @@ class Songpress_Frontend {
 			$out .= '</span></div>';
 		}
 		$rx = $desktop ? array() : Songpress_Reactions::bulk( wp_list_pluck( $res['rows'], 'id' ) );
+		$isrc = array(); // songs on this page that have an ISRC: the desktop list tags them Released
+		if ( $desktop && $res['rows'] ) {
+			global $wpdb;
+			$ids  = array_map( 'intval', wp_list_pluck( $res['rows'], 'id' ) );
+			$ph   = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+			$isrc = array_flip( array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( 'SELECT DISTINCT song_id FROM ' . Songpress_Install::table( 'identifiers' ) . " WHERE kind = 'isrc' AND TRIM(value) <> '' AND song_id IN ({$ph})", $ids ) ) ) ); // phpcs:ignore WordPress.DB
+		}
 		$out .= '<ul class="songpress-list">';
 		foreach ( $res['rows'] as $s ) {
 			$link  = esc_url( add_query_arg( 'sp_song', (int) $s->id ) );
@@ -354,7 +361,7 @@ class Songpress_Frontend {
 			}
 			$out .= '<li class="songpress-row">' . ( $bulk ? '<input type="checkbox" class="songpress-pick" name="ids[]" value="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Select %s', 'songpress' ), $s->title ) ) . '">' : '' ) . $art . '<a class="songpress-rowlink" href="' . $link . '">'
 				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
-				. '<span class="songpress-title">' . esc_html( Songpress_Songs::list_title( $s ) ) . '</span>'
+				. '<span class="songpress-title">' . esc_html( Songpress_Songs::list_title( $s ) ) . ( isset( $isrc[ (int) $s->id ] ) ? '<small class="songpress-tag">' . esc_html__( 'Released', 'songpress' ) . '</small>' : '' ) . '</span>'
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'

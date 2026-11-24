@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.22
+Stable tag: 0.72.23
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.23 =
+* Works list (desktop): a song with an ISRC number shows a small Released tag under its title.
 
 = 0.72.22 =
 * Works editor: new Type field in Basics (Raw, Studio, AI, Live). Each version has its own; a new version starts blank.
