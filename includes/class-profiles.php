@@ -156,8 +156,8 @@ class Songpress_Profiles {
 			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The name goes under the circle.', 'songpress' ) . '</p>'
 			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html( '' !== (string) $person ? __( 'Use as their profile picture', 'songpress' ) : __( 'Use as my profile picture', 'songpress' ) ) . '</button> <span class="sp-av-msg" role="status"></span>'
 			. '</div></details>';
-		wp_enqueue_script( 'songpress-avatar', SONGPRESS_URL . 'assets/avatar.js', array(), SONGPRESS_VERSION, true );
-		wp_add_inline_script( 'songpress-avatar', 'window.SP_AV=' . wp_json_encode( $cfg ) . ';', 'before' );
+		// Printed right after the tool, not enqueued: the desktop screens are drawn inside the page body, where a footer script may never be printed.
+		$o .= '<script>window.SP_AV=' . wp_json_encode( $cfg ) . ';' . (string) file_get_contents( SONGPRESS_DIR . 'assets/avatar.js' ) . '</script>'; // phpcs:ignore WordPress.WP.AlternativeFunctions,WordPress.Security.EscapeOutput -- our own file and json.
 		return $o;
 	}
 
