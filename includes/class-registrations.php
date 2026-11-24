@@ -92,8 +92,40 @@ class Songpress_Registrations {
 	public static function facts( $w ) {
 		return array(
 			'released' => array( __( 'Released', 'songpress' ), '' !== (string) $w->release ),
-			'chordpro' => array( 'ChordPro', ! empty( $w->has_cp ) ),
+			'chordpro' => array( 'ChPro', ! empty( $w->has_cp ) ),
 		);
+	}
+
+	/** The work (its whole family) that holds this song, for the Works list. Loaded once per request. */
+	public static function work_of( $song_id ) {
+		static $by = null;
+		if ( null === $by ) {
+			$by = array();
+			foreach ( self::works() as $w ) {
+				foreach ( array_keys( $w->ids ) as $sid ) {
+					$by[ $sid ] = $w;
+				}
+			}
+		}
+		return $by[ (int) $song_id ] ?? null;
+	}
+
+	/** One compact line of chips for the Works list: the registries, then Released and ChPro. */
+	public static function strip( $song_id ) {
+		$w = self::work_of( $song_id );
+		if ( ! $w ) {
+			return '';
+		}
+		$now = time();
+		$o   = '';
+		foreach ( self::SOCIETIES as $k => $d ) {
+			$st = self::status( $w, $k, $now );
+			$o .= '<span class="spr-chip ' . esc_attr( $st['state'] ) . '" title="' . esc_attr( $d[0] . ( '' !== $st['code'] ? ': ' . $st['code'] : '' ) ) . '">' . esc_html( $d[0] ) . '</span>';
+		}
+		foreach ( self::facts( $w ) as $fv ) {
+			$o .= '<span class="spr-chip ' . ( $fv[1] ? 'green' : 'red' ) . '">' . esc_html( $fv[0] ) . '</span>';
+		}
+		return $o;
 	}
 
 	/** What a work looks like at one society: array(state, code, reference, days, note, started). Pure given a work. */
@@ -285,7 +317,7 @@ class Songpress_Registrations {
 		foreach ( self::SOCIETIES as $k => $d ) {
 			$o .= '<li>' . esc_html( $d[0] ) . '<strong><span class="spr-g">' . (int) $tot[ $k ]['green'] . '</span> · <span class="spr-y">' . (int) $tot[ $k ]['gold'] . '</span> · <span class="spr-r">' . (int) $tot[ $k ]['red'] . '</span></strong></li>';
 		}
-		foreach ( array( 'released' => __( 'Released', 'songpress' ), 'chordpro' => 'ChordPro' ) as $fk => $fl ) {
+		foreach ( array( 'released' => __( 'Released', 'songpress' ), 'chordpro' => 'ChPro' ) as $fk => $fl ) {
 			$o .= '<li>' . esc_html( $fl ) . '<strong><span class="spr-g">' . (int) $ftot[ $fk ][0] . '</span> · <span class="spr-r">' . (int) $ftot[ $fk ][1] . '</span></strong></li>';
 		}
 		$o .= '</ul><p class="spe-help">' . esc_html__( 'Green: the work has the registry\'s code. Gold: you marked it in progress. Red: not filed. Released and ChordPro are green when any version of the work has a release date or a chord sheet, red when none does. The code on the song is never changed from here.', 'songpress' ) . '</p><p class="spr-tabs">';
