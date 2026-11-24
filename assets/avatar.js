@@ -1,25 +1,41 @@
-/* Profile picture maker: pick a photo, remove its background, choose a backdrop, frame it. The name strip is fixed (first name and last initial). */
+/* Profile picture maker: upload a photo, remove its background, put it in a colored circle over a name (first name and last initial by default; it can be changed). */
 (function () {
   var root = document.querySelector('.sp-avatar-tool');
   if (!root || !window.SP_AV) { return; }
   var C = window.SP_AV, T = C.t || {};
   var S = 512, cv = root.querySelector('canvas'), cx = cv.getContext('2d');
   var msg = root.querySelector('.sp-av-msg'), zoom = root.querySelector('.sp-av-zoom');
-  var st = { img: null, cut: null, useCut: false, z: 1, ox: 0, oy: 0, bg: 'accent' };
+  var st = { img: null, cut: null, useCut: false, z: 1, ox: 0, oy: 0, color: '' };
   cv.width = cv.height = S;
   var accent = (getComputedStyle(root).getPropertyValue('--sp-accent') || '').trim() || '#e9a847';
-
+  if (!/^#[0-9a-f]{6}$/i.test(accent)) { accent = '#e9a847'; }
+  st.color = accent;
+  var nameIn = root.querySelector('.sp-av-name'), picker = root.querySelector('.sp-av-color'), sw = root.querySelector('.sp-av-sw');
+  nameIn.value = C.label || '';
+  picker.value = st.color;
   function say(t) { msg.textContent = t || ''; }
-  function bgFill() {
-    if (st.bg === 'none') { return null; }
-    if (st.bg === 'white') { return '#ffffff'; }
-    if (st.bg === 'dark') { return '#15171c'; }
-    return accent;
+  function ink(hex) { // readable text on the circle color
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#15171c' : '#ffffff';
   }
   function draw() {
     cx.clearRect(0, 0, S, S);
-    var f = bgFill();
-    if (f) { cx.fillStyle = f; cx.fillRect(0, 0, S, S); }
+    cx.save();
+    cx.beginPath();
+    cx.arc(S / 2, S / 2, S / 2, 0, Math.PI * 2);
+    cx.clip();
+    cx.fillStyle = st.color;
+    cx.fillRect(0, 0, S, S);
+    // the name sits in the circle, behind the photo
+    var label = (nameIn.value || '').trim().toUpperCase();
+    if (label) {
+      var fs = Math.round(S * 0.17);
+      cx.fillStyle = ink(st.color);
+      cx.textAlign = 'center';
+      cx.textBaseline = 'middle';
+      do { cx.font = '800 ' + fs + 'px -apple-system, system-ui, "Segoe UI", Roboto, Arial, sans-serif'; fs -= 2; } while (fs > 20 && cx.measureText(label).width > S * 0.72);
+      cx.fillText(label, S / 2, S * 0.8);
+    }
     var im = st.useCut && st.cut ? st.cut : st.img;
     if (im) {
       var w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
@@ -27,15 +43,7 @@
       var dw = w * k, dh = h * k;
       cx.drawImage(im, (S - dw) / 2 + st.ox, (S - dh) / 2 + st.oy, dw, dh);
     }
-    // the name strip: fixed, never edited
-    var bh = Math.round(S * 0.15);
-    cx.fillStyle = 'rgba(0,0,0,.72)';
-    cx.fillRect(0, S - bh, S, bh);
-    cx.fillStyle = accent;
-    cx.font = '700 ' + Math.round(S * 0.075) + 'px -apple-system, system-ui, "Segoe UI", Roboto, sans-serif';
-    cx.textAlign = 'center';
-    cx.textBaseline = 'middle';
-    cx.fillText(C.label, S / 2, S - bh / 2 + 1);
+    cx.restore();
   }
   function load(src, done) {
     var im = new Image();
@@ -68,13 +76,19 @@
   }
 
   zoom.addEventListener('input', function () { st.z = parseFloat(zoom.value) || 1; draw(); });
-  Array.prototype.forEach.call(root.querySelectorAll('.sp-av-bg button'), function (b) {
-    b.addEventListener('click', function () {
-      st.bg = b.getAttribute('data-bg');
-      Array.prototype.forEach.call(root.querySelectorAll('.sp-av-bg button'), function (o) { o.classList.toggle('on', o === b); });
-      draw();
-    });
-  });
+  for (var i = 0; i < 24; i++) {
+    (function (n) {
+      var col = 'hsl(' + Math.round(n * 360 / 24) + ',85%,58%)', b = document.createElement('button');
+      b.type = 'button'; b.style.background = col; b.setAttribute('aria-label', col);
+      b.addEventListener('click', function () {
+        var t = document.createElement('canvas').getContext('2d'); t.fillStyle = col; // browser turns the hsl into hex
+        st.color = t.fillStyle; picker.value = st.color; draw();
+      });
+      sw.appendChild(b);
+    })(i);
+  }
+  picker.addEventListener('input', function () { st.color = picker.value; draw(); });
+  nameIn.addEventListener('input', draw);
 
   // drag to move the photo inside the frame
   var drag = null;

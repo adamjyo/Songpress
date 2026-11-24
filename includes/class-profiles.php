@@ -148,9 +148,11 @@ class Songpress_Profiles {
 			. '<canvas aria-label="' . esc_attr__( 'Profile picture preview', 'songpress' ) . '"></canvas>'
 			. '<label class="sp-av-pick songpress-btn">' . esc_html__( 'Choose a photo', 'songpress' ) . '<input class="sp-av-file" type="file" accept="image/*" hidden></label>'
 			. '<button type="button" class="sp-av-cut songpress-btn2">' . esc_html__( 'Remove background', 'songpress' ) . '</button>'
-			. '<div class="sp-av-bg" role="group" aria-label="' . esc_attr__( 'Background', 'songpress' ) . '"><button type="button" data-bg="accent" class="on">' . esc_html__( 'Color', 'songpress' ) . '</button><button type="button" data-bg="dark">' . esc_html__( 'Dark', 'songpress' ) . '</button><button type="button" data-bg="white">' . esc_html__( 'White', 'songpress' ) . '</button><button type="button" data-bg="none">' . esc_html__( 'None', 'songpress' ) . '</button></div>'
+			. '<div class="sp-av-sw" role="group" aria-label="' . esc_attr__( 'Circle color', 'songpress' ) . '"></div>'
+			. '<label class="sp-av-cl"><span>' . esc_html__( 'Pick any color', 'songpress' ) . '</span><input class="sp-av-color" type="color" value="#e9a847"></label>'
+			. '<label class="sp-av-nl"><span>' . esc_html__( 'Name on the picture', 'songpress' ) . '</span><input class="sp-av-name" type="text" maxlength="24" autocomplete="off"></label>'
 			. '<label class="sp-av-zl"><span>' . esc_html__( 'Zoom', 'songpress' ) . '</span><input class="sp-av-zoom" type="range" min="1" max="3" step="0.01" value="1"></label>'
-			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The name strip is added for you.', 'songpress' ) . '</p>'
+			. '<p class="songpress-note">' . esc_html__( 'Drag the photo to move it. The photo sits over the name, so move or shrink it to show more of the name.', 'songpress' ) . '</p>'
 			. '<button type="button" class="sp-av-save songpress-btn">' . esc_html( '' !== (string) $person ? __( 'Use as their profile picture', 'songpress' ) : __( 'Use as my profile picture', 'songpress' ) ) . '</button> <span class="sp-av-msg" role="status"></span>'
 			. '</div></details>';
 		wp_enqueue_script( 'songpress-avatar', SONGPRESS_URL . 'assets/avatar.js', array(), SONGPRESS_VERSION, true );
