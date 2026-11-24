@@ -125,7 +125,7 @@ class Songpress_Profiles {
 	}
 
 	/** The picture maker on the Profile screen. */
-	public static function avatar_tool( $user, $person = '' ) {
+	public static function avatar_tool( $user, $person = '', $open = false ) {
 		$cfg = array(
 			'label' => self::photo_label( $user->display_name ),
 			'ajax'  => admin_url( 'admin-ajax.php' ),
@@ -144,7 +144,7 @@ class Songpress_Profiles {
 				'fail2'  => __( 'Could not save the picture.', 'songpress' ),
 			),
 		);
-		$o = '<details class="songpress-myinfo sp-avatar-tool"><summary>' . esc_html__( 'Profile picture', 'songpress' ) . '</summary><div class="sp-av">'
+		$o = '<details class="songpress-myinfo sp-avatar-tool"' . ( $open ? ' open' : '' ) . '><summary>' . esc_html__( 'Profile picture', 'songpress' ) . '</summary><div class="sp-av">'
 			. '<canvas aria-label="' . esc_attr__( 'Profile picture preview', 'songpress' ) . '"></canvas>'
 			. '<label class="sp-av-pick songpress-btn">' . esc_html__( 'Choose a photo', 'songpress' ) . '<input class="sp-av-file" type="file" accept="image/*" hidden></label>'
 			. '<button type="button" class="sp-av-cut songpress-btn2">' . esc_html__( 'Remove background', 'songpress' ) . '</button>'
