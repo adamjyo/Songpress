@@ -563,12 +563,13 @@ class Songpress_Editor {
 	/** The printable chord sheet, shown under the ChordPro box and kept in step with it. */
 	private static function sheet_preview( $song ) {
 		$src = Songpress_ChordTool::url() . '&sheet=1' . ( $song ? '&song=' . (int) $song->id : '' );
-		return '<details class="spe-sheet adv" open><summary>' . esc_html__( 'Chord sheet (PDF)', 'songpress' ) . '</summary><iframe id="spe-sheet-frame" title="' . esc_attr__( 'Chord sheet preview', 'songpress' ) . '" data-src="' . esc_url( $src ) . '" loading="lazy"></iframe></details>'
+		return '<details class="spe-sheet adv" open' . ( '' === trim( (string) ( $song ? $song->chordpro : '' ) ) ? ' hidden' : '' ) . '><summary>' . esc_html__( 'Chord sheet (PDF)', 'songpress' ) . '</summary><iframe id="spe-sheet-frame" title="' . esc_attr__( 'Chord sheet preview', 'songpress' ) . '" data-src="' . esc_url( $src ) . '" loading="lazy"></iframe></details>'
 			. '<script>(function(){var d=document.querySelector(".spe-sheet"),f=document.getElementById("spe-sheet-frame"),t=document.getElementById("spe-chordpro");if(!d||!f||!t)return;var ready=false,tm;'
 			. 'function send(){if(ready&&f.contentWindow)f.contentWindow.postMessage({spChart:t.value},location.origin)}'
 			. 'function load(){if(!f.getAttribute("src"))f.setAttribute("src",f.getAttribute("data-src"))}'
 			. 'window.addEventListener("message",function(e){if(e.origin!==location.origin||!e.data||!e.data.spSheetReady)return;ready=true;send()});'
-			. 't.addEventListener("input",function(){clearTimeout(tm);tm=setTimeout(send,350)});'
+			. 'function show(){var on=t.value.trim()!=="";d.hidden=!on;if(on&&d.open)load()}show();'
+			. 't.addEventListener("input",function(){show();clearTimeout(tm);tm=setTimeout(send,350)});'
 			. 'd.addEventListener("toggle",function(){if(d.open)load()});if(d.open)load();})()</script>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped parts and a fixed script.
 	}
 
