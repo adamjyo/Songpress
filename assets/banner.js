@@ -177,6 +177,7 @@
         busy = false; if (!swap(h, url, push)) location.href = url;
       }).catch(function () { busy = false; location.href = url; });
     };
+    window.SPGO = function (u) { var x = new URL(u, location.href); if (ok(x)) go(x.href, true); else location.href = x.href; }; // the bottom tabs use this so a tab switch keeps the player going
     document.addEventListener('click', function (e) {
       if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || !playingNow()) return;
       var a = e.target.closest && e.target.closest('.songpress.sp-app a[href]'); if (!a || a.target || a.hasAttribute('download') || a.getAttribute('onclick')) return;

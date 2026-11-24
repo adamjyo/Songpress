@@ -157,8 +157,8 @@ class Songpress_Frontend {
 			. 'function key(a){var u=new URL(a.href);return(u.searchParams.get("sp_page")||"")+(u.searchParams.get("sp_radio")?"|radio":"")+"|"+u.pathname}'
 			. 'function clean(h){var u=new URL(h);["sp_deleted","sp_bulk","sp_bskip","sp_err","sp_saved","m_ok","m_err","nj_go"].forEach(function(k){u.searchParams.delete(k)});return u.toString()}'
 			. 'function save(){if(!on)return;try{localStorage.setItem(K+key(on),clean(location.href))}catch(e){}}'
-			. 'save();window.addEventListener("pagehide",save);'
-			. 'n.addEventListener("click",function(e){var a=e.target.closest("a[href]");if(!a||a===on||e.button||e.metaKey||e.ctrlKey||e.shiftKey||/action=logout/.test(a.href))return;save();try{var t=localStorage.getItem(K+key(a));if(t&&new URL(t).origin===location.origin){e.preventDefault();location.href=t}}catch(x){}})}());</script>';
+			. 'save();window.addEventListener("pagehide",function(){if(document.contains(n))save()});'
+			. 'n.addEventListener("click",function(e){var a=e.target.closest("a[href]");if(!a||a===on||e.button||e.metaKey||e.ctrlKey||e.shiftKey||/action=logout/.test(a.href))return;save();try{var t=localStorage.getItem(K+key(a));if(t&&new URL(t).origin===location.origin){e.preventDefault();if(window.SPGO)window.SPGO(t);else location.href=t}}catch(x){}})}());</script>';
 	}
 
 	private static function shell( $which, $here ) {
