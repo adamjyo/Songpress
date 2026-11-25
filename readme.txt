@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.89
+Stable tag: 0.72.90
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.90 =
+* Notes: Find unreadable data is now at the bottom of the tag list on the left, where it cannot be hidden.
 
 = 0.72.89 =
 * Notes: Find unreadable data now catches notes that are really file bytes (zip files read as text), including the short scraps the first version missed, and it sits under Songs mentioned instead of in the toolbar.

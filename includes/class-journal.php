@@ -647,7 +647,6 @@ class Songpress_Journal {
 		$o .= '<div class="spn-two"><label><span>' . esc_html__( 'Key', 'songpress' ) . '</span><input id="spn-f-key"></label><label><span>' . esc_html__( 'Tempo', 'songpress' ) . '</span><input id="spn-f-tempo"></label></div>';
 		$o .= '<label><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select id="spn-f-kind"></select></label>';
 		$o .= '<div class="spn-songs"><span>' . esc_html__( 'Songs mentioned', 'songpress' ) . '</span><div id="spn-songs"></div></div>';
-		$o .= '<div class="spn-junk"><button type="button" class="spe-btn" id="spn-junk">' . esc_html__( 'Find unreadable data', 'songpress' ) . '</button><p id="spn-junk-msg" class="spe-help"></p></div>';
 		$o .= '<div class="spn-chips" id="spn-chips"></div><datalist id="spn-authors"></datalist>';
 		$o .= '<div class="spn-hist"><span>' . esc_html__( 'Earlier versions', 'songpress' ) . ' <a href="#" id="spn-hist-show">' . esc_html__( 'show', 'songpress' ) . '</a></span><div id="spn-hist" hidden></div></div>';
 		$o .= '<label><span>' . esc_html( "#'s" ) . '</span><input id="spn-f-tag" placeholder="' . esc_attr__( '# then a tag, Enter to add', 'songpress' ) . '"></label>';
@@ -702,6 +701,7 @@ function renderTags(){
  if(pins)h+=b('@pin','Pinned',tag==='@pin');
  Object.keys(all).sort().forEach(function(k){h+=b(k,'#'+all[k],tag===k)});
  if(arch)h+=b('@arch','Archived',tag==='@arch');
+ h+='<div class="spn-junk" style="margin-top:14px"><button type="button" class="spe-btn" id="spn-junk">Find unreadable data</button><p id="spn-junk-msg" class="spe-help"></p></div>';
  $('spn-tags').innerHTML=h}
 var LIM=150,lk='',FQ='',FS={},fT=null,want=0;
 function renderList(){
@@ -853,12 +853,16 @@ $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target
  var r=e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');
  if(selMode||e.metaKey||e.ctrlKey||e.shiftKey){sel[id]=!sel[id];if(!sel[id])delete sel[id];renderList();return}
  pick(id)});
-(function(){var b=$('spn-junk'),m=$('spn-junk-msg');if(!b)return;
- function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){m.textContent=r.error||'Failed';b.disabled=false;return}nn+=r.notes;ll+=r.lines;m.textContent=(op==='junk_scan'?'Scanning… ':'Cleaning… ')+nn+' notes';if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){m.textContent='Could not reach the server';b.disabled=false})}
- b.addEventListener('click',function(){b.disabled=true;m.textContent='Scanning…';
-  run('junk_scan',0,0,0,function(nn,ll){b.disabled=false;if(!nn){m.textContent='No unreadable data found.';return}
-   m.innerHTML=nn+' notes have '+ll+' unreadable lines. <a href="#" id="spn-junk-go">Remove them</a> (the original of each note stays under Earlier versions)';
-   $('spn-junk-go').addEventListener('click',function(e){e.preventDefault();m.textContent='Cleaning…';b.disabled=true;run('junk_clean',0,0,0,function(n2,l2){m.textContent='Removed '+l2+' lines from '+n2+' notes. Reloading…';setTimeout(function(){location.reload()},1200)})})})})})();
+(function(){
+ function msg(t,html){var m=$('spn-junk-msg');if(!m)return;if(html)m.innerHTML=t;else m.textContent=t}
+ function btn(off){var b=$('spn-junk');if(b)b.disabled=off}
+ function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){msg(r.error||'Failed');btn(false);return}nn+=r.notes;ll+=r.lines;msg((op==='junk_scan'?'Scanning… ':'Cleaning… ')+nn+' notes');if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){msg('Could not reach the server');btn(false)})}
+ $('spn-tags').addEventListener('click',function(e){
+  if(e.target.closest('#spn-junk-go')){e.preventDefault();msg('Cleaning…');btn(true);run('junk_clean',0,0,0,function(n2,l2){msg('Removed '+l2+' lines from '+n2+' notes. Reloading…');setTimeout(function(){location.reload()},1200)});return}
+  if(!e.target.closest('#spn-junk'))return;
+  btn(true);msg('Scanning…');
+  run('junk_scan',0,0,0,function(nn,ll){btn(false);if(!nn){msg('No unreadable data found.');return}
+   msg(nn+' notes have '+ll+' unreadable lines. <a href="#" id="spn-junk-go">Remove them</a> (the original of each note stays under Earlier versions)',true)})})})();
 var hv=null;$('spn-list').addEventListener('mouseover',function(e){var r=e.target.closest&&e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');clearTimeout(hv);hv=setTimeout(function(){prefetch(id)},120)});
 $('spn-search').addEventListener('input',function(){q=this.value;mark(cur&&cur.id);renderList();clearTimeout(fT);var k=q.trim().toLowerCase();if(k.length<2){FQ='';FS={};return}fT=setTimeout(function(){if(fCtl){try{fCtl.abort()}catch(e){}}fCtl=window.AbortController?new AbortController():null;post({op:'find',q:k},fCtl?fCtl.signal:undefined).then(function(r){if(r.ok&&q.trim().toLowerCase()===k){FS={};r.ids.forEach(function(i){FS[i]=1});FQ=k;renderList()}}).catch(function(){})},350)});
 root.querySelector('.spn-top').addEventListener('click',function(e){
