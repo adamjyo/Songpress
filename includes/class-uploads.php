@@ -874,6 +874,12 @@ class Songpress_Uploads {
 		self::back( $args + array( 'nj_go' => 1 ) );
 	}
 
+	/** A title that is a date (October 12, 2026 / 2026-10-12): notes from the previous project, which stay. */
+	public static function date_title( $title ) {
+		$t = trim( (string) $title );
+		return '' === $t || 1 === preg_match( '/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2}(st|nd|rd|th)?,? \d{4}/i', $t ) || 1 === preg_match( '/^\d{4}-\d{2}-\d{2}/', $t ) || 1 === preg_match( '/^\d{1,2}\/\d{1,2}\/\d{2,4}/', $t );
+	}
+
 	/** Remove every note that came in from note files (source key "file:…"), so they can be imported again. Notes from the old software ("old:…") and notes written here are not touched. */
 	public static function handle_notes_unimport() {
 		check_admin_referer( 'songpress_notes_unimport' );
@@ -883,9 +889,14 @@ class Songpress_Uploads {
 		global $wpdb;
 		$t    = Songpress_Install::table( 'journal' );
 		$vt   = Songpress_Install::table( 'note_versions' );
-		$rows = $wpdb->get_results( "SELECT id, title FROM {$t} WHERE source_key LIKE 'file:%'" ); // phpcs:ignore WordPress.DB
+		$rows = array_values( array_filter( (array) $wpdb->get_results( "SELECT id, title FROM {$t} WHERE source_key LIKE 'file:%'" ), function ( $r ) { // phpcs:ignore WordPress.DB
+			return ! self::date_title( $r->title );
+		} ) );
 		if ( $rows ) { // keep a copy of every note about to go
-			$all = $wpdb->get_results( "SELECT * FROM {$t} WHERE source_key LIKE 'file:%'" ); // phpcs:ignore WordPress.DB
+			$keep = array_map( function ( $r ) {
+				return (int) $r->id;
+			}, $rows );
+			$all  = $wpdb->get_results( "SELECT * FROM {$t} WHERE id IN (" . implode( ',', $keep ) . ')' ); // phpcs:ignore WordPress.DB
 			$up  = wp_upload_dir();
 			$dir = trailingslashit( $up['basedir'] ) . 'songpress-note-backups';
 			wp_mkdir_p( $dir );
@@ -1021,11 +1032,13 @@ class Songpress_Uploads {
 			$njhtml = '';
 			global $wpdb;
 			$jt       = Songpress_Install::table( 'journal' );
-			$nf       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$jt} WHERE source_key LIKE 'file:%'" ); // phpcs:ignore WordPress.DB
+			$nf       = count( array_filter( (array) $wpdb->get_results( "SELECT title FROM {$jt} WHERE source_key LIKE 'file:%'" ), function ( $r ) { // phpcs:ignore WordPress.DB
+				return ! self::date_title( $r->title );
+			} ) );
 			$no       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$jt} WHERE source_key LIKE 'old:%'" ); // phpcs:ignore WordPress.DB
 			$na       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$jt}" ); // phpcs:ignore WordPress.DB
 			/* translators: 1: imported from files, 2: from the old software, 3: all notes */
-			$uncount  = sprintf( __( 'Right now: %1$d notes came from files, %2$d from the old software, %3$d notes in all. Only the first number would be removed.', 'songpress' ), $nf, $no, $na );
+			$uncount  = sprintf( __( 'Right now: %1$d notes came from files, %2$d from the old software, %3$d notes in all. Only the first number would be removed: notes from files whose title is not a date. Notes titled with a date stay.', 'songpress' ), $nf, $no, $na );
 			$unmsg    = sprintf( __( 'Remove %1$d notes imported from files? %2$d notes would stay. A copy is saved first.', 'songpress' ), $nf, $na - $nf );
 			$lf     = get_option( 'songpress_last_fatal' );
 			if ( is_array( $lf ) && ! empty( $lf['msg'] ) ) {
