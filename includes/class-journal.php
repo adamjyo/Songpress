@@ -621,8 +621,8 @@ class Songpress_Journal {
 		}
 		global $wpdb;
 		try { // the daily logs: everything once, then the last two days each time the screen opens
-			if ( '1' !== get_option( 'songpress_daily_built' ) ) {
-				update_option( 'songpress_daily_built', '1' );
+			if ( '1' !== get_option( 'songpress_daily_built2' ) ) {
+				update_option( 'songpress_daily_built2', '1' );
 				self::build_logs();
 			} else {
 				self::build_logs( gmdate( 'Y-m-d', strtotime( current_time( 'Y-m-d' ) . ' -1 day UTC' ) ), current_time( 'Y-m-d' ) );
@@ -1039,7 +1039,7 @@ JS
 		$lo = '' !== $from ? gmdate( 'Y-m-d H:i:s', strtotime( $from . ' 00:00:00 UTC' ) - 86400 ) : '0000-00-00 00:00:00';
 		$hi = '' !== $to ? gmdate( 'Y-m-d H:i:s', strtotime( $to . ' 23:59:59 UTC' ) + 86400 ) : '9999-12-31 23:59:59';
 		$songs = array();
-		foreach ( (array) $wpdb->get_results( "SELECT id, serial, title, release_title, created_at FROM {$st}" ) as $r ) { // phpcs:ignore WordPress.DB
+		foreach ( (array) $wpdb->get_results( "SELECT id, family_id, version_no, serial, title, release_title, created_at, writing_date, release_date, production_date, scheduled_at FROM {$st}" ) as $r ) { // phpcs:ignore WordPress.DB
 			$songs[ (int) $r->id ] = $r;
 		}
 		$label = function ( $sid ) use ( &$songs ) {
@@ -1097,6 +1097,38 @@ JS
 				$add( substr( $r->created_at, 0, 10 ), 'New songs', $label( $sid ) );
 			}
 		}
+		$today = function_exists( 'current_time' ) ? current_time( 'Y-m-d' ) : gmdate( 'Y-m-d' );
+		$isday = function ( $d ) {
+			return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', (string) $d );
+		};
+		$root = array();
+		foreach ( $songs as $sid => $r ) {
+			if ( 0 === (int) $r->version_no ) {
+				$root[ (int) $r->family_id ] = $sid;
+			}
+			if ( $isday( $r->writing_date ) ) {
+				$add( $r->writing_date, 'Wrote', $label( $sid ) );
+			}
+			if ( $isday( $r->production_date ) ) {
+				$add( $r->production_date, 'Produced', $label( $sid ) );
+			}
+			if ( $isday( $r->release_date ) ) {
+				$add( $r->release_date, $r->release_date <= $today ? 'Released' : 'Release dates (upcoming)', $label( $sid ) );
+			}
+			if ( preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $r->scheduled_at ) ) {
+				$add( substr( $r->scheduled_at, 0, 10 ), 'Scheduled', $label( $sid ) . ' — scheduled ' . $r->scheduled_at . ( $isday( $r->release_date ) ? ', release date ' . $r->release_date : '' ) );
+			}
+		}
+		$labels = array( 'wrote' => 'Wrote', 'worked' => 'Worked on', 'released' => 'Released' );
+		foreach ( (array) $wpdb->get_results( 'SELECT day, kind, song_id, serial, title FROM ' . Songpress_Install::table( 'activity' ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$add( substr( (string) $r->day, 0, 10 ), $labels[ $r->kind ] ?? 'Worked on', (int) $r->song_id && isset( $songs[ (int) $r->song_id ] ) ? $label( (int) $r->song_id ) : trim( $r->serial . ' ' . $r->title ) );
+		}
+		foreach ( (array) $wpdb->get_results( 'SELECT spent_on, payee, category, amount FROM ' . Songpress_Install::table( 'expenses' ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$add( substr( (string) $r->spent_on, 0, 10 ), 'Expenses', trim( $r->payee . ' — $' . number_format( (float) $r->amount, 2 ) . ( '' !== $r->category ? ' (' . $r->category . ')' : '' ) ) );
+		}
+		foreach ( (array) $wpdb->get_results( 'SELECT family_id, society, started_on, reference FROM ' . Songpress_Install::table( 'registrations' ) . ' WHERE started_on IS NOT NULL' ) as $r ) { // phpcs:ignore WordPress.DB
+			$add( substr( (string) $r->started_on, 0, 10 ), 'Registrations', strtoupper( $r->society ) . ' — ' . ( isset( $root[ (int) $r->family_id ] ) ? $label( $root[ (int) $r->family_id ] ) : 'work ' . (int) $r->family_id ) . ( '' !== $r->reference ? ' (' . $r->reference . ')' : '' ) );
+		}
 		foreach ( (array) $wpdb->get_results( "SELECT pay_year, pay_quarter, kind, party, amount, paid_on FROM {$pt} WHERE paid = 1 AND paid_on IS NOT NULL" ) as $r ) { // phpcs:ignore WordPress.DB
 			$add( substr( (string) $r->paid_on, 0, 10 ), 'Payments', $r->party . ' — $' . number_format( (float) $r->amount, 2 ) . ' (Q' . (int) $r->pay_quarter . ' ' . (int) $r->pay_year . ', ' . $r->kind . ')' );
 		}
@@ -1111,7 +1143,7 @@ JS
 			list( $day, $line ) = explode( "\n", $k, 2 );
 			$add( $day, 'Other activity', $line . ( $n > 1 ? ' ×' . $n : '' ) );
 		}
-		$order = array( 'New songs', 'New versions', 'Edited songs', 'Released', 'Scheduled', 'Payments', 'Other song changes', 'Other activity' );
+		$order = array( 'New songs', 'New versions', 'Wrote', 'Worked on', 'Produced', 'Edited songs', 'Released', 'Scheduled', 'Release dates (upcoming)', 'Registrations', 'Payments', 'Expenses', 'Other song changes', 'Other activity' );
 		$have  = array();
 		foreach ( (array) $wpdb->get_results( "SELECT id, source_key, title, notes FROM {$j} WHERE source_key LIKE 'daily:%'" ) as $r ) { // phpcs:ignore WordPress.DB
 			$have[ $r->source_key ] = $r;
