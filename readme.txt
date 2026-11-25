@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.98
+Stable tag: 0.72.99
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.99 =
+* Notes: a daily log note for every day with activity (new songs and versions, edits, releases, scheduling, payments, other actions). Write below the "Your notes" line and it is kept. "Build daily logs" rebuilds them.
+* Works editor: a Scheduled box beside the release date stamps the date and time of the click.
 
 = 0.72.98 =
 * "Remove imported notes" now leaves notes whose title is a date (the previous project) and removes only imported song-titled notes.

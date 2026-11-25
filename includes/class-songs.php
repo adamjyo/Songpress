@@ -25,7 +25,7 @@ class Songpress_Songs {
 	const GENRES = array( 'Folk', 'Country', 'Pop', 'Rock', 'Americana', 'R&B', 'Hip-Hop', 'Gospel', 'Jazz', 'Electronic', 'Soundtrack', 'Other' );
 
 	/** Release information. Only versions have it. The original work (version 0) does not. */
-	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date' );
+	const RELEASE_FIELDS      = array( 'artist', 'album', 'release_title', 'release_date', 'scheduled_at' );
 	/** What every version shares. Edited on any of them, it is copied to all the others. */
 	const SHARED_FIELDS = array( 'title', 'alt_titles', 'writing_date', 'copyright_date', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'themes' );
 	const SHARED_ROLES  = array( 'writer', 'publisher', 'label' );
@@ -35,7 +35,7 @@ class Songpress_Songs {
 	const ROOT_DROPPED = array( 'isrc', 'distrokid', 'upc' );
 
 	/** What differs from one version to the next. A new version starts with these empty; everything else is shared and starts as a copy. */
-	const VERSION_FIELDS = array( 'work_type', 'artist', 'album', 'release_title', 'release_date', 'musical_key', 'tempo', 'time_signature', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
+	const VERSION_FIELDS = array( 'work_type', 'artist', 'album', 'release_title', 'release_date', 'scheduled_at', 'musical_key', 'tempo', 'time_signature', 'format', 'production_date', 'audio_url', 'audio_id', 'art_id', 'art_url', 'stage', 'style', 'ai_prompt', 'art_prompt', 'notes' );
 
 	/** The writing stages offered in the editor. Any other stage a work already carries is kept in the list. */
 	const STAGES = array( 'Idea', 'Starter', 'Pre-production', 'Production', 'Post-production', 'Finished', 'Released', 'Taken down' );
@@ -148,7 +148,7 @@ class Songpress_Songs {
 	/** Columns a form may set. Anything else is ignored. */
 	const FIELDS = array(
 		'title', 'alt_titles', 'status', 'stage', 'work_type', 'writing_date', 'musical_key', 'tempo', 'time_signature', 'genre',
-		'artist', 'album', 'release_title', 'release_date', 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
+		'artist', 'album', 'release_title', 'release_date', 'scheduled_at', 'copyright_date', 'production_date', 'format', 'style', 'themes', 'ai_prompt', 'art_prompt', 'lyrics', 'chords_lyrics', 'chordpro', 'story', 'notes',
 		'audio_url', 'audio_id', 'art_id', 'art_url', 'artist_id',
 	);
 
@@ -418,7 +418,7 @@ class Songpress_Songs {
 		if ( ! $bits ) {
 			return false;
 		}
-		$set = array( 'release_title' => '', 'artist' => '', 'album' => '', 'release_date' => '' );
+		$set = array( 'release_title' => '', 'artist' => '', 'album' => '', 'release_date' => '', 'scheduled_at' => '' );
 		if ( '' !== trim( (string) $s->release_title ) && ( $use_release_title || '' === trim( (string) $s->title ) ) ) {
 			$set['title'] = trim( (string) $s->release_title );
 		}
@@ -587,7 +587,10 @@ class Songpress_Songs {
 			}
 			// Release milestones get their own lines in the history.
 			$new_date = isset( $data['release_date'] ) ? (string) $data['release_date'] : (string) $was->release_date;
-			if ( isset( $data['release_date'] ) && (string) $was->release_date !== $new_date && '' !== $new_date && $new_date > current_time( 'Y-m-d' ) ) {
+			$new_at = isset( $data['scheduled_at'] ) ? (string) $data['scheduled_at'] : (string) ( $was->scheduled_at ?? '' );
+			if ( isset( $data['scheduled_at'] ) && (string) ( $was->scheduled_at ?? '' ) !== $new_at && '' !== $new_at ) { // the Scheduled box was ticked
+				Songpress_History::log( $id, 'scheduled', array( 'date' => $new_date, 'at' => $new_at ) );
+			} elseif ( isset( $data['release_date'] ) && (string) $was->release_date !== $new_date && '' !== $new_date && $new_date > current_time( 'Y-m-d' ) ) {
 				Songpress_History::log( $id, 'scheduled', array( 'date' => $new_date ) );
 			}
 			if ( isset( $data['status'] ) && 'released' === $data['status'] && 'released' !== $was->status ) {

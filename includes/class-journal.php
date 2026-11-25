@@ -9,7 +9,8 @@ defined( 'ABSPATH' ) || exit;
 class Songpress_Journal {
 
 	const PER_PAGE = 40;
-	const KINDS    = array( 'day' => 'Day', 'note' => 'Note', 'idea' => 'Idea', 'session' => 'Session' );
+	const KINDS    = array( 'day' => 'Day', 'note' => 'Note', 'idea' => 'Idea', 'session' => 'Session', 'log' => 'Log' );
+	const LOG_MARK = '--- Your notes: write below this line, it is kept ---';
 
 	public static function init() {
 		add_action( 'admin_post_songpress_journal_save', array( __CLASS__, 'handle_save' ) );
@@ -501,6 +502,9 @@ class Songpress_Journal {
 			}
 			return array( 'ok' => true, 'deleted' => $ids );
 		}
+		if ( 'daily_build' === $op ) {
+			return array( 'ok' => true ) + self::build_logs();
+		}
 		if ( 'junk_scan' === $op || 'junk_clean' === $op ) {
 			$after = absint( $in['after'] ?? 0 );
 			$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t() . ' WHERE id > %d ORDER BY id LIMIT 60', $after ) ); // phpcs:ignore WordPress.DB
@@ -616,6 +620,16 @@ class Songpress_Journal {
 			return $o . '</p>' . ( 'days' === $view ? self::days_html() : self::map_html() ) . '</div>';
 		}
 		global $wpdb;
+		try { // the daily logs: everything once, then the last two days each time the screen opens
+			if ( '1' !== get_option( 'songpress_daily_built' ) ) {
+				update_option( 'songpress_daily_built', '1' );
+				self::build_logs();
+			} else {
+				self::build_logs( gmdate( 'Y-m-d', strtotime( current_time( 'Y-m-d' ) . ' -1 day UTC' ) ), current_time( 'Y-m-d' ) );
+			}
+		} catch ( \Throwable $e ) {
+			Songpress_Audit::log( 'notes', 'Daily log failed', mb_substr( $e->getMessage(), 0, 200 ) );
+		}
 		// Read the notes in small slices and encode each at once, so thousands of notes never sit in memory three times over.
 		$fl    = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR;
 		$parts = array();
@@ -735,7 +749,7 @@ function renderTags(){
  if(pins)h+=b('@pin','Pinned',tag==='@pin');
  Object.keys(all).sort().forEach(function(k){h+=b(k,'#'+all[k],tag===k)});
  if(arch)h+=b('@arch','Archived',tag==='@arch');
- h+='<div class="spn-junk" style="margin-top:14px"><button type="button" class="spe-btn" id="spn-junk">Find unreadable data</button><p id="spn-junk-msg" class="spe-help"></p></div>';
+ h+='<div class="spn-junk" style="margin-top:14px"><button type="button" class="spe-btn" id="spn-junk">Find unreadable data</button><p id="spn-junk-msg" class="spe-help"></p><button type="button" class="spe-btn" id="spn-daily">Build daily logs</button><p id="spn-daily-msg" class="spe-help"></p></div>';
  $('spn-tags').innerHTML=h}
 var LIM=150,lk='',FQ='',FS={},fT=null,want=0;
 function renderList(){
@@ -894,6 +908,7 @@ $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target
  function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){msg(r.error||'Failed');btn(false);return}nn+=r.notes;ll+=r.lines;seen+=r.seen;(r.names||[]).forEach(function(x){if(eg.length<5)eg.push(x)});msg((op==='junk_scan'?'Scanning… ':'Cleaning… ')+seen+' of '+r.total+' notes checked, '+nn+' with unreadable data');if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){msg('Could not reach the server');btn(false)})}
  $('spn-tags').addEventListener('click',function(e){
   if(e.target.closest('#spn-junk-go')){e.preventDefault();msg('Cleaning…');btn(true);seen=0;run('junk_clean',0,0,0,function(n2,l2){msg('Removed '+l2+' lines from '+n2+' notes. Reloading…');setTimeout(function(){location.reload()},1200)});return}
+  if(e.target.closest('#spn-daily')){var dm=$('spn-daily-msg'),db=$('spn-daily');db.disabled=true;dm.textContent='Building…';post({op:'daily_build'}).then(function(r){if(!r.ok){dm.textContent=r.error||'Failed';db.disabled=false;return}dm.textContent=r.days+' days: '+r.created+' new, '+r.updated+' updated. Reloading…';setTimeout(function(){location.reload()},1000)}).catch(function(){dm.textContent='Could not reach the server';db.disabled=false});return}
   if(!e.target.closest('#spn-junk'))return;
   btn(true);msg('Scanning…');seen=0;eg=[];
   run('junk_scan',0,0,0,function(nn,ll){btn(false);if(!nn){msg('Checked '+seen+' notes. No unreadable data found.');return}
@@ -996,6 +1011,149 @@ JS
 			return '<p class="spe-help">' . esc_html__( 'No notes have a position yet.', 'songpress' ) . '</p>';
 		}
 		return '<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><div id="spj-map" style="height:460px;border-radius:10px"></div><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><script>(function(){var P=' . wp_json_encode( $pts, JSON_HEX_TAG | JSON_HEX_AMP ) . ';if(!window.L)return;var m=L.map("spj-map");L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:18,attribution:"&copy; OpenStreetMap"}).addTo(m);var b=[];P.forEach(function(p){b.push([p[0],p[1]]);L.marker([p[0],p[1]]).addTo(m).bindPopup(document.createTextNode(p[2]).textContent);});m.fitBounds(b,{padding:[30,30],maxZoom:14});})();</script><p class="spe-help">' . esc_html( sprintf( /* translators: %d: notes */ _n( '%d note with a position.', '%d notes with a position.', count( $pts ), 'songpress' ), count( $pts ) ) ) . '</p>';
+	}
+
+	/* ---------- daily logs ---------- */
+
+	/**
+	 * One note per day that had something happen: new songs and versions, edits, releases, scheduling, payments and other activity.
+	 * The text above the "Your notes" line is rebuilt each time; whatever is written below the line is kept. Days with nothing get no note.
+	 * Returns array( days, created, updated ). $from / $to (YYYY-MM-DD) limit the days rebuilt.
+	 */
+	public static function build_logs( $from = '', $to = '' ) {
+		global $wpdb;
+		if ( function_exists( 'set_time_limit' ) ) {
+			@set_time_limit( 180 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		}
+		$h  = Songpress_Install::table( 'history' );
+		$a  = Songpress_Install::table( 'audit' );
+		$pt = Songpress_Install::table( 'payments' );
+		$st = Songpress_Install::table( 'songs' );
+		$j  = self::t();
+		$in = function ( $day ) use ( $from, $to ) {
+			return ( '' === $from || $day >= $from ) && ( '' === $to || $day <= $to );
+		};
+		$loc = function ( $gmt ) {
+			return function_exists( 'get_date_from_gmt' ) ? get_date_from_gmt( (string) $gmt, 'Y-m-d H:i:s' ) : (string) $gmt;
+		};
+		$lo = '' !== $from ? gmdate( 'Y-m-d H:i:s', strtotime( $from . ' 00:00:00 UTC' ) - 86400 ) : '0000-00-00 00:00:00';
+		$hi = '' !== $to ? gmdate( 'Y-m-d H:i:s', strtotime( $to . ' 23:59:59 UTC' ) + 86400 ) : '9999-12-31 23:59:59';
+		$songs = array();
+		foreach ( (array) $wpdb->get_results( "SELECT id, serial, title, release_title, created_at FROM {$st}" ) as $r ) { // phpcs:ignore WordPress.DB
+			$songs[ (int) $r->id ] = $r;
+		}
+		$label = function ( $sid ) use ( &$songs ) {
+			if ( ! isset( $songs[ $sid ] ) ) {
+				return __( '(a song that was removed)', 'songpress' );
+			}
+			return trim( $songs[ $sid ]->serial . ' ' . ( '' !== trim( (string) $songs[ $sid ]->title ) ? $songs[ $sid ]->title : $songs[ $sid ]->release_title ) );
+		};
+		$ev      = array();
+		$edits   = array();
+		$created = array();
+		$add     = function ( $day, $sec, $line ) use ( &$ev, $in ) {
+			if ( $in( $day ) ) {
+				$ev[ $day ][ $sec ][ $line ] = true;
+			}
+		};
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT id, song_id, action, detail, created_at FROM {$h} WHERE created_at >= %s AND created_at <= %s ORDER BY id", $lo, $hi ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$when = $loc( $r->created_at );
+			$day  = substr( $when, 0, 10 );
+			$sid  = (int) $r->song_id;
+			$d    = '' !== (string) $r->detail ? json_decode( $r->detail, true ) : array();
+			$d    = is_array( $d ) ? $d : array();
+			$name = $label( $sid );
+			switch ( $r->action ) {
+				case 'created':
+					$created[ $sid ] = true;
+					$add( $day, 'New songs', $name );
+					break;
+				case 'version':
+					$created[ $sid ] = true;
+					$add( $day, 'New versions', $name );
+					break;
+				case 'edited':
+					foreach ( array_keys( $d ) as $f ) {
+						$edits[ $day ][ $sid ][ ucfirst( str_replace( '_', ' ', (string) $f ) ) ] = true;
+					}
+					break;
+				case 'released':
+					$add( $day, 'Released', $name . ( ! empty( $d['date'] ) ? ' (' . $d['date'] . ')' : '' ) );
+					break;
+				case 'scheduled':
+					$add( $day, 'Scheduled', $name . ( ! empty( $d['at'] ) ? ' — scheduled ' . $d['at'] : '' ) . ( ! empty( $d['date'] ) ? ', release date ' . $d['date'] : '' ) );
+					break;
+				default:
+					$add( $day, 'Other song changes', $name . ' — ' . Songpress_History::describe( $r ) );
+			}
+		}
+		foreach ( $edits as $day => $by ) {
+			foreach ( $by as $sid => $fields ) {
+				$add( $day, 'Edited songs', $label( $sid ) . ' — ' . implode( ', ', array_keys( $fields ) ) );
+			}
+		}
+		foreach ( $songs as $sid => $r ) { // songs that came in without a history line
+			if ( empty( $created[ $sid ] ) && preg_match( '/^\d{4}-\d{2}-\d{2}/', (string) $r->created_at ) ) {
+				$add( substr( $r->created_at, 0, 10 ), 'New songs', $label( $sid ) );
+			}
+		}
+		foreach ( (array) $wpdb->get_results( "SELECT pay_year, pay_quarter, kind, party, amount, paid_on FROM {$pt} WHERE paid = 1 AND paid_on IS NOT NULL" ) as $r ) { // phpcs:ignore WordPress.DB
+			$add( substr( (string) $r->paid_on, 0, 10 ), 'Payments', $r->party . ' — $' . number_format( (float) $r->amount, 2 ) . ' (Q' . (int) $r->pay_quarter . ' ' . (int) $r->pay_year . ', ' . $r->kind . ')' );
+		}
+		$cnt = array();
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT user_id, area, action, subject, created_at FROM {$a} WHERE area NOT IN ('songs','login','notes') AND created_at >= %s AND created_at <= %s ORDER BY id", $lo, $hi ) ) as $r ) { // phpcs:ignore WordPress.DB
+			$day = substr( $loc( $r->created_at ), 0, 10 );
+			$u   = ( (int) $r->user_id && function_exists( 'get_userdata' ) ) ? get_userdata( (int) $r->user_id ) : false;
+			$k   = $day . "\n" . $r->action . ' — ' . ( '' !== $r->subject ? $r->subject . ' ' : '' ) . '(' . ( $u ? $u->display_name : 'system' ) . ')';
+			$cnt[ $k ] = ( $cnt[ $k ] ?? 0 ) + 1;
+		}
+		foreach ( $cnt as $k => $n ) {
+			list( $day, $line ) = explode( "\n", $k, 2 );
+			$add( $day, 'Other activity', $line . ( $n > 1 ? ' ×' . $n : '' ) );
+		}
+		$order = array( 'New songs', 'New versions', 'Edited songs', 'Released', 'Scheduled', 'Payments', 'Other song changes', 'Other activity' );
+		$have  = array();
+		foreach ( (array) $wpdb->get_results( "SELECT id, source_key, title, notes FROM {$j} WHERE source_key LIKE 'daily:%'" ) as $r ) { // phpcs:ignore WordPress.DB
+			$have[ $r->source_key ] = $r;
+		}
+		$out = array( 'days' => 0, 'created' => 0, 'updated' => 0 );
+		krsort( $ev );
+		foreach ( $ev as $day => $secs ) {
+			$title = 'Daily log — ' . gmdate( 'l, F j, Y', strtotime( $day . ' 12:00:00 UTC' ) );
+			$body  = '';
+			foreach ( $order as $sec ) {
+				if ( empty( $secs[ $sec ] ) ) {
+					continue;
+				}
+				$body .= '## ' . $sec . "\n";
+				foreach ( array_keys( $secs[ $sec ] ) as $line ) {
+					$body .= '- ' . $line . "\n";
+				}
+				$body .= "\n";
+			}
+			if ( '' === $body ) {
+				continue;
+			}
+			++$out['days'];
+			$key = 'daily:' . $day;
+			if ( isset( $have[ $key ] ) ) {
+				$old  = (string) $have[ $key ]->notes;
+				$pos  = strpos( $old, self::LOG_MARK );
+				$tail = false === $pos ? '' : ltrim( substr( $old, $pos + strlen( self::LOG_MARK ) ), "\n" );
+				$full = rtrim( $body ) . "\n\n" . self::LOG_MARK . "\n" . $tail;
+				if ( $full !== $old ) {
+					self::keep_version( (int) $have[ $key ]->id, $title, $full );
+					$wpdb->update( $j, array( 'notes' => $full, 'title' => $title ), array( 'id' => (int) $have[ $key ]->id ) );
+					++$out['updated'];
+				}
+				continue;
+			}
+			$n = array( 'title' => $title, 'date' => $day, 'kind' => 'log', 'pinned' => 0, 'archived' => 0, 'song_key' => '', 'tempo' => '', 'authors' => '', 'place' => '', 'latitude' => '', 'longitude' => '', 'notes' => rtrim( $body ) . "\n\n" . self::LOG_MARK . "\n" );
+			if ( self::add_note( $n, $key ) ) {
+				++$out['created'];
+			}
+		}
+		return $out;
 	}
 
 	/* ---------- note files (.bear, .md, .txt) ---------- */

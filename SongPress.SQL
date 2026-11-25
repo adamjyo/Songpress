@@ -37,6 +37,7 @@ CREATE TABLE {prefix}songpress_songs (
   album varchar(191) NOT NULL DEFAULT '',
   release_title varchar(191) NOT NULL DEFAULT '',
   release_date varchar(32) NOT NULL DEFAULT '',
+  scheduled_at varchar(19) NOT NULL DEFAULT '',
   copyright_date varchar(32) NOT NULL DEFAULT '',
   production_date varchar(32) NOT NULL DEFAULT '',
   format varchar(64) NOT NULL DEFAULT '',

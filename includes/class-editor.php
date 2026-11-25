@@ -51,6 +51,13 @@ class Songpress_Editor {
 		return '<label class="spe-field ' . esc_attr( $class ) . '"><span>' . esc_html( $label ) . '</span><input name="' . esc_attr( $name ) . '" value="' . esc_attr( self::f( $song, $name ) ) . '" ' . $extra . '></label>';
 	}
 
+	/** The Scheduled box beside the release date: ticking it stamps the date and time of the click; clearing it clears the stamp. */
+	private static function scheduled_box( $song ) {
+		$at  = (string) self::f( $song, 'scheduled_at' );
+		$js  = "var f=this.form,h=f.elements.scheduled_at,n=new Date(),p=function(x){return(x<10?'0':'')+x};h.value=this.checked?n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes()):'';this.parentNode.querySelector('small').textContent=h.value?'Scheduled '+h.value:''";
+		return '<label class="spe-field spe-sched"><span>' . esc_html__( 'Scheduled', 'songpress' ) . '</span><input type="checkbox" name="scheduled_box" value="1" ' . checked( '' !== $at, true, false ) . ' onchange="' . esc_attr( $js ) . '"><input type="hidden" name="scheduled_at" value="' . esc_attr( $at ) . '"><small>' . esc_html( '' !== $at ? sprintf( /* translators: %s: date and time */ __( 'Scheduled %s', 'songpress' ), $at ) : '' ) . '</small></label>';
+	}
+
 	/** Small line icons for the editor's top bar. */
 	private static function ico( $name ) {
 		$d = array(
@@ -189,7 +196,7 @@ class Songpress_Editor {
 			if ( $legacy ) {
 				$rel .= '<p class="spe-note warn">' . esc_html__( 'This is the original work, which should not have release information. It came from the old catalog. Add a version and enter it there.', 'songpress' ) . '</p>';
 			}
-			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::artist_select( $song );
+			$rel .= '<div class="spe-grid">' . $artist_html . self::input( 'release_date', __( 'Release date', 'songpress' ), $song, 'placeholder="YYYY-MM-DD"' ) . self::scheduled_box( $song ) . self::input( 'album', __( 'Album', 'songpress' ), $song ) . self::artist_select( $song );
 			$rel .= self::input( 'genre', __( 'Genre', 'songpress' ), $song, 'list="spe-genres"' );
 			$rel .= '<datalist id="spe-genres">';
 			foreach ( Songpress_Songs::genres() as $gn ) {

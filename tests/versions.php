@@ -36,7 +36,7 @@ class FakeWpdb {
 	function __construct() {
 		$this->pdo = new PDO( 'sqlite::memory:' ); $this->pdo->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_families (id INTEGER PRIMARY KEY AUTOINCREMENT, family_no INT UNIQUE, created_at TEXT)' );
-		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, work_type TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, copyright_date TEXT, production_date TEXT, format TEXT, style TEXT, themes TEXT, ai_prompt TEXT, art_prompt TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
+		$cols = 'family_id INT, version_no INT, revision INT DEFAULT 0, serial TEXT UNIQUE, legacy_id INT, title TEXT, alt_titles TEXT, status TEXT, stage TEXT, work_type TEXT, writing_date TEXT, musical_key TEXT, tempo TEXT, time_signature TEXT, genre TEXT, artist TEXT, album TEXT, release_title TEXT, release_date TEXT, scheduled_at TEXT, copyright_date TEXT, production_date TEXT, format TEXT, style TEXT, themes TEXT, ai_prompt TEXT, art_prompt TEXT, lyrics TEXT, chords_lyrics TEXT, chordpro TEXT, story TEXT, notes TEXT, audio_url TEXT, art_id INT, audio_id INT, art_url TEXT, owner_id INT, artist_id INT DEFAULT 0, archived_at TEXT, share_token TEXT UNIQUE, created_at TEXT, updated_at TEXT';
 		$this->pdo->exec( "CREATE TABLE wp_songpress_songs (id INTEGER PRIMARY KEY AUTOINCREMENT, $cols)" );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_credits (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, role TEXT, name TEXT, ipi TEXT, share REAL, user_id INT, position INT)' );
 		$this->pdo->exec( 'CREATE TABLE wp_songpress_identifiers (id INTEGER PRIMARY KEY AUTOINCREMENT, song_id INT, kind TEXT, value TEXT)' );
@@ -1114,6 +1114,19 @@ $wpdb_->insert( 'wp_songpress_earnings', array( 'song_id' => $xr2, 'quarter' => 
 $xem = Songpress_Export::earned_map( array( $xr1, $xr2, $xroot ) );
 check( 'export earnings: a release shows its own income', array( $xem[ $xr1 ], $xem[ $xr2 ] ), array( 100.0, 25.5 ) );
 check( 'export earnings: the work shows all its releases, band payments left out', $xem[ $xroot ], 125.5 );
+
+// daily logs: one note per day with events, the user's own lines below the marker are kept, and the Scheduled stamp is saved
+$sv = Songpress_Songs::update( $v1, array( 'scheduled_at' => '2026-11-25 16:41', 'release_date' => '2026-12-01' ) );
+check( 'scheduled stamp saved', Songpress_Songs::get( $v1 )->scheduled_at, '2026-11-25 16:41' );
+$lb = Songpress_Journal::build_logs();
+check( 'daily logs built', $lb['days'] > 0 && $lb['created'] > 0, true );
+$dk = $GLOBALS['wpdb']->get_row( "SELECT * FROM wp_songpress_journal WHERE source_key LIKE 'daily:%' ORDER BY id DESC LIMIT 1" );
+check( 'daily log is a log note with the marker', $dk && 'log' === $dk->kind && false !== strpos( $dk->notes, Songpress_Journal::LOG_MARK ), true );
+$GLOBALS['wpdb']->update( 'wp_songpress_journal', array( 'notes' => $dk->notes . "my own line\n" ), array( 'id' => $dk->id ) );
+Songpress_Journal::build_logs();
+$dk2 = $GLOBALS['wpdb']->get_row( $GLOBALS['wpdb']->prepare( 'SELECT * FROM wp_songpress_journal WHERE id = %d', $dk->id ) );
+check( 'rebuilding keeps what was written below the line', false !== strpos( $dk2->notes, 'my own line' ), true );
+check( 'one note per day', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_journal WHERE source_key = '" . $dk->source_key . "'" ), 1 );
 
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";

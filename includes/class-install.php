@@ -64,6 +64,15 @@ class Songpress_Install {
 			}
 			update_option( 'songpress_type_col', '1' );
 		}
+		// The Scheduled box beside the release date: add its column to existing sites, once.
+		if ( '1' !== get_option( 'songpress_sched_col' ) ) {
+			global $wpdb;
+			$tb = self::table( 'songs' );
+			if ( ! $wpdb->get_var( "SHOW COLUMNS FROM {$tb} LIKE 'scheduled_at'" ) ) { // phpcs:ignore WordPress.DB
+				$wpdb->query( "ALTER TABLE {$tb} ADD COLUMN scheduled_at varchar(19) NOT NULL DEFAULT '' AFTER release_date" ); // phpcs:ignore WordPress.DB
+			}
+			update_option( 'songpress_sched_col', '1' );
+		}
 		// Versions that were already turned into works of their own (serial changed to a plain number): make them look like works, once.
 		if ( '1' !== get_option( 'songpress_roots_fixed3' ) ) {
 			global $wpdb;

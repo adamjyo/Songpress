@@ -64,7 +64,9 @@ class Songpress_History {
 			case 'version_made':
 				return sprintf( /* translators: %s: serial number */ __( 'New version %s created', 'songpress' ), (string) ( $d['serial'] ?? '' ) );
 			case 'scheduled':
-				return sprintf( /* translators: %s: date */ __( 'Scheduled for release on %s', 'songpress' ), (string) ( $d['date'] ?? '' ) );
+				return ! empty( $d['at'] )
+					? sprintf( /* translators: 1: date and time it was scheduled, 2: release date */ __( 'Scheduled on %1$s (release date %2$s)', 'songpress' ), (string) $d['at'], '' !== (string) ( $d['date'] ?? '' ) ? (string) $d['date'] : __( 'not set', 'songpress' ) )
+					: sprintf( /* translators: %s: date */ __( 'Scheduled for release on %s', 'songpress' ), (string) ( $d['date'] ?? '' ) );
 			case 'released':
 				return '' !== (string) ( $d['date'] ?? '' ) ? sprintf( /* translators: %s: date */ __( 'Released (release date %s)', 'songpress' ), $d['date'] ) : __( 'Released', 'songpress' );
 			case 'synced':
