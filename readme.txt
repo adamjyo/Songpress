@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.87
+Stable tag: 0.72.88
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.88 =
+* Notes: a Find unreadable data button under the tag list finds lines of file bytes that got into notes (the thousands of garbled lines that made them slow), counts them, and removes them on request. The original of each cleaned note stays under Earlier versions. Imports now skip such lines.
 
 = 0.72.87 =
 * Notes: opening a note is much faster. Pointing at a note in the list reads it ahead of the click, and clicking a result cancels the search that was still running so it no longer holds up the request.

@@ -104,7 +104,7 @@ class Songpress_Journal {
 				if ( ! $sid ) {
 					$sid = self::sole_song( (string) ( $r['notes'] ?? '' ), $byser );
 				}
-				$rows[] = array( $key, substr( $r['log_date'], 0, 10 ), self::kind( (string) ( $r['kind'] ?? '' ) ), mb_substr( $title, 0, 255 ), (string) ( $r['notes'] ?? '' ), mb_substr( (string) ( $r['place'] ?? '' ), 0, 191 ), $sid, (int) ! empty( $r['pinned'] ), (int) ! empty( $r['archived'] ),
+				$rows[] = array( $key, substr( $r['log_date'], 0, 10 ), self::kind( (string) ( $r['kind'] ?? '' ) ), mb_substr( $title, 0, 255 ), self::clean_text( (string) ( $r['notes'] ?? '' ) )[0], mb_substr( (string) ( $r['place'] ?? '' ), 0, 191 ), $sid, (int) ! empty( $r['pinned'] ), (int) ! empty( $r['archived'] ),
 					mb_substr( trim( (string) ( $r['song_key'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['song_tempo'] ?? '' ) ), 0, 16 ), mb_substr( trim( (string) ( $r['authors'] ?? '' ) ), 0, 255 ), mb_substr( trim( (string) ( $r['latitude'] ?? '' ) ), 0, 24 ), mb_substr( trim( (string) ( $r['longitude'] ?? '' ) ), 0, 24 ), preg_match( '/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/', (string) ( $r['created_at'] ?? '' ) ) ? str_replace( 'T', ' ', substr( $r['created_at'], 0, 19 ) ) : current_time( 'mysql' ) );
 			}
 			// only entries not already here, so a second load never doubles or overwrites edits
@@ -263,6 +263,37 @@ class Songpress_Journal {
 	const VERSION_KEEP = 30;
 
 	/** Before a note is overwritten, keep what it said (at most one copy every five minutes; the newest 30 stay). */
+	/** A line of unreadable data (pasted or imported file bytes), not writing: mostly symbols, control and accented-byte characters. */
+	public static function junk_line( $line ) {
+		$line = rtrim( (string) $line, "\r" );
+		if ( '' === trim( $line ) ) {
+			return false;
+		}
+		if ( 1 !== @preg_match( '//u', $line ) ) {
+			return strlen( $line ) >= 8;
+		}
+		$len = mb_strlen( $line );
+		if ( $len < 8 ) {
+			return false;
+		}
+		$bad = (int) preg_match_all( '/[\x{0080}-\x{00FF}\x{FFFD}\x{E000}-\x{F8FF}\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}]/u', $line );
+		return $bad >= 5 && $bad / $len >= 0.22;
+	}
+
+	/** The text with its unreadable lines taken out: array( clean text, number of lines removed ). */
+	public static function clean_text( $text ) {
+		$out = array();
+		$n   = 0;
+		foreach ( explode( "\n", (string) $text ) as $line ) {
+			if ( self::junk_line( $line ) ) {
+				$n++;
+				continue;
+			}
+			$out[] = $line;
+		}
+		return array( $n ? trim( preg_replace( "/\n{3,}/", "\n\n", implode( "\n", $out ) ) ) : (string) $text, $n );
+	}
+
 	public static function keep_version( $id, $new_title, $new_notes ) {
 		global $wpdb;
 		$old = self::row( $id );
@@ -422,6 +453,31 @@ class Songpress_Journal {
 			}
 			return array( 'ok' => true, 'deleted' => $ids );
 		}
+		if ( 'junk_scan' === $op || 'junk_clean' === $op ) {
+			$after = absint( $in['after'] ?? 0 );
+			$rows  = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM ' . self::t() . ' WHERE id > %d ORDER BY id LIMIT 60', $after ) ); // phpcs:ignore WordPress.DB
+			$notes = 0;
+			$lines = 0;
+			$last  = $after;
+			foreach ( (array) $rows as $r ) {
+				$last = (int) $r->id;
+				list( $clean, $n ) = self::clean_text( $r->notes );
+				if ( ! $n ) {
+					continue;
+				}
+				$notes++;
+				$lines += $n;
+				if ( 'junk_clean' === $op ) {
+					$vt = Songpress_Install::table( 'note_versions' ); // one copy of the original stays under Earlier versions
+					$wpdb->insert( $vt, array( 'entry_id' => (int) $r->id, 'title' => (string) $r->title, 'notes' => (string) $r->notes, 'user_id' => get_current_user_id(), 'saved_at' => current_time( 'mysql' ) ) );
+					$wpdb->update( self::t(), array( 'notes' => $clean ), array( 'id' => (int) $r->id ) );
+				}
+			}
+			if ( 'junk_clean' === $op && $notes ) {
+				Songpress_Audit::log( 'notes', 'Removed unreadable lines from notes', $notes . ' notes', array( 'lines' => $lines, 'upto' => $last ) );
+			}
+			return array( 'ok' => true, 'notes' => $notes, 'lines' => $lines, 'next' => count( (array) $rows ) < 60 ? 0 : $last );
+		}
 		if ( 'delete' === $op && $id ) {
 			$gone = self::row( $id );
 			$wpdb->delete( self::t(), array( 'id' => $id ) );
@@ -547,6 +603,7 @@ class Songpress_Journal {
 		unset( $parts );
 		$o    = '<div class="songpress sp-app spn-wrap"><div class="spn" id="spn">';
 		$o   .= '<div class="spn-tags" id="spn-tags"></div>';
+		$o   .= '<p class="spn-junk"><button type="button" class="spe-btn" id="spn-junk">' . esc_html__( 'Find unreadable data', 'songpress' ) . '</button> <span id="spn-junk-msg"></span></p>';
 		$o   .= '<div class="spn-side"><div class="spn-top">';
 		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'foc' => array( '⛶', __( 'Focus: hide everything but the note', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
 			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
@@ -778,6 +835,12 @@ $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target
  var r=e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');
  if(selMode||e.metaKey||e.ctrlKey||e.shiftKey){sel[id]=!sel[id];if(!sel[id])delete sel[id];renderList();return}
  pick(id)});
+(function(){var b=$('spn-junk'),m=$('spn-junk-msg');if(!b)return;
+ function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){m.textContent=r.error||'Failed';b.disabled=false;return}nn+=r.notes;ll+=r.lines;m.textContent=(op==='junk_scan'?'Scanning… ':'Cleaning… ')+nn+' notes';if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){m.textContent='Could not reach the server';b.disabled=false})}
+ b.addEventListener('click',function(){b.disabled=true;m.textContent='Scanning…';
+  run('junk_scan',0,0,0,function(nn,ll){b.disabled=false;if(!nn){m.textContent='No unreadable data found.';return}
+   m.innerHTML=nn+' notes have '+ll+' unreadable lines. <a href="#" id="spn-junk-go">Remove them</a> (the original of each note stays under Earlier versions)';
+   $('spn-junk-go').addEventListener('click',function(e){e.preventDefault();m.textContent='Cleaning…';b.disabled=true;run('junk_clean',0,0,0,function(n2,l2){m.textContent='Removed '+l2+' lines from '+n2+' notes. Reloading…';setTimeout(function(){location.reload()},1200)})})})})})();
 var hv=null;$('spn-list').addEventListener('mouseover',function(e){var r=e.target.closest&&e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');clearTimeout(hv);hv=setTimeout(function(){prefetch(id)},120)});
 $('spn-search').addEventListener('input',function(){q=this.value;mark(cur&&cur.id);renderList();clearTimeout(fT);var k=q.trim().toLowerCase();if(k.length<2){FQ='';FS={};return}fT=setTimeout(function(){if(fCtl){try{fCtl.abort()}catch(e){}}fCtl=window.AbortController?new AbortController():null;post({op:'find',q:k},fCtl?fCtl.signal:undefined).then(function(r){if(r.ok&&q.trim().toLowerCase()===k){FS={};r.ids.forEach(function(i){FS[i]=1});FQ=k;renderList()}}).catch(function(){})},350)});
 root.querySelector('.spn-top').addEventListener('click',function(e){
