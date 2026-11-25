@@ -550,10 +550,23 @@ class Songpress_Journal {
 			return array( 'ok' => true, 'versions' => $out );
 		}
 		if ( 'media' === $op ) {
-			$mq  = new WP_Query( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'post_mime_type' => 'audio', 's' => sanitize_text_field( (string) ( $in['q'] ?? '' ) ), 'posts_per_page' => 12, 'orderby' => 'date', 'order' => 'DESC', 'no_found_rows' => true ) );
-			$out = array();
-			foreach ( $mq->posts as $p ) {
-				$out[] = array( 'title' => get_the_title( $p ), 'url' => (string) wp_get_attachment_url( $p->ID ) );
+			// Every word you type must be in the title or file name, so the list narrows as you type.
+			$terms = array_filter( preg_split( '/[\s_\-]+/', sanitize_text_field( (string) ( $in['q'] ?? '' ) ) ) );
+			$where = '';
+			$args  = array();
+			foreach ( array_slice( $terms, 0, 8 ) as $tm ) {
+				$like    = '%' . $wpdb->esc_like( $tm ) . '%';
+				$where  .= ' AND ( post_title LIKE %s OR post_name LIKE %s OR guid LIKE %s OR post_excerpt LIKE %s )';
+				$args[]  = $like;
+				$args[]  = $like;
+				$args[]  = $like;
+				$args[]  = $like;
+			}
+			$sql  = "SELECT ID, post_title FROM {$wpdb->posts} WHERE post_type = 'attachment' AND post_mime_type LIKE 'audio/%'{$where} ORDER BY post_date DESC LIMIT 12";
+			$rows = $wpdb->get_results( $args ? $wpdb->prepare( str_replace( "'audio/%'", "'audio/%%'", $sql ), $args ) : $sql ); // phpcs:ignore WordPress.DB
+			$out  = array();
+			foreach ( (array) $rows as $p ) {
+				$out[] = array( 'title' => (string) $p->post_title, 'url' => (string) wp_get_attachment_url( (int) $p->ID ) );
 			}
 			return array( 'ok' => true, 'items' => $out );
 		}
@@ -871,7 +884,7 @@ document.addEventListener('selectionchange',function(){if(document.activeElement
 $('spn-body').addEventListener('blur',function(){auds()});
 window.addEventListener('resize',function(){auds()});
 function addAud(name,url){var t=$('spn-body'),v=t.value,s=t.selectionStart,e=t.selectionEnd;AL.push(url);var tok=(s>0&&v.charAt(s-1)!=='\n'?'\n':'')+'[♪ '+String(name||'Audio').replace(/[\]\n]/g,' ')+']⟦'+(AL.length-1)+'⟧\n\n';t.value=v.slice(0,s)+tok+v.slice(e);t.focus();t.selectionStart=t.selectionEnd=s+tok.length;$('spn-audbox').hidden=true;sizeBody();touch()}
-function audSearch(){var qv=$('spn-audq').value;post({op:'media',q:qv}).then(function(r){var h=$('spn-audres');if(!r.items||!r.items.length){h.innerHTML='<em>No audio found in WordPress media.</em>';return}h.innerHTML=r.items.map(function(x,i){return '<button type="button" data-i="'+i+'">♪ '+esc(x.title||'Audio')+'</button>'}).join('');h.onclick=function(ev){var b=ev.target.closest('[data-i]');if(!b)return;var x=r.items[+b.getAttribute('data-i')];addAud(x.title,x.url)}})}
+var audN=0;function audSearch(){var qv=$('spn-audq').value,my=++audN;post({op:'media',q:qv}).then(function(r){if(my!==audN)return;var h=$('spn-audres');if(!r.items||!r.items.length){h.innerHTML='<em>No audio found in WordPress media.</em>';return}h.innerHTML=r.items.map(function(x,i){return '<button type="button" data-i="'+i+'">♪ '+esc(x.title||'Audio')+'</button>'}).join('');h.onclick=function(ev){var b=ev.target.closest('[data-i]');if(!b)return;var x=r.items[+b.getAttribute('data-i')];addAud(x.title,x.url)}})}
 function audFiles(fl){Array.prototype.forEach.call(fl,function(f){if(/^audio\//.test(f.type)||/\.(mp3|wav|m4a|aac|ogg|flac)$/i.test(f.name))upload(f,'aud');else setStatus('That is not an audio file')})}
 $('spn-drop').addEventListener('click',function(){$('spn-audpick').hidden=false;$('spn-audq').focus();audSearch()});
 $('spn-drop').addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();this.click()}});
