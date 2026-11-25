@@ -881,7 +881,7 @@ class Songpress_Uploads {
 			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
 		}
 		global $wpdb;
-		$t    = Songpress_Journal::t();
+		$t    = Songpress_Install::table( 'journal' );
 		$vt   = Songpress_Install::table( 'note_versions' );
 		$rows = $wpdb->get_results( "SELECT id, title FROM {$t} WHERE source_key LIKE 'file:%'" ); // phpcs:ignore WordPress.DB
 		$ids  = array();
