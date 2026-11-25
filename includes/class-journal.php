@@ -762,9 +762,12 @@ function renderList(){
  $('spn-list').innerHTML=h||'<p class="spn-empty">No notes here.</p>';renderCal()}
 function setStatus(s){$('spn-status').textContent=s||''}
 function mark(id){try{var u=new URL(location.href);if(id)u.searchParams.set('note',id);else u.searchParams.delete('note');var k=q.trim();if(k)u.searchParams.set('nq',k);else u.searchParams.delete('nq');history.replaceState(null,'',u)}catch(e){}}
+function gone(id,msg){ // the note asked for no longer exists: drop it, clear it from the address, and show the list with the first note
+ notes=notes.filter(function(x){return x.id!==id});try{var u=new URL(location.href);u.searchParams.delete('note');history.replaceState(null,'',u)}catch(e){}
+ renderTags();var v=visible();want=0;if(v[0])fill(v[0]);else{fill(blank());renderList()}setStatus(msg||'That note is gone.')}
 function fill(n){
  want=n.id||0;mark(want);
- if(n.slim){setStatus('Opening…');var w0=n.id;post({op:'get',entry_id:w0}).then(function(r){if(want!==w0)return;if(r.ok){fill(merge(r.note));setStatus('')}else setStatus(r.error||'Could not open it')}).catch(function(){setStatus('Could not reach the server')});return}
+ if(n.slim){setStatus('Opening…');var w0=n.id;post({op:'get',entry_id:w0}).then(function(r){if(want!==w0)return;if(r.ok){fill(merge(r.note));setStatus('')}else{gone(w0,r.error)}}).catch(function(){setStatus('Could not reach the server');renderList()});return}
  cur=n;pos=(n.lat!==''&&n.lat!=null&&n.lng!=='')?{lat:+n.lat,lng:+n.lng}:null;
  $('spn-title').value=n.title||'';AL=[];$('spn-body').value=toDisp(n.notes||'');
  $('spn-f-date').value=n.date||D.today;$('spn-f-created').value=n.created||'';

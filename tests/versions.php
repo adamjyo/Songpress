@@ -1128,6 +1128,15 @@ $dk2 = $GLOBALS['wpdb']->get_row( $GLOBALS['wpdb']->prepare( 'SELECT * FROM wp_s
 check( 'rebuilding keeps what was written below the line', false !== strpos( $dk2->notes, 'my own line' ), true );
 check( 'one note per day', (int) $GLOBALS['wpdb']->get_var( "SELECT COUNT(*) FROM wp_songpress_journal WHERE source_key = '" . $dk->source_key . "'" ), 1 );
 
+$rowsx = $GLOBALS['wpdb']->get_results( "SELECT * FROM wp_songpress_journal ORDER BY pinned DESC, log_date DESC, id DESC LIMIT 250" );
+$partsx = array();
+foreach ( $rowsx as $ex ) {
+	$partsx[] = wp_json_encode( Songpress_Journal::shape_slim( $ex ), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_PARTIAL_OUTPUT_ON_ERROR );
+}
+$dec = json_decode( '[' . implode( ',', $partsx ) . ']', true );
+check( 'notes page data is valid JSON with daily logs', is_array( $dec ) && count( $dec ) === count( $rowsx ) && count( $dec ) > 0, true );
+
+
 exec( 'rm -rf ' . escapeshellarg( $GLOBALS['sp_tmp'] ) );
 echo $fail ? "\n$fail of $n failed\n" : "All $n checks passed\n";
 exit( $fail ? 1 : 0 );
