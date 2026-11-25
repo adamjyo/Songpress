@@ -100,7 +100,7 @@ if ( ! function_exists( 'wp_normalize_path' ) ) { function wp_normalize_path( $p
 if ( ! function_exists( 'wp_strip_all_tags' ) ) { function wp_strip_all_tags( $s ) { return strip_tags( (string) $s ); } }
 require_once __DIR__ . '/../includes/class-import.php';
 if ( ! function_exists( 'remove_accents' ) ) { function remove_accents( $s ) { return strtr( (string) $s, array( 'é' => 'e', 'è' => 'e', 'á' => 'a', 'ñ' => 'n', 'ç' => 'c', 'ü' => 'u', 'ö' => 'o' ) ); } }
-if ( ! class_exists( 'Songpress_Editor', false ) ) { class Songpress_Editor { public static function list_url() { return 'https://site.test/app/'; } public static function edit_url( $id ) { return 'https://site.test/edit/' . (int) $id; } } }
+if ( ! class_exists( 'Songpress_Editor', false ) ) { class Songpress_Editor { public static function date_js() { return ''; } public static function list_url() { return 'https://site.test/app/'; } public static function edit_url( $id ) { return 'https://site.test/edit/' . (int) $id; } } }
 require __DIR__ . '/../includes/class-names.php';
 require __DIR__ . '/../includes/class-backup.php';
 require __DIR__ . '/../includes/class-health.php';
@@ -624,7 +624,7 @@ check( 'bear export without authors still reads back as bear', array( $bb2['titl
 
 // Notes screen actions
 $r1 = Songpress_Journal::ajax_op( array( 'op' => 'save', 'title' => 'Screen note', 'notes' => "hello #idea\nand ^0378", 'log_date' => '2026-05-06', 'song_key' => 'D', 'tempo' => '88', 'authors' => 'Adam Page', 'created_at' => '2026-05-06T10:30', 'kind' => 'note' ) );
-check( 'notes screen: save new', array( $r1['ok'], $r1['note']['title'], $r1['note']['key'], $r1['note']['created'], $r1['note']['date'] ), array( true, 'Screen note', 'D', '2026-05-06T10:30', '2026-05-06' ) );
+check( 'notes screen: save new', array( $r1['ok'], $r1['note']['title'], $r1['note']['key'], $r1['note']['created'], $r1['note']['date'] ), array( true, 'Screen note', 'D', '2026-05-06', '2026-05-06' ) );
 $nid = $r1['note']['id'];
 $r2 = Songpress_Journal::ajax_op( array( 'op' => 'save', 'entry_id' => $nid, 'title' => 'Screen note 2', 'notes' => 'changed', 'log_date' => '2026-05-07' ) );
 check( 'notes screen: save existing', array( $r2['note']['id'], $r2['note']['title'], $r2['note']['date'] ), array( $nid, 'Screen note 2', '2026-05-07' ) );

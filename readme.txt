@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.111
+Stable tag: 0.72.112
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.112 =
+* Notes: Created shows only the date. Every date box in Notes and the works editor takes pasted dates in common formats (3/4/2026, Nov 5, 2026, 5 November 2026, 2026-11-05) and keeps a small button for the calendar picker.
 
 = 0.72.111 =
 * Notes: pasting an image or file works anywhere in the open note, whether the cursor is in the text, the title or the media window.

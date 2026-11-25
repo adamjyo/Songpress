@@ -236,7 +236,13 @@ class Songpress_Journal {
 			}
 			$row['song_id'] = self::sole_song( $notes, array_filter( $byser ) );
 		}
-		$cr = isset( $in['created_at'] ) && preg_match( '/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/', (string) $in['created_at'], $cm ) ? $cm[1] . ' ' . $cm[2] . ':00' : '';
+		$cr = '';
+		if ( isset( $in['created_at'] ) && preg_match( '/^(\d{4}-\d{2}-\d{2})/', (string) $in['created_at'], $cm ) ) {
+			// Only the day is shown; keep the stored time of day so ordering inside a day does not change.
+			$old = $id ? (string) $wpdb->get_var( $wpdb->prepare( 'SELECT created_at FROM ' . self::t() . ' WHERE id = %d', $id ) ) : '';
+			$tod = preg_match( '/^\d{4}-\d{2}-\d{2} (\d{2}:\d{2}:\d{2})/', $old, $tm ) ? $tm[1] : substr( current_time( 'mysql' ), 11, 8 );
+			$cr  = $cm[1] . ' ' . $tod;
+		}
 		if ( $id ) {
 			if ( '' !== $cr ) {
 				$row['created_at'] = $cr;
@@ -375,7 +381,7 @@ class Songpress_Journal {
 			'authors'  => (string) $e->authors,
 			'lat'      => (string) $e->latitude,
 			'lng'      => (string) $e->longitude,
-			'created'  => $e->created_at ? str_replace( ' ', 'T', substr( (string) $e->created_at, 0, 16 ) ) : '',
+			'created'  => $e->created_at ? substr( (string) $e->created_at, 0, 10 ) : '',
 			'pinned'   => (int) $e->pinned,
 			'archived' => (int) $e->archived,
 		);
@@ -608,7 +614,7 @@ class Songpress_Journal {
 	}
 
 	private static function fields( $e = null ) {
-		$o  = '<div class="spe-grid"><label class="spe-field"><span>' . esc_html__( 'Created', 'songpress' ) . '</span><input type="datetime-local" name="created_at" value="' . esc_attr( $e && $e->created_at ? str_replace( ' ', 'T', substr( $e->created_at, 0, 16 ) ) : str_replace( ' ', 'T', substr( current_time( 'mysql' ), 0, 16 ) ) ) . '"></label><label class="spe-field"><span>' . esc_html__( 'Date', 'songpress' ) . '</span><input type="date" name="log_date" value="' . esc_attr( $e ? $e->log_date : gmdate( 'Y-m-d' ) ) . '"></label>';
+		$o  = '<div class="spe-grid"><label class="spe-field"><span>' . esc_html__( 'Created', 'songpress' ) . '</span><input type="date" name="created_at" value="' . esc_attr( $e && $e->created_at ? substr( $e->created_at, 0, 10 ) : substr( current_time( 'mysql' ), 0, 10 ) ) . '"></label><label class="spe-field"><span>' . esc_html__( 'Date', 'songpress' ) . '</span><input type="date" name="log_date" value="' . esc_attr( $e ? $e->log_date : gmdate( 'Y-m-d' ) ) . '"></label>';
 		$o .= '<label class="spe-field"><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select name="kind">';
 		foreach ( self::KINDS as $k => $label ) {
 			$o .= '<option value="' . esc_attr( $k ) . '"' . selected( $e ? $e->kind : 'day', $k, false ) . '>' . esc_html( $label ) . '</option>';
@@ -701,7 +707,7 @@ class Songpress_Journal {
 		$o .= '<aside class="spn-info" id="spn-info">';
 		foreach ( array(
 			array( 'date', __( 'Date', 'songpress' ), 'date' ),
-			array( 'created', __( 'Created', 'songpress' ), 'datetime-local' ),
+			array( 'created', __( 'Created', 'songpress' ), 'date' ),
 			array( 'place', __( 'Location', 'songpress' ), 'text' ),
 			array( 'authors', __( 'Authors', 'songpress' ), 'text' ),
 		) as $f ) {
@@ -1010,7 +1016,7 @@ var v=visible(),bk=pn?notes.find(function(x){return x.id===pn}):null;
 fill(bk||(pn?{id:pn,slim:true}:(v[0]||blank())));openMap();
 })();
 JS
-. '</script>';
+. '</script>' . Songpress_Editor::date_js();
 	}
 
 	/** Each day: what was written, worked on and released, with links to the songs, newest first. */

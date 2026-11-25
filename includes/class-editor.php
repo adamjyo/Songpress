@@ -40,6 +40,12 @@ class Songpress_Editor {
 		return $song ? (string) $song->$name : '';
 	}
 
+	/** Inline script that lets date boxes take pasted dates in any common format (and keeps a picker button). */
+	public static function date_js() {
+		$f = SONGPRESS_DIR . 'assets/datefields.js';
+		return is_readable( $f ) ? '<script>' . file_get_contents( $f ) . '</script>' : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions
+	}
+
 	private static function input( $name, $label, $song, $extra = '', $class = '' ) {
 		// Date fields get the browser's calendar picker. A value that is not a plain YYYY-MM-DD (old free text) stays a text box, so nothing is blanked.
 		if ( false !== strpos( $extra, 'placeholder="YYYY-MM-DD"' ) ) {
@@ -139,6 +145,7 @@ class Songpress_Editor {
 				$so .= '<option value="' . esc_attr( $st ) . '"' . selected( strtolower( $cur_stage ), strtolower( $st ), false ) . '>' . esc_html( $st ) . '</option>';
 			}
 			$o .= '<label class="spe-field' . ( $root ? '' : ' spe-own' ) . '"><span>' . esc_html__( 'Status', 'songpress' ) . '</span><select name="stage" id="spe-stage">' . $so . '</select></label>';
+		$o .= self::date_js();
 		$o .= '<script>(function(){var s=document.getElementById("spe-stage"),t=document.querySelector("input[name=title]");if(!s||!t)return;function f(){t.required=s.value.toLowerCase()!=="starter"}s.addEventListener("change",f);f()})()</script>';
 		$tcur = trim( (string) self::f( $song, 'work_type' ) );
 		$to   = '<option value=""></option>';
