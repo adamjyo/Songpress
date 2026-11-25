@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.94
+Stable tag: 0.72.95
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.95 =
+* Upload / Notes: a "Remove imported notes" button deletes notes added from note files so they can be imported again; notes from the old software stay.
 
 = 0.72.94 =
 * Notes import (.bear, .md, .txt, zip): skips zip and binary files and strips unreadable scrap lines from imported notes.

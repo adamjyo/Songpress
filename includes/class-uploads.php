@@ -63,6 +63,7 @@ class Songpress_Uploads {
 		add_action( 'admin_post_songpress_notes_folder', array( __CLASS__, 'handle_notes_folder' ) );
 		add_action( 'admin_post_songpress_notes_step', array( __CLASS__, 'handle_notes_step' ) );
 		add_action( 'admin_post_songpress_notes_cancel', array( __CLASS__, 'handle_notes_cancel' ) );
+		add_action( 'admin_post_songpress_notes_unimport', array( __CLASS__, 'handle_notes_unimport' ) );
 		add_action( 'admin_post_songpress_statement', array( __CLASS__, 'handle_statement' ) );
 		add_action( 'admin_post_songpress_download', array( __CLASS__, 'handle_download' ) );
 	}
@@ -873,6 +874,38 @@ class Songpress_Uploads {
 		self::back( $args + array( 'nj_go' => 1 ) );
 	}
 
+	/** Remove every note that came in from note files (source key "file:…"), so they can be imported again. Notes from the old software ("old:…") and notes written here are not touched. */
+	public static function handle_notes_unimport() {
+		check_admin_referer( 'songpress_notes_unimport' );
+		if ( ! Songpress_Caps::can( 'import' ) ) {
+			wp_die( esc_html__( 'Not allowed.', 'songpress' ) );
+		}
+		global $wpdb;
+		$t    = Songpress_Journal::t();
+		$vt   = Songpress_Install::table( 'note_versions' );
+		$rows = $wpdb->get_results( "SELECT id, title FROM {$t} WHERE source_key LIKE 'file:%'" ); // phpcs:ignore WordPress.DB
+		$ids  = array();
+		$ttl  = array();
+		foreach ( (array) $rows as $r ) {
+			$ids[] = (int) $r->id;
+			if ( count( $ttl ) < 60 ) {
+				$ttl[] = (string) $r->title;
+			}
+		}
+		foreach ( array_chunk( $ids, 200 ) as $chunk ) {
+			$in = implode( ',', $chunk );
+			$wpdb->query( "DELETE FROM {$vt} WHERE entry_id IN ({$in})" ); // phpcs:ignore WordPress.DB
+			$wpdb->query( "DELETE FROM {$t} WHERE id IN ({$in})" ); // phpcs:ignore WordPress.DB
+		}
+		$job = get_option( self::NOTES_JOB );
+		if ( is_array( $job ) && ! empty( $job['path'] ) ) {
+			@unlink( $job['path'] ); // phpcs:ignore WordPress.PHP.NoSilencedErrors, WordPress.WP.AlternativeFunctions
+		}
+		delete_option( self::NOTES_JOB );
+		Songpress_Audit::log( 'notes', 'Removed imported notes', count( $ids ) . ' notes', array( 'titles' => implode( ' | ', $ttl ) ) );
+		self::back( array( 'type' => 'notes_files', 'm_ok' => sprintf( /* translators: %d: count */ _n( 'Removed %d imported note. Notes from the old software and notes written here were kept.', 'Removed %d imported notes. Notes from the old software and notes written here were kept.', count( $ids ), 'songpress' ), count( $ids ) ) ) );
+	}
+
 	public static function handle_notes_cancel() {
 		check_admin_referer( 'songpress_notes_cancel' );
 		$job = get_option( self::NOTES_JOB );
@@ -989,7 +1022,7 @@ class Songpress_Uploads {
 			$inc    = self::incoming_files();
 			$incdir = self::incoming_dir();
 			$njhtml .= '<div class="notice notice-info"><p><strong>' . esc_html__( 'Import from a folder on the server', 'songpress' ) . '</strong> ' . esc_html__( 'If your browser cannot read the files, put them (or a zip of them) in this folder with your host\'s file manager or FTP, then press the button.', 'songpress' ) . '</p><p><code>' . esc_html( $incdir ? str_replace( ABSPATH, '', $incdir ) : '' ) . '</code></p><form method="post" id="spu-folder" data-ajax="' . esc_url( admin_url( 'admin-ajax.php' ) ) . '" data-step="' . esc_attr( wp_create_nonce( 'songpress_notes_step' ) ) . '" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_folder', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_folder"><input type="hidden" name="sp_return" value="' . $ret . '"><button class="spe-save" type="submit"' . ( $inc ? '' : ' disabled' ) . '>' . esc_html( sprintf( /* translators: %d: files waiting */ _n( 'Import %d file waiting in the folder', 'Import %d files waiting in the folder', count( $inc ), 'songpress' ), count( $inc ) ) ) . '</button></form></div>';
-			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" data-cfg="' . esc_attr( wp_json_encode( array( 'nonce' => wp_create_nonce( 'songpress_notes_import' ), 'ajax' => admin_url( 'admin-ajax.php' ) ) ) ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button><div id="spu-nprog" hidden><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden;margin:10px 0 4px"><div id="spu-nbar" style="height:8px;width:0;background:#f5a524"></div></div><small id="spu-ntxt"></small></div></form><script src="' . esc_url( SONGPRESS_URL . 'assets/notes-import.js?ver=' . SONGPRESS_VERSION ) . '"></script>' );
+			$o .= $panel( 'notes_files', $njhtml . '<p class="spe-help">' . esc_html__( 'Choose one or more note files: Bear exports (.bear or .md), plain .md or .txt files, a zip of them (best for a lot of notes), or an old notes .json export. A Bear note reads its title, authors and "key | tempo | date" line. Each file becomes a note, dated from the file or today. Files already loaded are skipped.', 'songpress' ) . ' ' . esc_html( sprintf( /* translators: %s: size */ __( 'This server takes up to %s in one upload.', 'songpress' ), size_format( wp_max_upload_size() ) ) ) . '</p><form method="post" data-cfg="' . esc_attr( wp_json_encode( array( 'nonce' => wp_create_nonce( 'songpress_notes_import' ), 'ajax' => admin_url( 'admin-ajax.php' ) ) ) ) . '" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_notes_import', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_import"><input type="hidden" name="sp_return" value="' . $ret . '"><input type="file" name="files[]" accept=".bear,.md,.markdown,.txt,.json,.zip" multiple required> <button class="spe-save" type="submit">' . esc_html__( 'Add notes', 'songpress' ) . '</button><div id="spu-nprog" hidden><div style="height:8px;border-radius:4px;background:#26221e;overflow:hidden;margin:10px 0 4px"><div id="spu-nbar" style="height:8px;width:0;background:#f5a524"></div></div><small id="spu-ntxt"></small></div></form><script src="' . esc_url( SONGPRESS_URL . 'assets/notes-import.js?ver=' . SONGPRESS_VERSION ) . '"></script><h3>' . esc_html__( 'Start over', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'Removes every note that was added from note files here, so you can import them again. Notes that came from the old software and notes written in SongPress stay. Any edits to the imported notes are lost.', 'songpress' ) . '</p><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" onsubmit="return confirm(\'' . esc_js( __( 'Remove all notes imported from files? This cannot be undone.', 'songpress' ) ) . '\')">' . wp_nonce_field( 'songpress_notes_unimport', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_notes_unimport"><input type="hidden" name="sp_return" value="' . $ret . '"><button class="spe-save" type="submit">' . esc_html__( 'Remove imported notes', 'songpress' ) . '</button></form>' );
 		}
 		if ( Songpress_Caps::can( 'money' ) ) {
 			$o .= $panel( 'dk_stats', '<p class="spe-help">' . esc_html__( 'In DistroKid, open your Stats page and save it as an HTML file (Save Page As). Days it covers are updated; other days are kept.', 'songpress' ) . '</p>' . $form( 'songpress_money_stats_import', 'songpress_money_stats_import', 'stats', '.html,.htm,text/html', __( 'Import daily stats', 'songpress' ) ) );
