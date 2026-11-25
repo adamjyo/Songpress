@@ -902,7 +902,16 @@ class Songpress_Uploads {
 			++$skip;
 			return;
 		}
+		if ( 0 === strncmp( $text, "PK\x03\x04", 4 ) || false !== strpos( substr( $text, 0, 4096 ), "\0" ) ) { // a zip or other binary file, not writing
+			++$skip;
+			return;
+		}
 		$n = Songpress_Journal::parse_note_file( $name, $text );
+		$n['notes'] = Songpress_Journal::clean_text( $n['notes'] )[0]; // drop file-byte scraps from a note that is mostly that
+		if ( '' === trim( $n['notes'] ) && '' === trim( $text ) ) {
+			++$skip;
+			return;
+		}
 		Songpress_Journal::add_note( $n, 'file:' . md5( $name . "\n" . $text ) ) ? ++$added : ++$skip;
 	}
 
