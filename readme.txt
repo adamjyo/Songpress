@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.110
+Stable tag: 0.72.111
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.111 =
+* Notes: pasting an image or file works anywhere in the open note, whether the cursor is in the text, the title or the media window.
 
 = 0.72.110 =
 * Notes: pasting an image into the media window now works in Safari (the drop area takes keyboard focus when it opens).
