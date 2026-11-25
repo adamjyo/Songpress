@@ -477,6 +477,7 @@ class Songpress_Journal {
 			$notes = 0;
 			$lines = 0;
 			$last  = $after;
+			$names = array();
 			foreach ( (array) $rows as $r ) {
 				$last = (int) $r->id;
 				list( $clean, $n ) = self::clean_text( $r->notes );
@@ -485,6 +486,9 @@ class Songpress_Journal {
 				}
 				$notes++;
 				$lines += $n;
+				if ( count( $names ) < 4 ) {
+					$names[] = mb_substr( trim( (string) $r->title ) ?: (string) $r->log_date, 0, 40 );
+				}
 				if ( 'junk_clean' === $op ) {
 					$vt = Songpress_Install::table( 'note_versions' ); // one copy of the original stays under Earlier versions
 					$wpdb->insert( $vt, array( 'entry_id' => (int) $r->id, 'title' => (string) $r->title, 'notes' => (string) $r->notes, 'user_id' => get_current_user_id(), 'saved_at' => current_time( 'mysql' ) ) );
@@ -494,7 +498,7 @@ class Songpress_Journal {
 			if ( 'junk_clean' === $op && $notes ) {
 				Songpress_Audit::log( 'notes', 'Removed unreadable lines from notes', $notes . ' notes', array( 'lines' => $lines, 'upto' => $last ) );
 			}
-			return array( 'ok' => true, 'notes' => $notes, 'lines' => $lines, 'next' => count( (array) $rows ) < 60 ? 0 : $last );
+			return array( 'ok' => true, 'notes' => $notes, 'lines' => $lines, 'seen' => count( (array) $rows ), 'names' => $names, 'total' => (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . self::t() ), 'next' => count( (array) $rows ) < 60 ? 0 : $last ); // phpcs:ignore WordPress.DB
 		}
 		if ( 'delete' === $op && $id ) {
 			$gone = self::row( $id );
@@ -856,13 +860,14 @@ $('spn-list').addEventListener('click',function(e){if(e.target.closest&&e.target
 (function(){
  function msg(t,html){var m=$('spn-junk-msg');if(!m)return;if(html)m.innerHTML=t;else m.textContent=t}
  function btn(off){var b=$('spn-junk');if(b)b.disabled=off}
- function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){msg(r.error||'Failed');btn(false);return}nn+=r.notes;ll+=r.lines;msg((op==='junk_scan'?'Scanning… ':'Cleaning… ')+nn+' notes');if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){msg('Could not reach the server');btn(false)})}
+ var seen=0,eg=[];
+ function run(op,after,nn,ll,done){post({op:op,after:after}).then(function(r){if(!r.ok){msg(r.error||'Failed');btn(false);return}nn+=r.notes;ll+=r.lines;seen+=r.seen;(r.names||[]).forEach(function(x){if(eg.length<5)eg.push(x)});msg((op==='junk_scan'?'Scanning… ':'Cleaning… ')+seen+' of '+r.total+' notes checked, '+nn+' with unreadable data');if(r.next)run(op,r.next,nn,ll,done);else done(nn,ll)}).catch(function(){msg('Could not reach the server');btn(false)})}
  $('spn-tags').addEventListener('click',function(e){
-  if(e.target.closest('#spn-junk-go')){e.preventDefault();msg('Cleaning…');btn(true);run('junk_clean',0,0,0,function(n2,l2){msg('Removed '+l2+' lines from '+n2+' notes. Reloading…');setTimeout(function(){location.reload()},1200)});return}
+  if(e.target.closest('#spn-junk-go')){e.preventDefault();msg('Cleaning…');btn(true);seen=0;run('junk_clean',0,0,0,function(n2,l2){msg('Removed '+l2+' lines from '+n2+' notes. Reloading…');setTimeout(function(){location.reload()},1200)});return}
   if(!e.target.closest('#spn-junk'))return;
-  btn(true);msg('Scanning…');
-  run('junk_scan',0,0,0,function(nn,ll){btn(false);if(!nn){msg('No unreadable data found.');return}
-   msg(nn+' notes have '+ll+' unreadable lines. <a href="#" id="spn-junk-go">Remove them</a> (the original of each note stays under Earlier versions)',true)})})})();
+  btn(true);msg('Scanning…');seen=0;eg=[];
+  run('junk_scan',0,0,0,function(nn,ll){btn(false);if(!nn){msg('Checked '+seen+' notes. No unreadable data found.');return}
+   msg('Checked '+seen+' notes: '+nn+' have '+ll+' unreadable lines (for example '+eg.map(function(x){return esc(x)}).join(', ')+'). <a href="#" id="spn-junk-go">Remove them</a> (the original of each note stays under Earlier versions)',true)})})})();
 var hv=null;$('spn-list').addEventListener('mouseover',function(e){var r=e.target.closest&&e.target.closest('.spn-row');if(!r)return;var id=+r.getAttribute('data-id');clearTimeout(hv);hv=setTimeout(function(){prefetch(id)},120)});
 $('spn-search').addEventListener('input',function(){q=this.value;mark(cur&&cur.id);renderList();clearTimeout(fT);var k=q.trim().toLowerCase();if(k.length<2){FQ='';FS={};return}fT=setTimeout(function(){if(fCtl){try{fCtl.abort()}catch(e){}}fCtl=window.AbortController?new AbortController():null;post({op:'find',q:k},fCtl?fCtl.signal:undefined).then(function(r){if(r.ok&&q.trim().toLowerCase()===k){FS={};r.ids.forEach(function(i){FS[i]=1});FQ=k;renderList()}}).catch(function(){})},350)});
 root.querySelector('.spn-top').addEventListener('click',function(e){
