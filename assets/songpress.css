@@ -1375,4 +1375,4 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spn-apdf{padding:6px;justify-content:flex-start;align-items:stretch;gap:4px}
 .spn-pdfh{display:flex;gap:12px;align-items:baseline;padding-right:28px}
 .spn-pdfh span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.spn-apdf iframe{flex:1;min-height:0;width:100%;border:0;border-radius:6px;background:#fff}
+.spn-pdfa{display:block;line-height:0;align-self:flex-start}.spn-pdfc{display:block;background:#fff;border-radius:4px;box-shadow:0 2px 10px rgba(0,0,0,.45)}.spn-pdfno{font:12px system-ui,sans-serif;color:#9d958a}
