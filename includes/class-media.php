@@ -84,8 +84,11 @@ class Songpress_Media {
 		}
 		$check = wp_check_filetype_and_ext( $_FILES['file']['tmp_name'], $_FILES['file']['name'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
 		$field = self::field_for_mime( $check['type'] ?: '' );
+		if ( '' === $field && 'application/pdf' === ( $check['type'] ?: '' ) && ! empty( $_POST['allow_pdf'] ) ) { // Notes may link a PDF (a scan or a chart); the song screens still take only art and audio
+			$field = 'pdf';
+		}
 		if ( '' === $field ) {
-			wp_send_json_error( array( 'message' => __( 'Only images (cover art) and audio files can be added here.', 'songpress' ) ), 415 );
+			wp_send_json_error( array( 'message' => __( 'Only images (cover art), audio files and PDFs can be added here.', 'songpress' ) ), 415 );
 		}
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
