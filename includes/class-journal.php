@@ -764,7 +764,6 @@ function renderTags(){
  if(pins)h+=b('@pin','Pinned',tag==='@pin');
  Object.keys(all).sort().forEach(function(k){h+=b(k,'#'+all[k],tag===k)});
  if(arch)h+=b('@arch','Archived',tag==='@arch');
- h+='<div class="spn-junk" style="margin-top:14px"><button type="button" class="spe-btn" id="spn-junk">Find unreadable data</button><p id="spn-junk-msg" class="spe-help"></p><button type="button" class="spe-btn" id="spn-daily">Build daily logs</button><p id="spn-daily-msg" class="spe-help"></p></div>';
  $('spn-tags').innerHTML=h}
 var LIM=150,lk='',FQ='',FS={},fT=null,want=0;
 function renderList(){
