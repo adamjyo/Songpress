@@ -21,11 +21,7 @@ el.type='text';el.setAttribute('inputmode','numeric');el.setAttribute('autocompl
 el.addEventListener('paste',function(e){var t=(e.clipboardData||window.clipboardData).getData('text');var d=parse(t);if(!d)return;e.preventDefault();el.value=d;fire(el)});
 el.addEventListener('blur',function(){fix(el)});
 el.addEventListener('keydown',function(e){if(e.key==='Enter')fix(el)});
-var b=document.createElement('button');b.type='button';b.className='spe-datebtn';b.setAttribute('aria-label','Pick a date');b.textContent='▾';b.tabIndex=-1;
-var h=document.createElement('input');h.type='date';h.tabIndex=-1;h.setAttribute('aria-hidden','true');h.className='spe-datehid';
-b.addEventListener('click',function(e){e.preventDefault();var c=parse(el.value);h.value=c;try{if(h.showPicker)h.showPicker();else{h.focus();h.click()}}catch(x){h.focus();h.click()}});
-h.addEventListener('change',function(){if(h.value){el.value=h.value;fire(el)}});
-el.insertAdjacentElement('afterend',b);b.insertAdjacentElement('afterend',h)}
+}
 function run(root){(root||document).querySelectorAll('input[type=date]').forEach(function(el){if(el.closest('.spe-field,.spn-info,#spn-info,.spe-grid,.spe-form,form#spe-form'))enhance(el)})}
 run();
 })();

@@ -1389,5 +1389,3 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spn-audres.grid b{display:flex;align-items:center;justify-content:center;width:100%;height:64px;border-radius:4px;background:#26221e;color:var(--acc);font:12px system-ui}
 .spn-audres.grid span{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spn-audbox:focus{outline:none}
-.spe-datebtn{margin-left:4px;padding:0 8px;height:30px;border:1px solid #4a443b;border-radius:6px;background:transparent;color:inherit;cursor:pointer;font-size:12px;vertical-align:middle}
-.spe-datehid{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
