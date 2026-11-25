@@ -1372,3 +1372,7 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spn-aimg{padding:6px;align-items:flex-start;justify-content:flex-start}
 .spn-aimg img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;display:block}
 .spn-apdf a{color:var(--acc);text-decoration:none;font-size:13px}
+.spn-apdf{padding:6px;justify-content:flex-start;align-items:stretch;gap:4px}
+.spn-pdfh{display:flex;gap:12px;align-items:baseline;padding-right:28px}
+.spn-pdfh span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.spn-apdf iframe{flex:1;min-height:0;width:100%;border:0;border-radius:6px;background:#fff}
