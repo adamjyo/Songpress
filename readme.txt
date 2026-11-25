@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.104
+Stable tag: 0.72.105
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.105 =
+* Notes: image and PDF previews no longer overlap the next line; audio keeps its embedded player.
 
 = 0.72.104 =
 * Notes: images and PDFs now work like audio: uploaded to the Media Library and shown as a preview in the note (a picture, or an Open-the-PDF row), saved as normal links.

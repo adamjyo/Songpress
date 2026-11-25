@@ -883,7 +883,7 @@ function auds(){var t=$('spn-body'),a=audLinks(t.value),h=$('spn-auds');if(t.hid
   return '<div class="spn-au"><span>♪ '+esc(x[0]||'Audio')+'</span><audio controls preload="none" src="'+esc(x[1])+'"></audio>'+ed+'</div>'}).join('')}
  var n=h.children,foc=document.activeElement===t,ss=t.selectionStart,se=t.selectionEnd,i,x,g,y1,y2,top;
  for(i=0;i<a.length&&i<n.length;i++){x=a[i];g=n[i];y1=caretXY(t,x[2]);y2=caretXY(t,x[3]);top=t.offsetTop+y1.y-t.scrollTop;
-  g.style.left=t.offsetLeft+'px';g.style.width=t.clientWidth+'px';g.style.top=top+'px';g.style.height=Math.max(y2.y+y2.h-y1.y,x[5]==='i'?120:54)+'px';g.hidden=foc&&ss<x[3]-1&&se>x[2]}}
+  g.style.left=t.offsetLeft+'px';g.style.width=t.clientWidth+'px';g.style.top=top+'px';g.style.height=Math.max((x[5]!=='a'&&t.value.charAt(x[3]-1)==='\n')?y2.y-y1.y-4:y2.y+y2.h-y1.y,x[5]==='i'?120:54)+'px';g.hidden=foc&&ss<x[3]-1&&se>x[2]}}
 $('spn-auds').addEventListener('click',function(e){var b=e.target.closest('.spn-auedit');if(!b)return;var a=audLinks($('spn-body').value),i=Array.prototype.indexOf.call($('spn-auds').children,b.parentNode);if(!a[i])return;var u=window.prompt('Address',a[i][1]);if(u&&/^https?:/.test(u)){AL[a[i][4]]=u;audKey='';auds();touch()}});
 document.addEventListener('selectionchange',function(){if(document.activeElement===$('spn-body'))auds()});
 $('spn-body').addEventListener('blur',function(){auds()});
