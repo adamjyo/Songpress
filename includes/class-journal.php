@@ -263,25 +263,43 @@ class Songpress_Journal {
 	const VERSION_KEEP = 30;
 
 	/** Before a note is overwritten, keep what it said (at most one copy every five minutes; the newest 30 stay). */
-	/** A line of unreadable data (pasted or imported file bytes), not writing: mostly symbols, control and accented-byte characters. */
+	/** How many characters in the text look like file bytes read as writing: control characters, accented-byte letters, the replacement character and the symbols a wrong text encoding produces. Curly quotes and dashes are writing. */
+	private static function bad_chars( $text ) {
+		return (int) @preg_match_all( '/[\x{0080}-\x{00BF}\x{00C0}-\x{00FF}\x{FFFD}\x{E000}-\x{F8FF}\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}\x{0152}\x{0153}\x{0160}\x{0161}\x{0178}\x{017D}\x{017E}\x{0192}\x{02C6}\x{02DC}\x{2020}-\x{2022}\x{2030}\x{2039}\x{203A}\x{20AC}\x{2122}\x{201A}\x{201E}]/u', (string) $text );
+	}
+
+	/** A note that is mostly file bytes: a real share of its characters are byte-like, and there are plenty of them. Ordinary accented lyrics stay far under this. */
+	public static function is_binary_note( $text ) {
+		$text = (string) $text;
+		if ( 1 !== @preg_match( '//u', $text ) ) {
+			return true;
+		}
+		$bad = self::bad_chars( $text );
+		return $bad >= 40 && $bad / max( 1, mb_strlen( $text ) ) >= 0.02;
+	}
+
+	/** In a note that is mostly file bytes, a line that is not writing: any byte-like character, or a scrap too short to be a word. */
 	public static function junk_line( $line ) {
 		$line = rtrim( (string) $line, "\r" );
 		if ( '' === trim( $line ) ) {
 			return false;
 		}
 		if ( 1 !== @preg_match( '//u', $line ) ) {
-			return strlen( $line ) >= 8;
+			return true;
 		}
-		$len = mb_strlen( $line );
-		if ( $len < 8 ) {
-			return false;
+		$bad = self::bad_chars( $line );
+		if ( $bad > 0 ) { // an accented lyric line in the middle stays: long, mostly letters, only a few accents
+			$words = (int) preg_match_all( '/\p{L}{2,}/u', $line );
+			return ! ( mb_strlen( $line ) >= 15 && $words >= 3 && $bad / mb_strlen( $line ) < 0.12 );
 		}
-		$bad = (int) preg_match_all( '/[\x{0080}-\x{00FF}\x{FFFD}\x{E000}-\x{F8FF}\x{0000}-\x{0008}\x{000B}\x{000C}\x{000E}-\x{001F}]/u', $line );
-		return $bad >= 5 && $bad / $len >= 0.22;
+		return mb_strlen( trim( $line ) ) <= 4 && 1 !== preg_match( '/[A-Za-z0-9]{2,}/', $line );
 	}
 
-	/** The text with its unreadable lines taken out: array( clean text, number of lines removed ). */
+	/** The text with its unreadable lines taken out: array( clean text, number of lines removed ). Only notes that are mostly file bytes are touched. */
 	public static function clean_text( $text ) {
+		if ( ! self::is_binary_note( $text ) ) {
+			return array( (string) $text, 0 );
+		}
 		$out = array();
 		$n   = 0;
 		foreach ( explode( "\n", (string) $text ) as $line ) {
@@ -291,7 +309,7 @@ class Songpress_Journal {
 			}
 			$out[] = $line;
 		}
-		return array( $n ? trim( preg_replace( "/\n{3,}/", "\n\n", implode( "\n", $out ) ) ) : (string) $text, $n );
+		return array( trim( preg_replace( "/\n{3,}/", "\n\n", implode( "\n", $out ) ) ), $n );
 	}
 
 	public static function keep_version( $id, $new_title, $new_notes ) {
@@ -603,7 +621,6 @@ class Songpress_Journal {
 		unset( $parts );
 		$o    = '<div class="songpress sp-app spn-wrap"><div class="spn" id="spn">';
 		$o   .= '<div class="spn-tags" id="spn-tags"></div>';
-		$o   .= '<p class="spn-junk"><button type="button" class="spe-btn" id="spn-junk">' . esc_html__( 'Find unreadable data', 'songpress' ) . '</button> <span id="spn-junk-msg"></span></p>';
 		$o   .= '<div class="spn-side"><div class="spn-top">';
 		foreach ( array( 'new' => array( '+', __( 'New note', 'songpress' ) ), 'imp' => array( '↓', __( 'Import notes (.bear, .md, .txt)', 'songpress' ) ), 'exp' => array( '↑', __( 'Export the open or selected notes as .md', 'songpress' ) ), 'sel' => array( '☑', __( 'Select several', 'songpress' ) ), 'sort' => array( '↕', __( 'Sort newest / oldest', 'songpress' ) ), 'foc' => array( '⛶', __( 'Focus: hide everything but the note', 'songpress' ) ), 'lay' => array( '▤', __( 'Show or hide the tag column', 'songpress' ) ) ) as $k => $b ) {
 			$o .= '<button type="button" class="spn-btn" data-act="' . esc_attr( $k ) . '" title="' . esc_attr( $b[1] ) . '" aria-label="' . esc_attr( $b[1] ) . '">' . esc_html( $b[0] ) . '</button>';
@@ -630,6 +647,7 @@ class Songpress_Journal {
 		$o .= '<div class="spn-two"><label><span>' . esc_html__( 'Key', 'songpress' ) . '</span><input id="spn-f-key"></label><label><span>' . esc_html__( 'Tempo', 'songpress' ) . '</span><input id="spn-f-tempo"></label></div>';
 		$o .= '<label><span>' . esc_html__( 'Kind', 'songpress' ) . '</span><select id="spn-f-kind"></select></label>';
 		$o .= '<div class="spn-songs"><span>' . esc_html__( 'Songs mentioned', 'songpress' ) . '</span><div id="spn-songs"></div></div>';
+		$o .= '<div class="spn-junk"><button type="button" class="spe-btn" id="spn-junk">' . esc_html__( 'Find unreadable data', 'songpress' ) . '</button><p id="spn-junk-msg" class="spe-help"></p></div>';
 		$o .= '<div class="spn-chips" id="spn-chips"></div><datalist id="spn-authors"></datalist>';
 		$o .= '<div class="spn-hist"><span>' . esc_html__( 'Earlier versions', 'songpress' ) . ' <a href="#" id="spn-hist-show">' . esc_html__( 'show', 'songpress' ) . '</a></span><div id="spn-hist" hidden></div></div>';
 		$o .= '<label><span>' . esc_html( "#'s" ) . '</span><input id="spn-f-tag" placeholder="' . esc_attr__( '# then a tag, Enter to add', 'songpress' ) . '"></label>';
