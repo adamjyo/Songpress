@@ -275,7 +275,37 @@ class Songpress_Journal {
 			return true;
 		}
 		$bad = self::bad_chars( $text );
-		return $bad >= 40 && $bad / max( 1, mb_strlen( $text ) ) >= 0.02;
+		if ( $bad >= 40 && $bad / max( 1, mb_strlen( $text ) ) >= 0.02 ) {
+			return true;
+		}
+		// Plain-letter scraps (o6, DA4, y_nF!): a note where many of the lines are such scraps.
+		$lines = 0;
+		$scrap = 0;
+		foreach ( explode( "\n", $text ) as $l ) {
+			if ( '' === trim( $l ) ) {
+				continue;
+			}
+			$lines++;
+			if ( self::scrap_line( $l ) ) {
+				$scrap++;
+			}
+		}
+		return $scrap >= 25 && $scrap / max( 1, $lines ) >= 0.35;
+	}
+
+	/** A short line that is not a word or a phrase: up to 8 characters, and not a plain word of four or more letters or a couple of short words. */
+	public static function scrap_line( $line ) {
+		$t = trim( rtrim( (string) $line, "\r" ) );
+		if ( '' === $t || mb_strlen( $t ) > 8 ) {
+			return false;
+		}
+		if ( preg_match( '/^[A-G][#b]?(m|maj|min|sus|dim|aug|add)?\d*(\/[A-G][#b]?)?$/', $t ) || preg_match( '/^\d{1,3}$/', $t ) ) { // a chord or a plain number
+			return false;
+		}
+		if ( preg_match( "/^\p{Lu}?\p{Ll}{3,}[.,!?]?$/u", $t ) || preg_match( "/^\p{L}{2,}[.,!?]? \p{L}{2,}[.,!?]?$/u", $t ) ) {
+			return false;
+		}
+		return true;
 	}
 
 	/** In a note that is mostly file bytes, a line that is not writing: any byte-like character, or a scrap too short to be a word. */
@@ -292,7 +322,7 @@ class Songpress_Journal {
 			$words = (int) preg_match_all( '/\p{L}{2,}/u', $line );
 			return ! ( mb_strlen( $line ) >= 15 && $words >= 3 && $bad / mb_strlen( $line ) < 0.12 );
 		}
-		return mb_strlen( trim( $line ) ) <= 4 && 1 !== preg_match( '/[A-Za-z0-9]{2,}/', $line );
+		return self::scrap_line( $line ) || ( mb_strlen( trim( $line ) ) <= 4 && 1 !== preg_match( '/[A-Za-z0-9]{2,}/', $line ) );
 	}
 
 	/** The text with its unreadable lines taken out: array( clean text, number of lines removed ). Only notes that are mostly file bytes are touched. */
