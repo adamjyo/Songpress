@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.86
+Stable tag: 0.72.87
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.87 =
+* Notes: opening a note is much faster. Pointing at a note in the list reads it ahead of the click, and clicking a result cancels the search that was still running so it no longer holds up the request.
 
 = 0.72.86 =
 * Desktop Works list: the Status column is gone. The status now shows as a chip in the Registered column, in place of Released (green finished or released, gold still being worked on, red taken down). People who do not manage registrations see just the status chip.
