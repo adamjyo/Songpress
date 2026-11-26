@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.113
+Stable tag: 0.72.114
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.114 =
+* Date boxes: a calendar button opens a small calendar inside the page. It closes when you pick a day, press Today or Close, click elsewhere or press Esc.
 
 = 0.72.113 =
 * Date boxes: removed the calendar button that left a picker stuck open in Safari. Dates are typed or pasted.

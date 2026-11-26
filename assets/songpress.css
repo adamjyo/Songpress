@@ -1389,3 +1389,17 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spn-audres.grid b{display:flex;align-items:center;justify-content:center;width:100%;height:64px;border-radius:4px;background:#26221e;color:var(--acc);font:12px system-ui}
 .spn-audres.grid span{font-size:11px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .spn-audbox:focus{outline:none}
+.spe-dwrap{position:relative;display:block}
+.spe-dwrap input{width:100%;box-sizing:border-box;padding-right:34px}
+.spe-dbtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:26px;height:26px;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer;opacity:.7;font-size:13px}
+.spe-dbtn:hover{opacity:1;background:rgba(128,128,128,.2)}
+.spe-cal{position:absolute;z-index:60;left:0;top:calc(100% + 4px);width:240px;padding:8px;border-radius:10px;background:#1c1915;color:#eee6d8;border:1px solid #4a443b;box-shadow:0 8px 24px rgba(0,0,0,.45);font:13px system-ui,sans-serif}
+.spe-calh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.spe-calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.spe-calg i{font-style:normal;opacity:.5;font-size:11px;padding:2px 0}
+.spe-cal button{border:0;background:transparent;color:inherit;border-radius:6px;padding:5px 0;cursor:pointer;font:inherit}
+.spe-cal button:hover{background:rgba(128,128,128,.25)}
+.spe-cal .on{background:var(--acc,#f59e0b);color:#111}
+.spe-cal .td{outline:1px solid var(--acc,#f59e0b)}
+.spe-calf{display:flex;justify-content:space-between;margin-top:6px}
+.spe-calf button{padding:4px 10px}
