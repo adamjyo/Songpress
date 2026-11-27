@@ -16,6 +16,7 @@ class Songpress_Art {
 		add_action( 'wp_ajax_songpress_art_save', array( __CLASS__, 'ajax_save' ) );
 		add_action( 'admin_post_songpress_art_delete', array( __CLASS__, 'handle_delete' ) );
 		add_action( 'wp_ajax_songpress_art_generate', array( __CLASS__, 'ajax_generate' ) );
+		add_action( 'wp_ajax_songpress_art_prov', array( __CLASS__, 'ajax_prov' ) );
 		add_action( 'wp_ajax_songpress_art_key', array( __CLASS__, 'ajax_key' ) );
 		add_action( 'wp_ajax_songpress_art_horde', array( __CLASS__, 'ajax_horde' ) );
 		add_action( 'wp_ajax_songpress_art_claim', array( __CLASS__, 'ajax_claim' ) );
@@ -387,6 +388,57 @@ class Songpress_Art {
 	const HORDE    = 'https://aihorde.net/api/v2/generate/';
 	const HORDEKEY = '0000000000'; // The AI Horde's public "anonymous" key.
 
+	/** The picture services, as shown in Settings. */
+	const PROVIDERS = array(
+		'togetherdev' => 'Together AI, FLUX.2 dev (about 1.5 cents a picture)',
+		'together'    => 'Together AI, Juggernaut Lightning Flux (about 0.2 cents a picture)',
+		'openai'      => 'OpenAI GPT Image (about 1 cent a picture)',
+		'horde'       => 'AI Horde (free, no key, can queue)',
+	);
+
+	public static function provider() {
+		$p = (string) get_option( 'songpress_art_provider', 'togetherdev' );
+		return isset( self::PROVIDERS[ $p ] ) ? $p : 'togetherdev';
+	}
+
+	public static function ajax_prov() {
+		check_ajax_referer( 'songpress_art', 'nonce' );
+		if ( ! Songpress_Caps::can( 'art' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Only Managers can do this.', 'songpress' ) ), 403 );
+		}
+		$p = sanitize_key( wp_unslash( $_POST['provider'] ?? '' ) );
+		if ( ! isset( self::PROVIDERS[ $p ] ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unknown service.', 'songpress' ) ), 400 );
+		}
+		update_option( 'songpress_art_provider', $p, false );
+		wp_send_json_success( array( 'provider' => $p ) );
+	}
+
+	/** The Settings section: which service makes the pictures, and the keys for the ones that need one. */
+	public static function settings_box() {
+		if ( ! Songpress_Caps::can( 'art' ) ) {
+			return '';
+		}
+		$cur = self::provider();
+		$o   = '<section class="sp-app spa-set" id="spa-set"><h3>' . esc_html__( 'Cover art pictures', 'songpress' ) . '</h3><p class="spe-help">' . esc_html__( 'The Art studio sends your picture description to the service chosen here. Keys are kept on this site and never shown again.', 'songpress' ) . '</p>';
+		$o  .= '<label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-sprov">';
+		foreach ( self::PROVIDERS as $k => $label ) {
+			$o .= '<option value="' . esc_attr( $k ) . '"' . selected( $cur, $k, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		$o .= '</select></label>';
+		$fams = array( 'together' => __( 'Together AI key (the third-party sharing switch must be on in your Together organization settings)', 'songpress' ), 'openai' => __( 'OpenAI key', 'songpress' ) );
+		foreach ( $fams as $f => $label ) {
+			$o .= '<div class="spa-sfam" data-fam="' . esc_attr( $f ) . '"><label class="spe-field"><span>' . esc_html( $label ) . '</span><input type="password" autocomplete="off" placeholder="' . esc_attr__( 'Paste key', 'songpress' ) . '"></label><p class="spe-help spa-shint">' . esc_html( self::key_hint( $f ) ) . '</p><button type="button" class="spe-btn" data-act="save">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" data-act="clear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div>';
+		}
+		$o .= '<p class="spe-help" id="spa-smsg" role="status"></p></section>';
+		$js = "(function(){var box=document.getElementById('spa-set');if(!box)return;var N=" . wp_json_encode( wp_create_nonce( 'songpress_art' ) ) . ",A=" . wp_json_encode( admin_url( 'admin-ajax.php' ) ) . ",m=document.getElementById('spa-smsg');"
+			. "function post(a,d){var f=new FormData();f.append('action',a);f.append('nonce',N);for(var k in d)f.append(k,d[k]);return fetch(A,{method:'POST',body:f,credentials:'same-origin'}).then(function(r){return r.json()})}"
+			. "document.getElementById('spa-sprov').onchange=function(){post('songpress_art_prov',{provider:this.value}).then(function(j){m.textContent=j.success?'Saved.':((j.data&&j.data.message)||'Could not save')})};"
+			. "box.querySelectorAll('.spa-sfam').forEach(function(w){var fam=w.getAttribute('data-fam'),inp=w.querySelector('input'),h=w.querySelector('.spa-shint');w.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var clear=b.getAttribute('data-act')==='clear',v=inp.value.trim();if(!clear&&!v){m.textContent='Paste the key first.';return}"
+			. "post('songpress_art_key',{key:clear?'':v,fam:fam}).then(function(j){if(j.success){inp.value='';h.textContent=j.data.hint||'';m.textContent=clear?'Key removed.':'Key saved.'}else m.textContent=(j.data&&j.data.message)||'Could not save the key'})})});})();";
+		return $o . '<script>' . $js . '</script>';
+	}
+
 	private static function tk_key( $fam = 'openai' ) {
 		return trim( (string) get_option( 'together' === $fam ? 'songpress_together_key' : 'songpress_openai_key', '' ) );
 	}
@@ -733,6 +785,8 @@ class Songpress_Art {
 			'upload' => wp_create_nonce( 'songpress_upload' ),
 			'list'   => add_query_arg( array( 'sp_page' => 'art' ), Songpress_Editor::list_url() ),
 			'ai'     => true,
+			'prov'   => self::provider(),
+			'provs'  => self::PROVIDERS,
 			'keys'   => array(
 				'openai'   => array( 'has' => '' !== self::tk_key( 'openai' ), 'hint' => self::key_hint( 'openai' ) ),
 				'together' => array( 'has' => '' !== self::tk_key( 'together' ), 'hint' => self::key_hint( 'together' ) ),
@@ -790,7 +844,7 @@ class Songpress_Art {
 		$o .= '<aside class="spa-right"><div class="spa-head"><h3>' . $tr( 'Layers' ) . '</h3><span><button type="button" class="spa-plus" id="spa-ladd" title="' . esc_attr__( 'New layer', 'songpress' ) . '">+</button></span></div><div class="spa-addmenu" id="spa-addmenu" hidden><button type="button" class="spe-btn" data-add="text">' . $tr( 'Text' ) . '</button><button type="button" class="spe-btn" data-add="rect">' . $tr( 'Box' ) . '</button><button type="button" class="spe-btn" data-add="ellipse">' . $tr( 'Circle' ) . '</button><button type="button" class="spe-btn" id="spa-newdraw">' . $tr( 'Drawing' ) . '</button></div><ul id="spa-layers" class="spa-layers"></ul><div id="spa-props" class="spa-props"></div></aside>';
 		$o .= '</div>';
 		// generate window
-		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . ' <small class="spa-ver">v' . esc_html( SONGPRESS_VERSION ) . '</small></h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class="spe-help">' . $tr( 'Your description is sent to the service you pick below. Press a picture to see it larger; drag one onto the square to put it on the top layer. Every picture is kept in your Media Library.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="openai">' . esc_html__( 'OpenAI GPT Image (about 1 cent a picture, needs a key)', 'songpress' ) . '</option><option value="together">' . esc_html__( 'Together AI, Juggernaut Lightning Flux (about 0.2 cents a picture, needs a key and third-party sharing switched on at Together)', 'songpress' ) . '</option><option value="togetherdev">' . esc_html__( 'Together AI, FLUX.2 dev (about 1.5 cents a picture, same setting needed)', 'songpress' ) . '</option><option value="horde">' . esc_html__( 'AI Horde (free, no key, can queue)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your key for this service (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="Paste key"></label><p class="spe-help" id="spa-keyinfo"></p><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make three', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div><div class="spa-prev" id="spa-prev" hidden><div class="spa-prevbox"><img id="spa-previmg" alt=""><div class="spa-prevbtns"><button type="button" class="spe-save" id="spa-prevtop">' . esc_html__( 'Add to top layer', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevback">' . esc_html__( 'Use as background', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevx">' . esc_html__( 'Close', 'songpress' ) . '</button></div></div></div>';
+		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . ' <small class="spa-ver">v' . esc_html( SONGPRESS_VERSION ) . '</small></h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class="spe-help">' . $tr( 'Your description is sent to the service you pick below. Press a picture to see it larger; drag one onto the square to put it on the top layer. Every picture is kept in your Media Library.' ) . '</p><p class="spe-help"><b id="spa-provname"></b> &middot; <a href="' . esc_url( add_query_arg( 'sp_page', 'settings', Songpress_Editor::list_url() ) ) . '">' . esc_html__( 'Change service or key in Settings', 'songpress' ) . '</a></p><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make three', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div><div class="spa-prev" id="spa-prev" hidden><div class="spa-prevbox"><img id="spa-previmg" alt=""><div class="spa-prevbtns"><button type="button" class="spe-save" id="spa-prevtop">' . esc_html__( 'Add to top layer', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevback">' . esc_html__( 'Use as background', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevx">' . esc_html__( 'Close', 'songpress' ) . '</button></div></div></div>';
 		$o .= '<script type="application/json" id="spa-cfg">' . wp_json_encode( $cfg, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script><script>' . self::js() . '</script></div>';
 		return $o;
 	}
@@ -975,12 +1029,8 @@ $('spa-aibtn').onclick=function(){if(ai.hidden)aiOpen();else ai.hidden=true};
 $('spa-aiclose').onclick=function(){ai.hidden=true};
 function aimsg(t){$('spa-aimsg').textContent=t||''}
 function post(action,data){var fd=new FormData();fd.append('action',action);fd.append('nonce',C.nonce);for(var k in data)fd.append(k,data[k]);return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
-function fam(){var v=$('spa-aiprov').value;return v==='openai'?'openai':(/^together/.test(v)?'together':'')}
-function provUi(){var f=fam(),k=f&&C.keys[f]||{};$('spa-aikey').hidden=!f;$('spa-key').placeholder=k.has?'Paste a new key to replace the saved one':'Paste your '+(f==='together'?'Together AI':'OpenAI')+' key';$('spa-keyinfo').textContent=k.has?(k.hint||'Key saved.'):''}
-$('spa-aiprov').onchange=function(){provUi();try{localStorage.setItem('spa-aiprov',$('spa-aiprov').value)}catch(e){}};
-
-$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your key first.');return}post('songpress_art_key',{key:v,fam:fam()}).then(function(j){if(j.success){C.keys[fam()]={has:true,hint:j.data.hint||''};$('spa-key').value='';provUi();aimsg('Key saved. Press Make three.')}else aimsg((j.data&&j.data.message)||'Could not save the key')})};
-$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:'',fam:fam()}).then(function(){C.keys[fam()]={has:false,hint:''};provUi();aimsg('Key removed.')})};
+function fam(){var v=C.prov;return v==='openai'?'openai':(/^together/.test(v)?'together':'')}
+function provUi(){$('spa-provname').textContent=(C.provs&&C.provs[C.prov])||C.prov}
 function claimPick(u){addPicture(u,'AI picture','top');aimsg('Added on top.');return Promise.resolve()}
 function backPick(u){addPicture(u,'AI picture',true);aimsg('Added to the back layer.')}
 var prevU='';
@@ -995,7 +1045,7 @@ function aiDone(){$('spa-aigo').disabled=false}
 function aiFail(j){aiDone();aimsg((j&&j.data&&j.data.message)||'Nothing came back');if(j&&j.data&&j.data.need_key)provUi()}
 function hordePoll(job,n){if(n>90){aiDone();aimsg('The AI Horde is busy. Try again in a few minutes.');return}
  setTimeout(function(){post('songpress_art_horde',{job:job}).then(function(j){if(!j.success){aiFail(j);return}if(j.data.images){aiDone();aiShowAll(j.data.images);return}aimsg('Waiting in the AI Horde queue'+(j.data.queue?' (place '+j.data.queue+')':'')+(j.data.wait?', about '+j.data.wait+' s':'')+'…');hordePoll(job,n+1)}).catch(function(){aiDone();aimsg('The request failed. Try again.')})},n?4000:500)}
-$('spa-aigo').onclick=function(){var pv=$('spa-aiprov').value;if(pv!=='horde'&&!C.keys[fam()].has){provUi();aimsg('Add your key for this service first.');return}
+$('spa-aigo').onclick=function(){var pv=C.prov;if(pv!=='horde'&&!C.keys[fam()].has){provUi();aimsg('Add your key for this service in Settings first.');return}
  aimsg(pv==='horde'?'Sending to the AI Horde…':'Making three pictures… this takes a few seconds.');$('spa-aigo').disabled=true;var d={prompt:$('spa-prompt').value,cover:$('spa-aicover').checked?1:0};
  if(pv==='horde'){post('songpress_art_horde',d).then(function(j){if(!j.success){aiFail(j);return}hordePoll(j.data.job,0)}).catch(function(){aiDone();aimsg('The request failed. Try again.')});return}
  d.provider=pv;post('songpress_art_generate',d).then(function(j){if(!j.success){aiFail(j);return}aiDone();aiShowAll(j.data.images)}).catch(function(){aiDone();aimsg('The request failed. Try again.')})};
