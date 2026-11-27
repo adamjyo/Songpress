@@ -552,16 +552,18 @@ class Songpress_Art {
 			return '<div class="sp-app"><p class="songpress-note">' . esc_html__( 'That art project does not exist.', 'songpress' ) . '</p></div>';
 		}
 		$serial = '';
-		$sid    = $p ? (int) $p->song_id : ( isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0 ); // phpcs:ignore WordPress.Security.NonceVerification
+		$from   = ( ! $p && isset( $_GET['from'] ) ) ? self::get( absint( $_GET['from'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification
+		$sid    = $p ? (int) $p->song_id : ( $from ? (int) $from->song_id : ( isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		if ( $sid && ( $s = Songpress_Songs::get( $sid ) ) ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition
 			$serial = $s->serial;
 		}
-		$layers = $p ? self::norm_layers( json_decode( (string) $p->layers, true ) ) : array(
+		$src    = $p ? $p : $from;
+		$layers = $src ? self::norm_layers( json_decode( (string) $src->layers, true ) ) : array(
 			array_merge( self::norm_layer( array( 'type' => 'canvas', 'name' => 'Canvas', 'x' => 0, 'y' => 0, 'w' => 100, 'h' => 100 ) ), array( 'color' => '#14161a' ) ),
 		);
 		$cfg  = array(
 			'id'     => (int) ( $p ? $p->id : 0 ),
-			'name'   => $p ? $p->name : ( $s->title ?? '' ),
+			'name'   => $p ? $p->name : ( $from ? sprintf( /* translators: %s: art project name */ __( '%s (new)', 'songpress' ), $from->name ) : ( $s->title ?? '' ) ),
 			'serial' => $serial,
 			'layers' => $layers,
 			'ajax'   => admin_url( 'admin-ajax.php' ),
@@ -584,7 +586,7 @@ class Songpress_Art {
 		$o .= '<aside class="spa-projects"><div class="spa-head"><h3>' . $tr( 'Projects' ) . '</h3><a class="spa-plus" href="' . esc_url( add_query_arg( array( 'sp_page' => 'art', 'art' => 'new' ), Songpress_Editor::list_url() ) ) . '" title="' . esc_attr__( 'New art', 'songpress' ) . '">+</a></div><ul class="spa-plist" id="spa-plist">';
 		foreach ( self::all() as $r ) {
 			$th = '' !== (string) $r->preview_url ? (string) $r->preview_url : self::thumb_for( $r->id );
-			$o .= '<li data-id="' . (int) $r->id . '"' . ( $p && (int) $p->id === (int) $r->id ? ' class="on"' : '' ) . '><a href="' . esc_url( add_query_arg( array( 'sp_page' => 'art', 'art' => (int) $r->id ), Songpress_Editor::list_url() ) ) . '"><span class="spa-pt">' . ( '' !== $th ? '<img src="' . esc_url( $th ) . '" alt="" loading="lazy">' : '' ) . '</span><span class="spa-pn">' . esc_html( $r->name ) . ( '' !== (string) $r->serial ? '<small>' . esc_html( $r->serial ) . '</small>' : '' ) . '</span></a></li>';
+			$o .= '<li data-id="' . (int) $r->id . '" data-song="' . (int) $r->song_id . '" data-serial="' . esc_attr( (string) $r->serial ) . '" data-edit="' . ( (int) $r->song_id ? esc_url( Songpress_Editor::edit_url( (int) $r->song_id ) ) : '' ) . '"' . ( $p && (int) $p->id === (int) $r->id ? ' class="on"' : '' ) . '><a href="' . esc_url( add_query_arg( array( 'sp_page' => 'art', 'art' => (int) $r->id ), Songpress_Editor::list_url() ) ) . '"><span class="spa-pt">' . ( '' !== $th ? '<img src="' . esc_url( $th ) . '" alt="" loading="lazy">' : '' ) . '</span><span class="spa-pn">' . esc_html( $r->name ) . ( '' !== (string) $r->serial ? '<small>' . esc_html( $r->serial ) . '</small>' : '' ) . '</span></a></li>';
 		}
 		$o .= '</ul>';
 		$o .= '<div class="spa-head"><h3>' . $tr( 'Elements' ) . '</h3><button type="button" class="spa-plus" id="spa-elsave" title="' . esc_attr__( 'Save the selected layer to reuse on other art', 'songpress' ) . '">+</button></div><div class="spa-els" id="spa-els"></div>';
@@ -883,7 +885,18 @@ document.addEventListener('keydown',function(e){var tg=(e.target.tagName||'');if
 /* projects on the left */
 function refreshList(cur){document.querySelectorAll('#spa-plist li').forEach(function(li){li.classList.toggle('on',+li.getAttribute('data-id')===cur)});var has=document.querySelector('#spa-plist li[data-id="'+cur+'"]');if(!has){var li=document.createElement('li');li.setAttribute('data-id',cur);li.className='on';li.innerHTML='<a href="'+esc(location.href)+'"><span class="spa-pt"></span><span class="spa-pn">x</span></a>';$('spa-plist').insertBefore(li,$('spa-plist').firstChild);has=li}
  var t=thumbData(),sp=has.querySelector('.spa-pt');if(t)sp.innerHTML='<img alt="" src="'+t+'">';var pn=has.querySelector('.spa-pn');if(pn&&pn.firstChild)pn.firstChild.nodeValue=$('spa-name').value||'Untitled art'}
-$('spa-plist').addEventListener('click',function(e){var a=e.target.closest('a');if(!a)return;if(dirty&&!window.confirm('This art has changes that are not saved. Leave without saving?')){e.preventDefault();return}dirty=false});
+$('spa-plist').addEventListener('click',function(e){var a=e.target.closest('a');if(!a)return;var li=a.closest('li');if(li&&+li.getAttribute('data-id')===id)return;e.preventDefault();askOpen(li,a.href)});
+function askOpen(li,href){var old=document.getElementById('spa-ask');if(old)old.remove();var nm=li.querySelector('.spa-pn').firstChild.nodeValue,ser=li.getAttribute('data-serial')||'',ed=li.getAttribute('data-edit')||'',pid=li.getAttribute('data-id');
+ var d=document.createElement('div');d.id='spa-ask';d.className='spa-ask';d.innerHTML='<div class="spa-askbox" role="dialog"><h4></h4><p></p><div class="spa-askbtns"></div></div>';document.body.appendChild(d);
+ d.querySelector('h4').textContent=nm;d.querySelector('p').textContent='Is this a new project? A new one starts as a copy and keeps '+(ser?'the serial '+ser:'this one\'s details')+'. Or update the old one.';
+ var bx=d.querySelector('.spa-askbtns');
+ function btn(t,cls,fn){var b=document.createElement('button');b.type='button';b.className=cls;b.textContent=t;b.onclick=fn;bx.appendChild(b)}
+ function leave(u){if(dirty&&!window.confirm('This art has changes that are not saved. Leave without saving?'))return;dirty=false;location.href=u}
+ btn('New project'+(ser?' ('+ser+')':''),'spe-save',function(){leave(C.list+(C.list.indexOf('?')<0?'?':'&')+'art=new&from='+pid)});
+ btn('Update the old one','spe-btn',function(){leave(href)});
+ if(ed)btn('Open its work in the Works editor','spe-btn',function(){leave(ed)});
+ btn('Cancel','spe-btn',function(){d.remove()});
+ d.addEventListener('click',function(e){if(e.target===d)d.remove()});document.addEventListener('keydown',function k(e){if(e.key==='Escape'){d.remove();document.removeEventListener('keydown',k)}})}
 $('spa-plist').addEventListener('dblclick',function(e){var li=e.target.closest('li');if(!li||!e.target.closest('.spa-pn'))return;e.preventDefault();var pid=+li.getAttribute('data-id'),cur=li.querySelector('.spa-pn').firstChild.nodeValue,v=window.prompt('Rename this art',cur);if(!v||!v.trim()||v===cur)return;post('songpress_art_rename',{id:pid,name:v.trim()}).then(function(j){if(j.success){li.querySelector('.spa-pn').firstChild.nodeValue=j.data.name;if(pid===id)$('spa-name').value=j.data.name}else say((j.data&&j.data.message)||'Could not rename')})});
 /* elements and templates */
 var LIB={el:[],tpl:[],logo:[]};
