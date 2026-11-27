@@ -1459,3 +1459,10 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spa-askbox{background:var(--sp-bg,#1b1d22);color:var(--sp-fg,#eee);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .spa-askbox h4{margin:0 0 8px;font-size:18px}.spa-askbox p{margin:0 0 14px;opacity:.85;line-height:1.4}
 .spa-askbtns{display:flex;flex-direction:column;gap:8px}.spa-askbtns button{width:100%;text-align:center}
+
+.spa-aigrid{grid-template-columns:repeat(3,1fr)}
+.spa-prev{position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
+.spa-prev[hidden]{display:none!important}
+.spa-prevbox{display:flex;flex-direction:column;gap:10px;align-items:center;max-width:min(92vw,900px)}
+.spa-prevbox img{max-width:100%;max-height:78vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.spa-prevbtns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}

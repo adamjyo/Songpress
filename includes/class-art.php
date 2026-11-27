@@ -382,12 +382,12 @@ class Songpress_Art {
 
 	/* ---------- AI pictures (free services that put no brand on the picture) ---------- */
 
-	const HF_URL   = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
+	const TOGETHER = 'https://api.together.xyz/v1/images/generations';
 	const HORDE    = 'https://aihorde.net/api/v2/generate/';
 	const HORDEKEY = '0000000000'; // The AI Horde's public "anonymous" key.
 
-	private static function hf_key() {
-		return trim( (string) get_option( 'songpress_hf_key', '' ) );
+	private static function tk_key() {
+		return trim( (string) get_option( 'songpress_together_key', '' ) );
 	}
 
 	public static function ajax_key() {
@@ -397,9 +397,9 @@ class Songpress_Art {
 		}
 		$k = preg_replace( '/[^A-Za-z0-9_\-.]/', '', (string) wp_unslash( $_POST['key'] ?? '' ) );
 		if ( '' === $k ) {
-			delete_option( 'songpress_hf_key' );
+			delete_option( 'songpress_together_key' );
 		} else {
-			update_option( 'songpress_hf_key', $k, false );
+			update_option( 'songpress_together_key', $k, false );
 		}
 		wp_send_json_success( array( 'has' => '' !== $k ) );
 	}
@@ -415,23 +415,32 @@ class Songpress_Art {
 		return $prompt;
 	}
 
-	/** Put a downloaded picture file into the Media Library and answer with its address. */
-	private static function keep_file( $tmp ) {
-		$info = @getimagesize( $tmp ); // phpcs:ignore
-		if ( ! $info || 0 !== strpos( (string) $info['mime'], 'image/' ) ) {
-			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => __( 'No picture came back. Try again.', 'songpress' ) ), 502 );
-		}
+	/** Put downloaded picture files into the Media Library and answer with their addresses. */
+	private static function keep_files( $tmps ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
-		$ext = 'image/png' === $info['mime'] ? 'png' : ( 'image/webp' === $info['mime'] ? 'webp' : 'jpg' );
-		$att = media_handle_sideload( array( 'name' => 'songpress-ai-' . gmdate( 'Ymd-His' ) . '.' . $ext, 'tmp_name' => $tmp ), 0 );
-		if ( is_wp_error( $att ) ) {
-			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => $att->get_error_message() ), 400 );
+		$urls = array();
+		$err  = '';
+		foreach ( (array) $tmps as $i => $tmp ) {
+			$info = @getimagesize( $tmp ); // phpcs:ignore
+			if ( ! $info || 0 !== strpos( (string) $info['mime'], 'image/' ) ) {
+				@unlink( $tmp ); // phpcs:ignore
+				continue;
+			}
+			$ext = 'image/png' === $info['mime'] ? 'png' : ( 'image/webp' === $info['mime'] ? 'webp' : 'jpg' );
+			$att = media_handle_sideload( array( 'name' => 'songpress-ai-' . gmdate( 'Ymd-His' ) . '-' . ( (int) $i + 1 ) . '.' . $ext, 'tmp_name' => $tmp ), 0 );
+			if ( is_wp_error( $att ) ) {
+				$err = $att->get_error_message();
+				@unlink( $tmp ); // phpcs:ignore
+				continue;
+			}
+			$urls[] = (string) wp_get_attachment_url( $att );
 		}
-		wp_send_json_success( array( 'images' => array( (string) wp_get_attachment_url( $att ) ) ) );
+		if ( ! $urls ) {
+			wp_send_json_error( array( 'message' => '' !== $err ? $err : __( 'No picture came back. Try again.', 'songpress' ) ), 502 );
+		}
+		wp_send_json_success( array( 'images' => $urls ) );
 	}
 
 	private static function guard() {
@@ -444,36 +453,46 @@ class Songpress_Art {
 		}
 	}
 
-	/** Hugging Face FLUX.1-schnell (free token): one picture per press. */
+	/** Together AI, FLUX.1 Schnell: three versions per press. Needs the site's own Together key. */
 	public static function ajax_generate() {
 		self::guard();
 		$prompt = self::prompt_in();
-		$tmp    = wp_tempnam( 'songpress-ai.jpg' );
-		{
-			$key = self::hf_key();
-			if ( '' === $key ) {
-				wp_send_json_error( array( 'message' => __( 'Add your free Hugging Face token first.', 'songpress' ), 'need_key' => true ), 400 );
-			}
-			$r = wp_remote_post( self::HF_URL, array( 'timeout' => 120, 'stream' => true, 'filename' => $tmp, 'headers' => array( 'Authorization' => 'Bearer ' . $key, 'Content-Type' => 'application/json', 'Accept' => 'image/png' ), 'body' => wp_json_encode( array( 'inputs' => $prompt, 'parameters' => array( 'width' => 1024, 'height' => 1024, 'seed' => wp_rand( 1, 999999 ) ) ) ) ) );
+		$key    = self::tk_key();
+		if ( '' === $key ) {
+			wp_send_json_error( array( 'message' => __( 'Add your Together AI key first.', 'songpress' ), 'need_key' => true ), 400 );
 		}
+		$r = wp_remote_post( self::TOGETHER, array( 'timeout' => 120, 'headers' => array( 'Authorization' => 'Bearer ' . $key, 'Content-Type' => 'application/json' ), 'body' => wp_json_encode( array( 'model' => 'black-forest-labs/FLUX.1-schnell', 'prompt' => $prompt, 'width' => 1024, 'height' => 1024, 'steps' => 4, 'n' => 3, 'response_format' => 'url' ) ) ) );
 		if ( is_wp_error( $r ) ) {
-			@unlink( $tmp ); // phpcs:ignore
 			wp_send_json_error( array( 'message' => $r->get_error_message() ), 502 );
 		}
 		$code = (int) wp_remote_retrieve_response_code( $r );
+		$j    = json_decode( wp_remote_retrieve_body( $r ), true );
 		if ( 401 === $code || 403 === $code ) {
-			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => __( 'The service did not accept the token.', 'songpress' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Together AI did not accept the key.', 'songpress' ) ), 403 );
 		}
-		if ( 429 === $code || 402 === $code ) {
-			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => __( 'The free Hugging Face allowance for this month or minute is used up.', 'songpress' ) ), 429 );
+		if ( 402 === $code || 429 === $code ) {
+			wp_send_json_error( array( 'message' => 402 === $code ? __( 'Your Together AI credit is used up. Add a few dollars on their site.', 'songpress' ) : __( 'Together AI says too many requests. Wait a moment and press again.', 'songpress' ) ), 429 );
 		}
-		if ( $code >= 300 ) {
-			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => sprintf( /* translators: %d: HTTP status */ __( 'No picture came back (the service answered %d). Try again.', 'songpress' ), $code ) ), 502 );
+		if ( $code >= 300 || empty( $j['data'] ) || ! is_array( $j['data'] ) ) {
+			$m = is_array( $j ) ? (string) ( $j['error']['message'] ?? $j['error'] ?? '' ) : '';
+			wp_send_json_error( array( 'message' => '' !== $m ? $m : sprintf( /* translators: %d: HTTP status */ __( 'No picture came back (Together AI answered %d). Try again.', 'songpress' ), $code ) ), 502 );
 		}
-		self::keep_file( $tmp );
+		$tmps = array();
+		foreach ( $j['data'] as $d ) {
+			if ( ! empty( $d['url'] ) && 0 === strpos( (string) $d['url'], 'https://' ) ) {
+				$t = download_url( (string) $d['url'], 60 );
+				if ( ! is_wp_error( $t ) ) {
+					$tmps[] = $t;
+				}
+			} elseif ( ! empty( $d['b64_json'] ) ) {
+				$bin = base64_decode( (string) $d['b64_json'], true ); // phpcs:ignore
+				$t   = wp_tempnam( 'songpress-ai.png' );
+				if ( false !== $bin && $t && false !== file_put_contents( $t, $bin ) ) { // phpcs:ignore
+					$tmps[] = $t;
+				}
+			}
+		}
+		self::keep_files( $tmps );
 	}
 
 	/** AI Horde (no key, volunteer GPUs): start a job, then check until it is ready. */
@@ -482,7 +501,7 @@ class Songpress_Art {
 		$hdr = array( 'apikey' => self::HORDEKEY, 'Client-Agent' => 'songpress:' . SONGPRESS_VERSION . ':wordpress', 'Content-Type' => 'application/json' );
 		$job = sanitize_text_field( wp_unslash( $_POST['job'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		if ( '' === $job ) {
-			$r = wp_remote_post( self::HORDE . 'async', array( 'timeout' => 30, 'headers' => $hdr, 'body' => wp_json_encode( array( 'prompt' => self::prompt_in(), 'params' => array( 'width' => 512, 'height' => 512, 'steps' => 25, 'n' => 1, 'sampler_name' => 'k_euler_a', 'cfg_scale' => 7 ), 'nsfw' => false, 'r2' => true, 'shared' => false ) ) ) );
+			$r = wp_remote_post( self::HORDE . 'async', array( 'timeout' => 30, 'headers' => $hdr, 'body' => wp_json_encode( array( 'prompt' => self::prompt_in(), 'params' => array( 'width' => 512, 'height' => 512, 'steps' => 25, 'n' => 3, 'sampler_name' => 'k_euler_a', 'cfg_scale' => 7 ), 'nsfw' => false, 'r2' => true, 'shared' => false ) ) ) );
 			$j = is_wp_error( $r ) ? array() : json_decode( wp_remote_retrieve_body( $r ), true );
 			if ( empty( $j['id'] ) ) {
 				$m = is_array( $j ) && ! empty( $j['message'] ) ? (string) $j['message'] : ( is_wp_error( $r ) ? $r->get_error_message() : __( 'The AI Horde did not accept the request.', 'songpress' ) );
@@ -499,16 +518,19 @@ class Songpress_Art {
 		if ( ! empty( $j['faulted'] ) ) {
 			wp_send_json_error( array( 'message' => __( 'The AI Horde could not make that picture. Try again.', 'songpress' ) ), 502 );
 		}
-		if ( ! empty( $j['done'] ) && ! empty( $j['generations'][0]['img'] ) ) {
-			$u = (string) $j['generations'][0]['img'];
-			if ( 0 !== strpos( $u, 'https://' ) ) {
-				wp_send_json_error( array( 'message' => __( 'No picture came back. Try again.', 'songpress' ) ), 502 );
+		if ( ! empty( $j['done'] ) && ! empty( $j['generations'] ) && is_array( $j['generations'] ) ) {
+			$tmps = array();
+			foreach ( $j['generations'] as $g ) {
+				$u = (string) ( $g['img'] ?? '' );
+				if ( 0 !== strpos( $u, 'https://' ) ) {
+					continue;
+				}
+				$t = download_url( $u, 60 );
+				if ( ! is_wp_error( $t ) ) {
+					$tmps[] = $t;
+				}
 			}
-			$tmp = download_url( $u, 60 );
-			if ( is_wp_error( $tmp ) ) {
-				wp_send_json_error( array( 'message' => $tmp->get_error_message() ), 502 );
-			}
-			self::keep_file( $tmp );
+			self::keep_files( $tmps );
 		}
 		wp_send_json_success( array( 'wait' => (int) ( $j['wait_time'] ?? 0 ), 'queue' => (int) ( $j['queue_position'] ?? 0 ) ) );
 	}
@@ -610,7 +632,7 @@ class Songpress_Art {
 			'upload' => wp_create_nonce( 'songpress_upload' ),
 			'list'   => add_query_arg( array( 'sp_page' => 'art' ), Songpress_Editor::list_url() ),
 			'ai'     => true,
-			'hf'     => '' !== self::hf_key(),
+			'tk'     => '' !== self::tk_key(),
 			'prompt' => (string) ( $s->art_prompt ?? '' ),
 			'logos'  => self::logos(),
 		);
@@ -664,7 +686,7 @@ class Songpress_Art {
 		$o .= '<aside class="spa-right"><div class="spa-head"><h3>' . $tr( 'Layers' ) . '</h3><span><button type="button" class="spa-plus" id="spa-ladd" title="' . esc_attr__( 'New layer', 'songpress' ) . '">+</button></span></div><div class="spa-addmenu" id="spa-addmenu" hidden><button type="button" class="spe-btn" data-add="text">' . $tr( 'Text' ) . '</button><button type="button" class="spe-btn" data-add="rect">' . $tr( 'Box' ) . '</button><button type="button" class="spe-btn" data-add="ellipse">' . $tr( 'Circle' ) . '</button><button type="button" class="spe-btn" id="spa-newdraw">' . $tr( 'Drawing' ) . '</button></div><ul id="spa-layers" class="spa-layers"></ul><div id="spa-props" class="spa-props"></div></aside>';
 		$o .= '</div>';
 		// generate window
-		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . '</h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class=\"spe-help\">' . $tr( 'Your description is sent to the service you pick below. Each picture is kept in your Media Library; drag one onto the square (or press it) to put it on the back layer.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="horde">' . esc_html__( 'AI Horde (free, no key, no watermark, can queue)', 'songpress' ) . '</option><option value="hf">' . esc_html__( 'Hugging Face FLUX.1 (free token, no watermark)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your free Hugging Face token (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="hf_…"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save token', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove token', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make a picture', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div>';
+		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . '</h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class=\"spe-help\">' . $tr( 'Your description is sent to the service you pick below. Press a picture to see it larger; drag one onto the square to put it on the top layer. Every picture is kept in your Media Library.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="together">' . esc_html__( 'Together AI FLUX.1 (about 0.3 cents a picture, needs a key)', 'songpress' ) . '</option><option value="horde">' . esc_html__( 'AI Horde (free, no key, can queue)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your Together AI key (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="Paste key"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make three', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div><div class="spa-prev" id="spa-prev" hidden><div class="spa-prevbox"><img id="spa-previmg" alt=""><div class="spa-prevbtns"><button type="button" class="spe-save" id="spa-prevtop">' . esc_html__( 'Add to top layer', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevback">' . esc_html__( 'Use as background', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevx">' . esc_html__( 'Close', 'songpress' ) . '</button></div></div></div>';
 		$o .= '<script type="application/json" id="spa-cfg">' . wp_json_encode( $cfg, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script><script>' . self::js() . '</script></div>';
 		return $o;
 	}
@@ -765,7 +787,7 @@ function addLayer(n){snap();var l=blank(n);L.push(l);sel=L.length-1;dirty=true;a
 function addKind(t){$('spa-addmenu').hidden=true;if(t==='text'){addLayer({type:'text',name:'Text',x:10,y:40,w:80,h:18,text:'Your words',font:'Impact',size:60,color:'#ffffff'});var tx=$('spa-text');if(tx){tx.focus();tx.select()}}else addLayer({type:'shape',name:t==='rect'?'Box':'Circle',x:30,y:30,w:40,h:40,color:'#f5a623',shape:t==='ellipse'?'ellipse':'rect'})}
 document.querySelectorAll('[data-add]').forEach(function(b){b.onclick=function(){addKind(b.getAttribute('data-add'))}});
 $('spa-addtext').onclick=function(){setTool('move');addKind('text')};
-function addPicture(url,name,asBack){var im=new Image();im.onload=function(){var ar=im.naturalWidth/im.naturalHeight,w=asBack?100:50,h=w/ar;snap();var l=blank({type:'image',name:name||'Picture',src:url,x:asBack?0:25,y:asBack?0:25,w:w,h:h});if(asBack){if(h<100){l.h=100;l.w=100*ar;l.x=(100-l.w)/2}else{l.y=(100-h)/2}L.splice(1,0,l);sel=1}else{L.push(l);sel=L.length-1}dirty=true;say('');all()};im.src=url}
+function addPicture(url,name,asBack){var im=new Image();im.onload=function(){var ar=im.naturalWidth/im.naturalHeight,top=asBack==='top',w=asBack===true?100:(top?(ar>=1?100:100*ar):50),h=w/ar;if(top)asBack=false;snap();var l=blank({type:'image',name:name||'Picture',src:url,x:asBack?0:(top?(100-w)/2:25),y:asBack?0:(top?(100-h)/2:25),w:w,h:h});if(asBack){if(h<100){l.h=100;l.w=100*ar;l.x=(100-l.w)/2}else{l.y=(100-h)/2}L.splice(1,0,l);sel=1}else{L.push(l);sel=L.length-1}dirty=true;say('');all()};im.src=url}
 function uploadPics(files){Array.prototype.slice.call(files).reduce(function(pr,f){return pr.then(function(){say('Uploading '+f.name+'…');var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',C.upload);fd.append('file',f);
  return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){say((j.data&&j.data.message)||'Upload failed');return}addPicture(j.data.url,f.name.replace(/\.[^.]+$/,''))})})},Promise.resolve()).catch(function(){say('Upload failed')})}
 $('spa-file').onchange=function(e){uploadPics(e.target.files);e.target.value=''};
@@ -848,22 +870,29 @@ $('spa-aibtn').onclick=function(){if(ai.hidden)aiOpen();else ai.hidden=true};
 $('spa-aiclose').onclick=function(){ai.hidden=true};
 function aimsg(t){$('spa-aimsg').textContent=t||''}
 function post(action,data){var fd=new FormData();fd.append('action',action);fd.append('nonce',C.nonce);for(var k in data)fd.append(k,data[k]);return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
-function provUi(){$('spa-aikey').hidden=!($('spa-aiprov').value==='hf'&&!C.hf)}
+function provUi(){$('spa-aikey').hidden=!($('spa-aiprov').value==='together'&&!C.tk)}
 $('spa-aiprov').onchange=function(){provUi();try{localStorage.setItem('spa-aiprov',$('spa-aiprov').value)}catch(e){}};
 try{var sp=localStorage.getItem('spa-aiprov');if(sp&&$('spa-aiprov').querySelector('option[value="'+sp+'"]'))$('spa-aiprov').value=sp}catch(e){}
-$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your token first.');return}post('songpress_art_key',{key:v}).then(function(j){if(j.success){C.hf=true;$('spa-key').value='';provUi();aimsg('Token saved. Press Make a picture.')}else aimsg((j.data&&j.data.message)||'Could not save the token')})};
-$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:''}).then(function(){C.hf=false;provUi();aimsg('Token removed.')})};
-function claimPick(u){addPicture(u,'AI picture',true);aimsg('Added to the back layer.');return Promise.resolve()}
+$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your key first.');return}post('songpress_art_key',{key:v}).then(function(j){if(j.success){C.tk=true;$('spa-key').value='';provUi();aimsg('Key saved. Press Make three.')}else aimsg((j.data&&j.data.message)||'Could not save the key')})};
+$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:''}).then(function(){C.tk=false;provUi();aimsg('Key removed.')})};
+function claimPick(u){addPicture(u,'AI picture','top');aimsg('Added on top.');return Promise.resolve()}
+function backPick(u){addPicture(u,'AI picture',true);aimsg('Added to the back layer.')}
+var prevU='';
+function prevOpen(u){prevU=u;$('spa-previmg').src=u;$('spa-prev').hidden=false}
+function prevClose(){$('spa-prev').hidden=true;$('spa-previmg').removeAttribute('src')}
+$('spa-prevx').onclick=prevClose;$('spa-prev').addEventListener('click',function(e){if(e.target===$('spa-prev'))prevClose()});
+$('spa-prevtop').onclick=function(){claimPick(prevU);prevClose()};$('spa-prevback').onclick=function(){backPick(prevU);prevClose()};
 function aiShow(u){var g=$('spa-aigrid'),b=document.createElement('button');b.type='button';b.className='spa-aipic';b.draggable=true;var im=document.createElement('img');im.src=u;im.alt='';b.appendChild(im);
- b.addEventListener('dragstart',function(e){e.dataTransfer.setData('application/x-spa-pick',u);e.dataTransfer.effectAllowed='copy'});b.onclick=function(){claimPick(u)};g.insertBefore(b,g.firstChild);aimsg('Drag it onto the square, or press it, to put it on the back layer. Press Make a picture for another.')}
+ b.addEventListener('dragstart',function(e){e.dataTransfer.setData('application/x-spa-pick',u);e.dataTransfer.effectAllowed='copy'});b.onclick=function(){prevOpen(u)};g.insertBefore(b,g.firstChild)}
+function aiShowAll(a){a.slice().reverse().forEach(aiShow);aimsg('Press a picture to see it larger, or drag one onto the square to put it on the top layer.')}
 function aiDone(){$('spa-aigo').disabled=false}
 function aiFail(j){aiDone();aimsg((j&&j.data&&j.data.message)||'Nothing came back');if(j&&j.data&&j.data.need_key)provUi()}
 function hordePoll(job,n){if(n>90){aiDone();aimsg('The AI Horde is busy. Try again in a few minutes.');return}
- setTimeout(function(){post('songpress_art_horde',{job:job}).then(function(j){if(!j.success){aiFail(j);return}if(j.data.images){aiDone();aiShow(j.data.images[0]);return}aimsg('Waiting in the AI Horde queue'+(j.data.queue?' (place '+j.data.queue+')':'')+(j.data.wait?', about '+j.data.wait+' s':'')+'…');hordePoll(job,n+1)}).catch(function(){aiDone();aimsg('The request failed. Try again.')})},n?4000:500)}
-$('spa-aigo').onclick=function(){var pv=$('spa-aiprov').value;if(pv==='hf'&&!C.hf){provUi();aimsg('Add your free Hugging Face token first.');return}
- aimsg(pv==='horde'?'Sending to the AI Horde…':'Making a picture… this can take up to a minute.');$('spa-aigo').disabled=true;var d={prompt:$('spa-prompt').value,cover:$('spa-aicover').checked?1:0};
+ setTimeout(function(){post('songpress_art_horde',{job:job}).then(function(j){if(!j.success){aiFail(j);return}if(j.data.images){aiDone();aiShowAll(j.data.images);return}aimsg('Waiting in the AI Horde queue'+(j.data.queue?' (place '+j.data.queue+')':'')+(j.data.wait?', about '+j.data.wait+' s':'')+'…');hordePoll(job,n+1)}).catch(function(){aiDone();aimsg('The request failed. Try again.')})},n?4000:500)}
+$('spa-aigo').onclick=function(){var pv=$('spa-aiprov').value;if(pv==='together'&&!C.tk){provUi();aimsg('Add your Together AI key first.');return}
+ aimsg(pv==='horde'?'Sending to the AI Horde…':'Making three pictures… this takes a few seconds.');$('spa-aigo').disabled=true;var d={prompt:$('spa-prompt').value,cover:$('spa-aicover').checked?1:0};
  if(pv==='horde'){post('songpress_art_horde',d).then(function(j){if(!j.success){aiFail(j);return}hordePoll(j.data.job,0)}).catch(function(){aiDone();aimsg('The request failed. Try again.')});return}
- d.provider=pv;post('songpress_art_generate',d).then(function(j){if(!j.success){aiFail(j);return}aiDone();aiShow(j.data.images[0])}).catch(function(){aiDone();aimsg('The request failed. Try again.')})};
+ post('songpress_art_generate',d).then(function(j){if(!j.success){aiFail(j);return}aiDone();aiShowAll(j.data.images)}).catch(function(){aiDone();aimsg('The request failed. Try again.')})};
 /* drag to move, corner to resize */
 var hitc=document.createElement('canvas');hitc.width=hitc.height=200;
 function inBox(l,p){return p.x>=l.x&&p.x<=l.x+l.w&&p.y>=l.y&&p.y<=l.y+l.h}
