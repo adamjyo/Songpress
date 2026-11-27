@@ -866,7 +866,7 @@ function loadMenuFonts(){if(fontMenuLoaded)return;fontMenuLoaded=true;var fam=FO
 function fld(label,key,type,extra){var l=L[sel];return '<label class="spe-field"><span>'+label+'</span><input data-k="'+key+'" type="'+(type||'number')+'" '+(extra||'')+' value="'+esc(l[key]==null?'':l[key])+'"></label>'}
 function props(){
  var l=L[sel],p=$('spa-props');if(!l){p.innerHTML='';return}
- var h='',pos='<details class="spa-pos"><summary>Position and size</summary><div class="spa-grid">'+fld('X %','x','number','step="0.5"')+fld('Y %','y','number','step="0.5"')+fld('Width %','w','number','step="0.5"')+fld('Height %','h','number','step="0.5"')+fld('Opacity','opacity','number','min="0" max="1" step="0.05"')+fld('Rotate °','rotate','number','step="1"')+'</div></details>';
+ var h='',pos='<div class="spa-pos"><div class="spa-grid">'+fld('X %','x','number','step="0.5"')+fld('Y %','y','number','step="0.5"')+fld('Width %','w','number','step="0.5"')+fld('Height %','h','number','step="0.5"')+fld('Opacity','opacity','number','min="0" max="1" step="0.05"')+fld('Rotate °','rotate','number','step="1"')+'</div></div>';
  if(l.type==='canvas'){h='<h4>Canvas</h4>'+fld('Colour','color','color')}
  else if(l.type==='text'){
   h='<h4>Text</h4><label class="spe-field"><textarea id="spa-text" data-k="text" rows="3">'+esc(l.text)+'</textarea></label>'
@@ -875,7 +875,7 @@ function props(){
    +'<div class="spa-fmt"><button type="button" data-t="bold" class="'+(l.bold?'on':'')+'" title="Bold"><b>B</b></button><button type="button" data-t="italic" class="'+(l.italic?'on':'')+'" title="Italic"><i>I</i></button><button type="button" data-t="caps" class="'+(l.caps?'on':'')+'" title="All caps"><svg viewBox="0 0 24 16" width="22" height="14"><path d="M2.2 14L6 2.2 9.8 14M3.6 9.6h4.8M14.2 14L18 2.2 21.8 14M15.6 9.6h4.8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button></div>'
    +'<label class="spe-field"><span>Shadow</span><input data-k="shadow" type="range" min="0" max="1" step="0.05" value="'+l.shadow+'"></label>'
    +'<div class="spa-grid"><label class="spe-field"><span>Align</span><select data-k="align"><option>left</option><option>center</option><option>right</option></select></label><label class="spe-field"><span>Vertical</span><select data-k="valign"><option>top</option><option>middle</option><option>bottom</option></select></label><label class="spe-field"><span>Direction</span><select data-k="flow"><option value="">Horizontal</option><option value="stack">Stack</option><option value="turn">Turn</option></select></label></div>'+pos}
- else{h='<h4>'+esc(lname(l))+'</h4>';if(l.type==='shape')h+=fld('Colour','color','color');if(l.type==='image')h+='<p class="spe-help">Drag on the square to move; the corner handle scales it.</p>';h+=pos}
+ else{h='';if(l.type==='shape')h+=fld('Colour','color','color');h+=pos}
  p.innerHTML=h;
  p.querySelectorAll('[data-k]').forEach(function(e){var k=e.getAttribute('data-k');if(e.tagName==='SELECT'){e.value=l[k]}
   var fresh=true;e.addEventListener('focus',function(){fresh=true});
