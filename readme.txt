@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.131
+Stable tag: 0.72.132
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.132 =
+* Art studio: Together AI needs third-party data sharing switched on for every image model, so Generate now uses OpenAI GPT Image instead (your own OpenAI key, low quality 1024 px, three versions per press). AI Horde stays as the free option.
 
 = 0.72.131 =
 * Art studio: a Together refusal that is not about the key (for example third-party data sharing not enabled) now shows Together's own message instead of saying the key was refused.
