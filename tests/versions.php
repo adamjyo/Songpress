@@ -453,6 +453,8 @@ unlink( $mf );
 $sh = '<html><body><script type="application/json" id="combinedStatsData">{"dsps":[{"key":"spotify","label":"Spotify"},{"key":"apple","label":"Apple Music"}],"series":{"daily":[{"category":"2026-02-01","spotify":10,"apple":4},{"category":"2026-02-02","spotify":7,"apple":0},{"category":"bad","spotify":1}]}}</script></body></html>';
 $pr = Songpress_Money::parse_stats_html( $sh );
 check( 'stats page parses to day/service rows', $pr, array( array( '2026-02-01', 'Spotify', 10 ), array( '2026-02-01', 'Apple Music', 4 ), array( '2026-02-02', 'Spotify', 7 ), array( '2026-02-02', 'Apple Music', 0 ) ) );
+$sh2 = '<html><body><script type="application/json" id="combinedStatsData">{"dsps":[{"key":"spotify","label":"Spotify"}],"series":{"daily":[{"category":"2026-08-20","spotify":5,"tiktok":19,"youtube":12}]}}</script></body></html>';
+check( 'stats page: TikTok and other services missing from dsps still get proper names', Songpress_Money::parse_stats_html( $sh2 ), array( array( '2026-08-20', 'Spotify', 5 ), array( '2026-08-20', 'TikTok', 19 ), array( '2026-08-20', 'YouTube', 12 ) ) );
 check( 'page with no stats gives a message', is_string( Songpress_Money::parse_stats_html( '<html></html>' ) ), true );
 $ri = Songpress_Money::import_stats_html( $sh );
 check( 'stats import counts', array( $ri['days'], $ri['rows'] ), array( 2, 4 ) );

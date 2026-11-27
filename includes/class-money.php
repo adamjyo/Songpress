@@ -252,6 +252,9 @@ class Songpress_Money {
 	 * (id="combinedStatsData"): a list of services and a daily series. Returns rows of day, service, streams,
 	 * or a string describing what is wrong with the file. Pure.
 	 */
+	/** Names for DistroKid's service keys, used when a saved page does not list them under "dsps". */
+	const SERVICE_NAMES = array( 'spotify' => 'Spotify', 'apple' => 'Apple Music', 'youtube' => 'YouTube', 'tiktok' => 'TikTok', 'amazon' => 'Amazon Music', 'tidal' => 'Tidal', 'deezer' => 'Deezer', 'pandora' => 'Pandora', 'instagram' => 'Instagram', 'facebook' => 'Facebook', 'snapchat' => 'Snapchat' );
+
 	public static function parse_stats_html( $html ) {
 		if ( ! preg_match( '/id="combinedStatsData"[^>]*>\s*(.*?)\s*<\/script>/s', (string) $html, $m ) ) {
 			return 'That file has no DistroKid daily stats. Save the stats page from DistroKid as HTML and choose that file.';
@@ -275,7 +278,7 @@ class Songpress_Money {
 				if ( 'category' === $key || ! is_numeric( $value ) ) {
 					continue;
 				}
-				$rows[] = array( (string) $point['category'], mb_substr( $labels[ $key ] ?? ucfirst( (string) $key ), 0, 48 ), (int) $value );
+				$rows[] = array( (string) $point['category'], mb_substr( $labels[ $key ] ?? ( self::SERVICE_NAMES[ strtolower( (string) $key ) ] ?? ucfirst( (string) $key ) ), 0, 48 ), (int) $value );
 			}
 		}
 		return $rows ? $rows : 'The daily series was empty.';
