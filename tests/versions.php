@@ -909,8 +909,6 @@ $n1 = Songpress_Art::import_layers_pdo( $ap );
 $n2 = Songpress_Art::import_layers_pdo( $ap );
 $lib = $GLOBALS['opts']['songpress_art_lib']['el'];
 check( 'old art layers come across as elements, once', array( $n1, $n2, count( $lib ), $lib[0]['name'], $lib[0]['layer']['src'], $lib[0]['layer']['w'], $lib[1]['layer']['text'], $lib[1]['layer']['font'] ), array( 2, 0, 2, 'Album Label', 'https://x.com/label.png', 38.0, 'Hearts Brand New', 'Rubik Dirt' ) );
-$iu = Songpress_Art::image_url( 'a cat & a hat', 7 );
-check( 'AI picture address is free-service, encoded, square, seeded', array( strpos( $iu, 'https://image.pollinations.ai/prompt/a%20cat%20%26%20a%20hat?' ) === 0, strpos( $iu, 'width=768&height=768' ) !== false, substr( $iu, -6 ) ), array( true, true, 'seed=7' ) );
 
 list( $nv, $nerr ) = Songpress_Journal::persist( array( 'title' => 'Versioned', 'notes' => 'first draft', 'log_date' => '2026-01-01', 'lat' => '36.1627', 'lng' => '-86.7816' ) );
 $nrow = $wpdb->get_row( 'SELECT * FROM ' . Songpress_Install::table( 'journal' ) . ' WHERE id = ' . (int) $nv );

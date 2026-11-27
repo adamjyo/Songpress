@@ -380,14 +380,7 @@ class Songpress_Art {
 		update_option( 'songpress_art_thumbs', $t, false );
 	}
 
-	/* ---------- AI pictures (Pollinations, free, no key) ---------- */
-
-	const IMG_URL = 'https://image.pollinations.ai/prompt/';
-
-	/** The address that makes one picture. The same prompt and seed always give the same picture. */
-	public static function image_url( $prompt, $seed ) {
-		return self::IMG_URL . rawurlencode( mb_substr( trim( (string) $prompt ), 0, 600 ) ) . '?width=768&height=768&nologo=true&seed=' . (int) $seed;
-	}
+	/* ---------- AI pictures (free services that put no brand on the picture) ---------- */
 
 	const HF_URL   = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
 	const HORDE    = 'https://aihorde.net/api/v2/generate/';
@@ -451,20 +444,17 @@ class Songpress_Art {
 		}
 	}
 
-	/** Pollinations (no key) or Hugging Face FLUX.1-schnell (free token): one picture per press. */
+	/** Hugging Face FLUX.1-schnell (free token): one picture per press. */
 	public static function ajax_generate() {
 		self::guard();
 		$prompt = self::prompt_in();
-		$which  = sanitize_key( wp_unslash( $_POST['provider'] ?? 'pollinations' ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		$tmp    = wp_tempnam( 'songpress-ai.jpg' );
-		if ( 'hf' === $which ) {
+		{
 			$key = self::hf_key();
 			if ( '' === $key ) {
 				wp_send_json_error( array( 'message' => __( 'Add your free Hugging Face token first.', 'songpress' ), 'need_key' => true ), 400 );
 			}
 			$r = wp_remote_post( self::HF_URL, array( 'timeout' => 120, 'stream' => true, 'filename' => $tmp, 'headers' => array( 'Authorization' => 'Bearer ' . $key, 'Content-Type' => 'application/json', 'Accept' => 'image/png' ), 'body' => wp_json_encode( array( 'inputs' => $prompt, 'parameters' => array( 'width' => 1024, 'height' => 1024, 'seed' => wp_rand( 1, 999999 ) ) ) ) ) );
-		} else {
-			$r = wp_remote_get( self::image_url( $prompt, wp_rand( 1, 999999 ) ), array( 'timeout' => 120, 'stream' => true, 'filename' => $tmp ) );
 		}
 		if ( is_wp_error( $r ) ) {
 			@unlink( $tmp ); // phpcs:ignore
@@ -477,7 +467,7 @@ class Songpress_Art {
 		}
 		if ( 429 === $code || 402 === $code ) {
 			@unlink( $tmp ); // phpcs:ignore
-			wp_send_json_error( array( 'message' => 'hf' === $which ? __( 'The free Hugging Face allowance for this month or minute is used up.', 'songpress' ) : __( 'This free service allows one picture at a time, about every 45 seconds. Wait a moment and press again.', 'songpress' ) ), 429 );
+			wp_send_json_error( array( 'message' => __( 'The free Hugging Face allowance for this month or minute is used up.', 'songpress' ) ), 429 );
 		}
 		if ( $code >= 300 ) {
 			@unlink( $tmp ); // phpcs:ignore
@@ -674,7 +664,7 @@ class Songpress_Art {
 		$o .= '<aside class="spa-right"><div class="spa-head"><h3>' . $tr( 'Layers' ) . '</h3><span><button type="button" class="spa-plus" id="spa-ladd" title="' . esc_attr__( 'New layer', 'songpress' ) . '">+</button></span></div><div class="spa-addmenu" id="spa-addmenu" hidden><button type="button" class="spe-btn" data-add="text">' . $tr( 'Text' ) . '</button><button type="button" class="spe-btn" data-add="rect">' . $tr( 'Box' ) . '</button><button type="button" class="spe-btn" data-add="ellipse">' . $tr( 'Circle' ) . '</button><button type="button" class="spe-btn" id="spa-newdraw">' . $tr( 'Drawing' ) . '</button></div><ul id="spa-layers" class="spa-layers"></ul><div id="spa-props" class="spa-props"></div></aside>';
 		$o .= '</div>';
 		// generate window
-		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . '</h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class=\"spe-help\">' . $tr( 'Your description is sent to the service you pick below. Each picture is kept in your Media Library; drag one onto the square (or press it) to put it on the back layer.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="pollinations">' . esc_html__( 'Pollinations (free, no key, about 45 s apart)', 'songpress' ) . '</option><option value="horde">' . esc_html__( 'AI Horde (free, no key, volunteer GPUs, can queue)', 'songpress' ) . '</option><option value="hf">' . esc_html__( 'Hugging Face FLUX.1 (free token)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your free Hugging Face token (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="hf_…"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save token', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove token', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make a picture', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div>';
+		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . '</h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class=\"spe-help\">' . $tr( 'Your description is sent to the service you pick below. Each picture is kept in your Media Library; drag one onto the square (or press it) to put it on the back layer.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="horde">' . esc_html__( 'AI Horde (free, no key, no watermark, can queue)', 'songpress' ) . '</option><option value="hf">' . esc_html__( 'Hugging Face FLUX.1 (free token, no watermark)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your free Hugging Face token (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="hf_…"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save token', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove token', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make a picture', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div>';
 		$o .= '<script type="application/json" id="spa-cfg">' . wp_json_encode( $cfg, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script><script>' . self::js() . '</script></div>';
 		return $o;
 	}
