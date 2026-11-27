@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.119
+Stable tag: 0.72.120
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.120 =
+* Art studio: double-click text on the square to type directly; clicking through transparent parts of a picture now selects the text under it; the selected layer stays draggable; Alt-click picks the layer underneath.
 
 = 0.72.119 =
 * Art studio: Band logos is now its own set made for the art. Press + (or drop pictures on the list) to upload several; press one to add it as an editable layer, double-click to rename, × to remove. The pictures on People are no longer mixed in.
