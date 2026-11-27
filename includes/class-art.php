@@ -759,7 +759,7 @@ class Songpress_Art {
 		$o .= '<div class="spa-head"><h3>' . $tr( 'Band logos' ) . '</h3><label class="spa-plus" title="' . esc_attr__( 'Upload band logos for the art (several at once; you can also drop them on this list)', 'songpress' ) . '">+<input type="file" id="spa-logofile" accept="image/*" multiple hidden></label></div><div class="spa-els spa-logos" id="spa-logos"></div>';
 		$o .= '<div class="spa-head"><h3>' . $tr( 'Templates' ) . '</h3><button type="button" class="spa-plus" id="spa-tplsave" title="' . esc_attr__( 'Save the layers on top of the canvas as a template', 'songpress' ) . '">+</button></div><ul class="spa-tpls" id="spa-tpls"></ul></aside>';
 		// middle
-		$o .= '<div class="spa-mid"><div class="spa-bar"><label class="spe-field"><span>' . $tr( 'Name' ) . '</span><input id="spa-name"></label></div>';
+		$o .= '<div class="spa-mid"><div class="spa-bar"><a class="spe-btn spa-back" id="spa-back" href="' . esc_url( $sid ? Songpress_Editor::edit_url( $sid ) : Songpress_Editor::list_url() ) . '">&larr; ' . $tr( 'Back' ) . '</a><label class="spe-field"><span>' . $tr( 'Name' ) . '</span><input id="spa-name"></label></div>';
 		$o .= '<div class="spa-opts" id="spa-opts"><b id="spa-opt-title">' . $tr( 'Move' ) . '</b><span class="spa-hint" id="spa-hint">' . $tr( 'Drag a layer on the square to move it. The corner handle scales it.' ) . '</span><span class="spa-ink" id="spa-ink"><label class="spa-tl">' . $tr( 'Size' ) . '<input type="range" id="spa-bsize" min="1" max="200" value="24"></label><label class="spa-tl">' . $tr( 'Flow' ) . '<input type="range" id="spa-bflow" min="5" max="100" value="100"></label><input type="color" id="spa-bcolor" value="#ffffff" title="' . esc_attr__( 'Colour', 'songpress' ) . '"><input type="color" id="spa-bcolor2" value="#000000" title="' . esc_attr__( 'Second colour (gradient)', 'songpress' ) . '"><label class="spa-tl"><input type="checkbox" id="spa-outline"> ' . $tr( 'Outline only' ) . '</label></span></div>';
 		$o .= '<div class="spa-stage"><div class="spa-tools" id="spa-tools">'
 			. $tool( 'move', 'Move', '<path d="M8 1.5v13M1.5 8h13M8 1.5L6 3.5M8 1.5l2 2M8 14.5l-2-2M8 14.5l2-2M1.5 8l2-2M1.5 8l2 2M14.5 8l-2-2M14.5 8l-2 2" ' . $st . '/>' )
@@ -803,6 +803,7 @@ var L=C.layers,sel=L.length>1?L.length-1:0,id=C.id,imgs={},REF=400,dirty=false;
 var cv=document.getElementById('spa-canvas'),sq=document.getElementById('spa-square'),box=document.getElementById('spa-sel'),hd=document.getElementById('spa-handle'),msg=document.getElementById('spa-msg');
 var SYS=/^(sans-serif|serif|system-ui|monospace|cursive|fantasy|impact|arial|helvetica|georgia|times new roman|verdana|courier new|tahoma|trebuchet ms)$/i;
 function $(i){return document.getElementById(i)}
+$('spa-back').addEventListener('click',function(e){e.preventDefault();var go=function(){var r=document.referrer;if(r&&r.indexOf(location.origin)===0&&!/[?&]sp_page=art\b/.test(r)&&history.length>1){history.back()}else{location.href=$('spa-back').href}};if(dirty&&!window.confirm('This art has changes that are not saved. Leave without saving?'))return;dirty=false;go()});
 $('spa-name').value=C.name||'';$('spa-serial').value=C.serial||'';
 function say(t){msg.textContent=t||''}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}

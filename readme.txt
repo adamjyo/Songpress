@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.134
+Stable tag: 0.72.135
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.135 =
+* The cover art tool now opens in the same window, beside the rail, instead of a new one. A Back button above the name returns to the work (or the page you came from), asking first if there are unsaved changes.
 
 = 0.72.134 =
 * Art studio: removed the layer name, the "Drag on the square" note and the "Position and size" heading from the right-hand panel (the position fields stay); the Layers list now runs the height of the screen with the settings below it; the scrollbar no longer sits on top of the delete buttons.
