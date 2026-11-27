@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.136
+Stable tag: 0.72.137
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.137 =
+* Art studio pictures: "no text" (and "without lettering", "no logo", and the like) is now taken out of the description before it is sent, because picture models draw whatever a prompt names even after "no". Cover mode asks for a purely pictorial scene instead, and AI Horde also gets a text-free exclusion list.
 
 = 0.72.136 =
 * The picture service and its keys moved from the Art studio to Settings (section "Cover art pictures"). FLUX.2 dev on Together AI is now the default. Generate in the studio just uses what Settings says and links there.

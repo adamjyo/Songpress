@@ -469,13 +469,20 @@ class Songpress_Art {
 		return '' === $k ? '' : sprintf( /* translators: 1: first characters, 2: last characters, 3: length */ __( 'Saved key: %1$s…%2$s (%3$d characters)', 'songpress' ), substr( $k, 0, 4 ), substr( $k, -4 ), strlen( $k ) );
 	}
 
+	/** Picture models draw what a prompt names, even after "no": a prompt that says "no text" gets text. So take those phrases out, and say what is wanted instead. */
+	public static function positive( $prompt ) {
+		$re   = '/\b(?:with\s*out|without|no|zero|avoid|exclude|minus|never\s+(?:any|use))\s+(?:any\s+|visible\s+|written\s+)?(?:text|texts|words?|letters?|lettering|typography|type|captions?|titles?|writing|watermarks?|logos?|signatures?|labels?|numbers?)\b[,.;]?|\b(?:text|word|letter)[- ]?free\b[,.;]?|\btextless\b[,.;]?/i';
+		$out  = trim( preg_replace( '/\s{2,}/', ' ', preg_replace( $re, '', (string) $prompt ) ), " ,.;\t\n" );
+		return '' === $out ? trim( (string) $prompt ) : $out;
+	}
+
 	private static function prompt_in() {
-		$prompt = mb_substr( sanitize_textarea_field( wp_unslash( $_POST['prompt'] ?? '' ) ), 0, 500 ); // phpcs:ignore WordPress.Security.NonceVerification
+		$prompt = self::positive( mb_substr( sanitize_textarea_field( wp_unslash( $_POST['prompt'] ?? '' ) ), 0, 500 ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		if ( '' === trim( $prompt ) ) {
 			wp_send_json_error( array( 'message' => __( 'Describe the picture first.', 'songpress' ) ), 400 );
 		}
 		if ( ! empty( $_POST['cover'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
-			$prompt .= ', square album cover artwork, no text, no letters, no watermark, full bleed';
+			$prompt .= ', square album cover artwork, a purely pictorial scene, clean artwork filling the whole square';
 		}
 		return $prompt;
 	}
@@ -654,7 +661,8 @@ class Songpress_Art {
 		$hdr = array( 'apikey' => self::HORDEKEY, 'Client-Agent' => 'songpress:' . SONGPRESS_VERSION . ':wordpress', 'Content-Type' => 'application/json' );
 		$job = sanitize_text_field( wp_unslash( $_POST['job'] ?? '' ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		if ( '' === $job ) {
-			$r = wp_remote_post( self::HORDE . 'async', array( 'timeout' => 30, 'headers' => $hdr, 'body' => wp_json_encode( array( 'prompt' => self::prompt_in(), 'params' => array( 'width' => 512, 'height' => 512, 'steps' => 25, 'n' => 3, 'sampler_name' => 'k_euler_a', 'cfg_scale' => 7 ), 'nsfw' => false, 'r2' => true, 'shared' => false ) ) ) );
+			$r = wp_remote_post( self::HORDE . 'async', array( 'timeout' => 30, 'headers' => $hdr, 'body' => wp_json_encode( array( 'prompt' => self::prompt_in() . ( ! empty( $_POST['cover'] ) ? ' ### text, letters, words, writing, typography, watermark, signature, logo, caption' : '' ), // phpcs:ignore WordPress.Security.NonceVerification
+ 'params' => array( 'width' => 512, 'height' => 512, 'steps' => 25, 'n' => 3, 'sampler_name' => 'k_euler_a', 'cfg_scale' => 7 ), 'nsfw' => false, 'r2' => true, 'shared' => false ) ) ) );
 			$j = is_wp_error( $r ) ? array() : json_decode( wp_remote_retrieve_body( $r ), true );
 			if ( empty( $j['id'] ) ) {
 				$m = is_array( $j ) && ! empty( $j['message'] ) ? (string) $j['message'] : ( is_wp_error( $r ) ? $r->get_error_message() : __( 'The AI Horde did not accept the request.', 'songpress' ) );

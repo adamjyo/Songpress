@@ -892,6 +892,7 @@ $fam = (int) $wpdb->get_var( "SELECT family_id FROM wp_songpress_songs WHERE tit
 check( 'editing a song does not match its own family', count( array_filter( Songpress_Names::matches( 'song', 'Harbor Lights', $fam ), function ( $m ) { return 'same' === $m['level'] && false !== strpos( $m['where'], '0001' ); } ) ), 0 );
 check( 'too short a name matches nothing', Songpress_Names::matches( 'song', '' ), array() );
 
+check( 'a "no text" prompt has the negation removed so the model is not told about text', array( Songpress_Art::positive( 'a red fox at dawn, no text' ), Songpress_Art::positive( 'moody city, without any lettering, neon' ), Songpress_Art::positive( 'fox with text-free sky' ), Songpress_Art::positive( 'no text' ) ), array( 'a red fox at dawn', 'moody city, neon', 'fox with sky', 'no text' ) );
 $el = Songpress_Art::norm_lib_item( 'el', array( 'name' => 'Logo', 'layer' => array( 'type' => 'image', 'src' => 'https://x.com/l.png', 'x' => 5, 'flip' => 1 ) ) );
 check( 'art element keeps a picture layer with its flip', array( $el['name'], $el['layer']['src'], $el['layer']['flip'] ), array( 'Logo', 'https://x.com/l.png', 1 ) );
 check( 'art element refuses an empty picture and a canvas', array( Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'image', 'src' => '' ) ) ), Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'canvas' ) ) ), Songpress_Art::norm_lib_item( 'el', 'x' ) ), array( null, null, null ) );
