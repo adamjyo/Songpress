@@ -134,32 +134,20 @@ class Songpress_Art {
 			$n++;
 		}
 		if ( $n ) {
-			update_option( 'songpress_art_lib', array( 'el' => array_slice( $lib['el'], 0, self::LIB_MAX ), 'tpl' => $lib['tpl'] ), false );
+			update_option( 'songpress_art_lib', array( 'el' => array_slice( $lib['el'], 0, self::LIB_MAX ), 'tpl' => $lib['tpl'], 'logo' => $lib['logo'] ), false );
 		}
 		return $n;
 	}
 
-	/** Band and artist logos for the studio: every band profile with a picture, and each artist's brand logo. Pure of output; reads the database. */
+	/** The band logos made for the studio (uploaded here, separate from the pictures on People). Name and address of each. */
 	public static function logos() {
-		global $wpdb;
 		$out = array();
-		$pt  = Songpress_Install::table( 'profiles' );
-		foreach ( (array) $wpdb->get_results( "SELECT name, photo_id, photo_url FROM {$pt} WHERE kind = 'band' ORDER BY name LIMIT 200" ) as $r ) { // phpcs:ignore WordPress.DB
-			$u = $r->photo_id ? (string) wp_get_attachment_url( (int) $r->photo_id ) : '';
-			$u = '' !== $u ? $u : (string) $r->photo_url;
-			if ( '' !== $u ) {
-				$out[ strtolower( $r->name ) ] = array( 'name' => (string) $r->name, 'url' => $u );
+		foreach ( self::lib_get()['logo'] as $it ) {
+			if ( ! empty( $it['url'] ) ) {
+				$out[] = array( 'name' => (string) ( $it['name'] ?? 'Logo' ), 'url' => (string) $it['url'] );
 			}
 		}
-		foreach ( (array) Songpress_Artists::all() as $a ) {
-			$set = json_decode( (string) $a->settings, true );
-			$id  = is_array( $set ) ? (int) ( $set['logo_id'] ?? 0 ) : 0;
-			$u   = $id ? (string) wp_get_attachment_url( $id ) : '';
-			if ( '' !== $u ) {
-				$out[ strtolower( $a->name ) ] = array( 'name' => (string) $a->name, 'url' => $u );
-			}
-		}
-		return array_values( $out );
+		return $out;
 	}
 
 	/** Bring the old studio's projects across. Projects already here (by their old id) are left alone. */
@@ -275,6 +263,10 @@ class Songpress_Art {
 		$name = mb_substr( sanitize_text_field( (string) ( $item['name'] ?? '' ) ), 0, 80 );
 		$id   = preg_match( '/^[a-z0-9]{6,20}$/', (string) ( $item['id'] ?? '' ) ) ? (string) $item['id'] : '';
 		$key  = preg_match( '/^[a-z]+:[0-9]{1,10}$/', (string) ( $item['key'] ?? '' ) ) ? (string) $item['key'] : '';
+		if ( 'logo' === $kind ) {
+			$u = esc_url_raw( (string) ( $item['url'] ?? '' ) );
+			return ! preg_match( '#^https?://#i', $u ) ? null : array( 'id' => $id, 'key' => $key, 'name' => '' === $name ? 'Logo' : $name, 'url' => $u );
+		}
 		if ( 'tpl' === $kind ) {
 			$ls = array_values( array_filter( self::norm_layers( $item['layers'] ?? array() ), function ( $l ) {
 				return 'canvas' !== $l['type'];
@@ -291,7 +283,7 @@ class Songpress_Art {
 	private static function lib_get() {
 		$o = get_option( 'songpress_art_lib', array() );
 		$o = is_array( $o ) ? $o : array();
-		return array( 'el' => array_values( (array) ( $o['el'] ?? array() ) ), 'tpl' => array_values( (array) ( $o['tpl'] ?? array() ) ) );
+		return array( 'el' => array_values( (array) ( $o['el'] ?? array() ) ), 'tpl' => array_values( (array) ( $o['tpl'] ?? array() ) ), 'logo' => array_values( (array) ( $o['logo'] ?? array() ) ) );
 	}
 
 	/** One handler for the two libraries: op list, save, rename, delete; kind el (a layer to reuse) or tpl (an overlay layout to reuse). */
@@ -300,7 +292,7 @@ class Songpress_Art {
 		if ( ! Songpress_Caps::can( 'art' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Only Managers can use the Art studio.', 'songpress' ) ), 403 );
 		}
-		$kind = 'tpl' === ( $_POST['kind'] ?? '' ) ? 'tpl' : 'el';
+		$kind = in_array( $_POST['kind'] ?? '', array( 'tpl', 'logo' ), true ) ? $_POST['kind'] : 'el';
 		$op   = sanitize_key( $_POST['op'] ?? 'list' );
 		$lib  = self::lib_get();
 		$id   = preg_replace( '/[^a-z0-9]/', '', strtolower( (string) ( $_POST['item'] ?? '' ) ) );
@@ -332,7 +324,7 @@ class Songpress_Art {
 		if ( 'list' !== $op ) {
 			update_option( 'songpress_art_lib', $lib, false );
 		}
-		wp_send_json_success( array( 'el' => $lib['el'], 'tpl' => $lib['tpl'] ) );
+		wp_send_json_success( array( 'el' => $lib['el'], 'tpl' => $lib['tpl'], 'logo' => $lib['logo'] ) );
 	}
 
 	/** Rename a project from the list on the left. */
@@ -596,7 +588,7 @@ class Songpress_Art {
 		}
 		$o .= '</ul>';
 		$o .= '<div class="spa-head"><h3>' . $tr( 'Elements' ) . '</h3><button type="button" class="spa-plus" id="spa-elsave" title="' . esc_attr__( 'Save the selected layer to reuse on other art', 'songpress' ) . '">+</button></div><div class="spa-els" id="spa-els"></div>';
-		$o .= '<div class="spa-head"><h3>' . $tr( 'Band logos' ) . '</h3></div><div class="spa-els spa-logos" id="spa-logos"></div>';
+		$o .= '<div class="spa-head"><h3>' . $tr( 'Band logos' ) . '</h3><label class="spa-plus" title="' . esc_attr__( 'Upload band logos for the art (several at once; you can also drop them on this list)', 'songpress' ) . '">+<input type="file" id="spa-logofile" accept="image/*" multiple hidden></label></div><div class="spa-els spa-logos" id="spa-logos"></div>';
 		$o .= '<div class="spa-head"><h3>' . $tr( 'Templates' ) . '</h3><button type="button" class="spa-plus" id="spa-tplsave" title="' . esc_attr__( 'Save the layers on top of the canvas as a template', 'songpress' ) . '">+</button></div><ul class="spa-tpls" id="spa-tpls"></ul></aside>';
 		// middle
 		$o .= '<div class="spa-mid"><div class="spa-bar"><label class="spe-field"><span>' . $tr( 'Name' ) . '</span><input id="spa-name"></label></div>';
@@ -871,7 +863,7 @@ tog('spa-safe',function(on){$('spa-safeov').hidden=!on});
 tog('spa-small',function(on){$('spa-smallprev').hidden=!on;smalls()});
 $('spa-keys').onclick=function(){$('spa-keyhelp').hidden=!$('spa-keyhelp').hidden};
 $('spa-flip').onclick=function(){var l=L[sel];if(!l||l.type==='canvas'){say('Pick a layer to flip.');return}snap();l.flip=l.flip?0:1;dirty=true;draw();rail()};
-$('spa-addtitle').onclick=function(){var s=$('spa-serial').value.trim(),go2=function(t,b){snap();var n=0;if(t){L.push(blank({type:'text',name:'Title',x:6,y:6,w:88,h:22,text:t,font:'Impact',size:90,color:'#ffffff',valign:'top',shadow:0.6}));n++}if(b){L.push(blank({type:'text',name:'Band',x:6,y:80,w:88,h:14,text:b,font:'Impact',size:48,color:'#ffffff',valign:'bottom',shadow:0.6}));n++}if(n){sel=L.length-1;dirty=true;all()}if(b&&C.logos){var m=C.logos.filter(function(g){return g.name.toLowerCase()===String(b).toLowerCase()})[0];if(m)addLogo(m)}};
+$('spa-addtitle').onclick=function(){var s=$('spa-serial').value.trim(),go2=function(t,b){snap();var n=0;if(t){L.push(blank({type:'text',name:'Title',x:6,y:6,w:88,h:22,text:t,font:'Impact',size:90,color:'#ffffff',valign:'top',shadow:0.6}));n++}if(b){L.push(blank({type:'text',name:'Band',x:6,y:80,w:88,h:14,text:b,font:'Impact',size:48,color:'#ffffff',valign:'bottom',shadow:0.6}));n++}if(n){sel=L.length-1;dirty=true;all()}if(b&&LIB.logo){var m=LIB.logo.filter(function(g){return g.name.toLowerCase()===String(b).toLowerCase()})[0];if(m)addLogo(m)}};
  if(s){post('songpress_art_lookup',{serial:s}).then(function(j){if(j.success)go2(j.data.title,j.data.band);else go2($('spa-name').value,'')})}else go2($('spa-name').value,'')};
 document.addEventListener('keydown',function(e){var tg=(e.target.tagName||'');if(/INPUT|TEXTAREA|SELECT/.test(tg)||e.target.isContentEditable)return;
  var m=e.metaKey||e.ctrlKey;if(m&&(e.key==='z'||e.key==='Z')){e.preventDefault();if(e.shiftKey)redo();else undo();return}if(m&&(e.key==='y')){e.preventDefault();redo();return}
@@ -884,9 +876,9 @@ function refreshList(cur){document.querySelectorAll('#spa-plist li').forEach(fun
 $('spa-plist').addEventListener('click',function(e){var a=e.target.closest('a');if(!a)return;if(dirty&&!window.confirm('This art has changes that are not saved. Leave without saving?')){e.preventDefault();return}dirty=false});
 $('spa-plist').addEventListener('dblclick',function(e){var li=e.target.closest('li');if(!li||!e.target.closest('.spa-pn'))return;e.preventDefault();var pid=+li.getAttribute('data-id'),cur=li.querySelector('.spa-pn').firstChild.nodeValue,v=window.prompt('Rename this art',cur);if(!v||!v.trim()||v===cur)return;post('songpress_art_rename',{id:pid,name:v.trim()}).then(function(j){if(j.success){li.querySelector('.spa-pn').firstChild.nodeValue=j.data.name;if(pid===id)$('spa-name').value=j.data.name}else say((j.data&&j.data.message)||'Could not rename')})});
 /* elements and templates */
-var LIB={el:[],tpl:[]};
+var LIB={el:[],tpl:[],logo:[]};
 function libCall(kind,op,extra){return post('songpress_art_lib',Object.assign({kind:kind,op:op},extra||{})).then(function(j){if(j.success){LIB=j.data;libDraw()}else say((j.data&&j.data.message)||'Could not do that');return j})}
-function libDraw(){var e=$('spa-els');e.innerHTML='';if(!LIB.el.length)e.innerHTML='<p class="spe-help">Press + to keep the selected layer here.</p>';
+function libDraw(){logoDraw();var e=$('spa-els');e.innerHTML='';if(!LIB.el.length)e.innerHTML='<p class="spe-help">Press + to keep the selected layer here.</p>';
  LIB.el.forEach(function(it){var b=document.createElement('div');b.className='spa-el';b.title=it.name+' (click to add, double-click to rename, × to remove)';var th=thumb(blank(it.layer));var wrap=document.createElement('button');wrap.type='button';wrap.appendChild(th);var x=document.createElement('i');x.textContent='×';b.appendChild(wrap);b.appendChild(x);
   wrap.onclick=function(){snap();var l=blank(JSON.parse(JSON.stringify(it.layer)));l.x=Math.min(l.x+3,90);L.push(l);sel=L.length-1;dirty=true;all()};
   wrap.ondblclick=function(){var v=window.prompt('Name',it.name);if(v&&v.trim())libCall('el','rename',{item:it.id,name:v.trim()})};
@@ -902,8 +894,17 @@ $('spa-elsave').onclick=function(){var l=L[sel];if(!l||l.type==='canvas'){say('P
 $('spa-tplsave').onclick=function(){var ls=L.filter(function(l){return l.type!=='canvas'});if(!ls.length){say('Add layers above the canvas first.');return}var v=window.prompt('Name this template',($('spa-name').value||'Template'));if(!v||!v.trim())return;
  flush().then(function(){libCall('tpl','save',{data:JSON.stringify({name:v.trim(),layers:clean(L.filter(function(l){return l.type!=='canvas'}))})}).then(function(j){if(j&&j.success)say('Template saved.')})},function(e){say('Could not save it: '+(e&&e.message||''))})};
 function addLogo(lg){var im=new Image();im.onload=function(){var ar=im.naturalWidth/im.naturalHeight,w=ar>=1?34:20,h=w/ar;if(h>34){h=34;w=h*ar}snap();var l=blank({type:'image',name:lg.name+' logo',src:lg.url,x:3,y:Math.max(0,100-h-3),w:w,h:h});L.push(l);sel=L.length-1;dirty=true;all()};im.onerror=function(){say('That logo could not be loaded.')};im.src=lg.url}
-(function(){var e=$('spa-logos');if(!C.logos||!C.logos.length){e.innerHTML='<p class="spe-help">Band pictures from People appear here.</p>';return}C.logos.forEach(function(lg){var b=document.createElement('div');b.className='spa-el';b.title=lg.name+' (click to add as a layer you can edit)';var btn=document.createElement('button');btn.type='button';var im=document.createElement('img');im.src=lg.url;im.alt=lg.name;im.loading='lazy';btn.appendChild(im);b.appendChild(btn);btn.onclick=function(){addLogo(lg)};e.appendChild(b)})})();
-libCall('el','list');libCall('tpl','list');
+function logoDraw(){var e=$('spa-logos');e.innerHTML='';var ls=LIB.logo||[];if(!ls.length){e.innerHTML='<p class="spe-help">Press + or drop logo pictures here. These are only for the art, separate from the pictures on People.</p>';return}
+ ls.forEach(function(lg){var b=document.createElement('div');b.className='spa-el';b.title=lg.name+' (click to add as an editable layer, double-click to rename, × to remove)';var btn=document.createElement('button');btn.type='button';var im=document.createElement('img');im.src=lg.url;im.alt=lg.name;im.loading='lazy';btn.appendChild(im);var x=document.createElement('i');x.textContent='×';b.appendChild(btn);b.appendChild(x);
+  btn.onclick=function(){addLogo(lg)};btn.ondblclick=function(){var v=window.prompt('Name',lg.name);if(v&&v.trim())libCall('logo','rename',{item:lg.id,name:v.trim()})};
+  x.onclick=function(ev){ev.stopPropagation();if(window.confirm('Remove "'+lg.name+'" from Band logos? Art already using it keeps it.'))libCall('logo','delete',{item:lg.id})};e.appendChild(b)})}
+function uploadLogos(files){var list=Array.prototype.slice.call(files).filter(function(f){return /^image\//.test(f.type)});if(!list.length){say('Choose picture files.');return}
+ list.reduce(function(pr,f){return pr.then(function(){say('Uploading '+f.name+'…');var fd=new FormData();fd.append('action','songpress_upload');fd.append('nonce',C.upload);fd.append('file',f);
+  return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()}).then(function(j){if(!j.success){say((j.data&&j.data.message)||'Upload failed');return}
+   return libCall('logo','save',{data:JSON.stringify({name:f.name.replace(/\.[^.]+$/,'').replace(/[-_]+/g,' ').trim()||'Logo',url:j.data.url})})})})},Promise.resolve()).then(function(){say('Logos saved.')},function(){say('Upload failed')})}
+$('spa-logofile').onchange=function(e){uploadLogos(e.target.files);e.target.value=''};
+(function(){var e=$('spa-logos');['dragenter','dragover'].forEach(function(n){e.addEventListener(n,function(ev){if(ev.dataTransfer&&[].indexOf.call(ev.dataTransfer.types||[],'Files')>-1){ev.preventDefault();e.classList.add('over')}})});e.addEventListener('dragleave',function(){e.classList.remove('over')});e.addEventListener('drop',function(ev){e.classList.remove('over');if(ev.dataTransfer&&ev.dataTransfer.files&&ev.dataTransfer.files.length){ev.preventDefault();uploadLogos(ev.dataTransfer.files)}})})();
+libCall('el','list');
 setTool('move');all();
 })();
 JS;

@@ -901,6 +901,8 @@ check( 'art element refuses an empty picture and a canvas', array( Songpress_Art
 $tp = Songpress_Art::norm_lib_item( 'tpl', array( 'name' => 'Badge', 'layers' => array( array( 'type' => 'canvas' ), array( 'type' => 'shape', 'color' => '#f5a623' ), array( 'type' => 'text', 'text' => 'Hi' ) ) ) );
 check( 'art template keeps the layers above the canvas', array( $tp['name'], count( $tp['layers'] ), $tp['layers'][0]['type'] ), array( 'Badge', 2, 'shape' ) );
 check( 'art template with nothing on it is refused', Songpress_Art::norm_lib_item( 'tpl', array( 'layers' => array( array( 'type' => 'canvas' ) ) ) ), null );
+$lg = Songpress_Art::norm_lib_item( 'logo', array( 'name' => 'Red Beard', 'url' => 'https://x.com/rb.png' ) );
+check( 'art band logo keeps its name and address, and refuses one with no address', array( $lg['name'], $lg['url'], Songpress_Art::norm_lib_item( 'logo', array( 'name' => 'x', 'url' => 'javascript:alert(1)' ) ) ), array( 'Red Beard', 'https://x.com/rb.png', null ) );
 $af = $GLOBALS['sp_tmp'] . '/artlayers.sqlite';
 $ap = new PDO( 'sqlite:' . $af );
 $ap->exec( "CREATE TABLE art_layers (id INTEGER, name TEXT, kind TEXT, src TEXT, meta_json TEXT, created_at TEXT)" );
