@@ -554,6 +554,13 @@ class Songpress_Art {
 		$serial = '';
 		$from   = ( ! $p && isset( $_GET['from'] ) ) ? self::get( absint( $_GET['from'] ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification
 		$sid    = $p ? (int) $p->song_id : ( $from ? (int) $from->song_id : ( isset( $_GET['song'] ) ? absint( $_GET['song'] ) : 0 ) ); // phpcs:ignore WordPress.Security.NonceVerification
+		if ( $from && ! empty( $_GET['to'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification
+			$to_ser = Songpress_Journal::serial_in( sanitize_text_field( wp_unslash( $_GET['to'] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification
+			$to_id  = '' === $to_ser ? 0 : (int) $GLOBALS['wpdb']->get_var( $GLOBALS['wpdb']->prepare( 'SELECT id FROM ' . Songpress_Install::table( 'songs' ) . ' WHERE serial = %s', $to_ser ) ); // phpcs:ignore WordPress.DB
+			if ( $to_id ) {
+				$sid = $to_id; // The new art belongs to the work it is being added to.
+			}
+		}
 		if ( $sid && ( $s = Songpress_Songs::get( $sid ) ) ) { // phpcs:ignore WordPress.CodeAnalysis.AssignmentInCondition
 			$serial = $s->serial;
 		}
@@ -563,7 +570,7 @@ class Songpress_Art {
 		);
 		$cfg  = array(
 			'id'     => (int) ( $p ? $p->id : 0 ),
-			'name'   => $p ? $p->name : ( $from ? sprintf( /* translators: %s: art project name */ __( '%s (new)', 'songpress' ), $from->name ) : ( $s->title ?? '' ) ),
+			'name'   => $p ? $p->name : ( $from ? ( ( isset( $s ) && $s && (int) $sid !== (int) $from->song_id && '' !== (string) $s->title ) ? $s->title : sprintf( /* translators: %s: art project name */ __( '%s (new)', 'songpress' ), $from->name ) ) : ( $s->title ?? '' ) ),
 			'serial' => $serial,
 			'layers' => $layers,
 			'ajax'   => admin_url( 'admin-ajax.php' ),
@@ -888,11 +895,11 @@ function refreshList(cur){document.querySelectorAll('#spa-plist li').forEach(fun
 $('spa-plist').addEventListener('click',function(e){var a=e.target.closest('a');if(!a)return;var li=a.closest('li');if(li&&+li.getAttribute('data-id')===id)return;e.preventDefault();askOpen(li,a.href)});
 function askOpen(li,href){var old=document.getElementById('spa-ask');if(old)old.remove();var nm=li.querySelector('.spa-pn').firstChild.nodeValue,ser=li.getAttribute('data-serial')||'',ed=li.getAttribute('data-edit')||'',pid=li.getAttribute('data-id');
  var d=document.createElement('div');d.id='spa-ask';d.className='spa-ask';d.innerHTML='<div class="spa-askbox" role="dialog"><h4></h4><p></p><div class="spa-askbtns"></div></div>';document.body.appendChild(d);
- d.querySelector('h4').textContent=nm;d.querySelector('p').textContent='Is this a new project? A new one starts as a copy and keeps '+(ser?'the serial '+ser:'this one\'s details')+'. Or update the old one.';
+ d.querySelector('h4').textContent=nm;var cur=($('spa-serial').value||'').trim(),tgt=cur||ser;d.querySelector('p').textContent='Is this a new project? A new one starts as a copy and is added to '+(tgt?'the work '+tgt:'no work yet')+'. Or update the old one.';
  var bx=d.querySelector('.spa-askbtns');
  function btn(t,cls,fn){var b=document.createElement('button');b.type='button';b.className=cls;b.textContent=t;b.onclick=fn;bx.appendChild(b)}
  function leave(u){if(dirty&&!window.confirm('This art has changes that are not saved. Leave without saving?'))return;dirty=false;location.href=u}
- btn('New project'+(ser?' ('+ser+')':''),'spe-save',function(){leave(C.list+(C.list.indexOf('?')<0?'?':'&')+'art=new&from='+pid)});
+ btn('New project'+(tgt?' for '+tgt:''),'spe-save',function(){leave(C.list+(C.list.indexOf('?')<0?'?':'&')+'art=new&from='+pid+(cur?'&to='+encodeURIComponent(cur):''))});
  btn('Update the old one','spe-btn',function(){leave(href)});
  if(ed)btn('Open its work in the Works editor','spe-btn',function(){leave(ed)});
  btn('Cancel','spe-btn',function(){d.remove()});
