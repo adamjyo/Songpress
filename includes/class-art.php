@@ -507,7 +507,7 @@ class Songpress_Art {
 		}
 		if ( 401 === $code || 403 === $code ) {
 			$tm = is_array( $j ) ? (string) ( $j['error']['message'] ?? $j['error'] ?? '' ) : '';
-			wp_send_json_error( array( 'message' => __( 'Together AI did not accept the key.', 'songpress' ) . ( '' !== $tm ? ' (' . $tm . ')' : sprintf( ' (%d)', $code ) ) ), 403 );
+			wp_send_json_error( array( 'message' => ( 401 === $code ? __( 'Together AI did not accept the key.', 'songpress' ) . ' ' : '' ) . ( '' !== $tm ? $tm : sprintf( /* translators: %d: HTTP status */ __( 'Together AI refused the request (%d).', 'songpress' ), $code ) ) ), 403 );
 		}
 		if ( 402 === $code || 429 === $code ) {
 			wp_send_json_error( array( 'message' => 402 === $code ? __( 'Your Together AI credit is used up. Add a few dollars on their site.', 'songpress' ) : __( 'Together AI says too many requests. Wait a moment and press again.', 'songpress' ) ), 429 );
