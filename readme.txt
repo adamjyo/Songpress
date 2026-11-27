@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.117
+Stable tag: 0.72.118
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,10 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.118 =
+* Art studio: a Band logos section lists every band picture from People (and each artist's brand logo). Press one to add it as a layer you can move, scale, crop and delete. Add title and band also adds the band's logo.
+* Art studio: the old catalog's saved layers (album labels, band tags, text) come across as Elements when you load the old catalog file again on Upload / Download. Ones already brought over are not added twice.
 
 = 0.72.117 =
 * Art studio, rebuilt on the old studio's layout: projects, elements and templates on the left; tools beside the square; layers with picture thumbnails, eye and delete on the right (drag to reorder, double-click to rename).

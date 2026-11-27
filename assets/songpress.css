@@ -1452,3 +1452,5 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spa-props textarea{width:100%;box-sizing:border-box}
 .spa-smallprev[hidden],.spa-keyhelp[hidden],.spa-confirm[hidden],.spa-aikey[hidden],.spa-ink[hidden]{display:none!important}
 .spa-bar{display:block;max-width:420px}
+.spa-logos img{width:100%;height:auto;aspect-ratio:1;object-fit:contain;background:#1b1d22;border-radius:5px;display:block}
+.spa-logos .spa-el button{padding:2px}

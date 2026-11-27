@@ -901,6 +901,15 @@ check( 'art element refuses an empty picture and a canvas', array( Songpress_Art
 $tp = Songpress_Art::norm_lib_item( 'tpl', array( 'name' => 'Badge', 'layers' => array( array( 'type' => 'canvas' ), array( 'type' => 'shape', 'color' => '#f5a623' ), array( 'type' => 'text', 'text' => 'Hi' ) ) ) );
 check( 'art template keeps the layers above the canvas', array( $tp['name'], count( $tp['layers'] ), $tp['layers'][0]['type'] ), array( 'Badge', 2, 'shape' ) );
 check( 'art template with nothing on it is refused', Songpress_Art::norm_lib_item( 'tpl', array( 'layers' => array( array( 'type' => 'canvas' ) ) ) ), null );
+$af = $GLOBALS['sp_tmp'] . '/artlayers.sqlite';
+$ap = new PDO( 'sqlite:' . $af );
+$ap->exec( "CREATE TABLE art_layers (id INTEGER, name TEXT, kind TEXT, src TEXT, meta_json TEXT, created_at TEXT)" );
+$ap->exec( "INSERT INTO art_layers VALUES (4,'Album Label','image','https://x.com/label.png','{\"x\":2.8,\"y\":79,\"w\":38,\"h\":17.7,\"opacity\":1}',''), (10,'Text','text','','{\"text\":\"Hearts Brand New\",\"font\":\"Rubik Dirt\",\"color\":\"#000000\",\"size\":12,\"x\":5,\"y\":78,\"w\":45,\"h\":8}',''), (11,'Empty','image','','{}','')" );
+$GLOBALS['opts']['songpress_art_lib'] = array();
+$n1 = Songpress_Art::import_layers_pdo( $ap );
+$n2 = Songpress_Art::import_layers_pdo( $ap );
+$lib = $GLOBALS['opts']['songpress_art_lib']['el'];
+check( 'old art layers come across as elements, once', array( $n1, $n2, count( $lib ), $lib[0]['name'], $lib[0]['layer']['src'], $lib[0]['layer']['w'], $lib[1]['layer']['text'], $lib[1]['layer']['font'] ), array( 2, 0, 2, 'Album Label', 'https://x.com/label.png', 38.0, 'Hearts Brand New', 'Rubik Dirt' ) );
 $xb = Songpress_Art::xai_bodies( 'a cat', 4 );
 check( 'AI request tries two models, four pictures', array( count( $xb ), $xb[0]['n'], $xb[1]['model'] ), array( 2, 4, 'grok-imagine-image' ) );
 
