@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.126
+Stable tag: 0.72.127
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.127 =
+* Art studio: the Generate panel shows the plugin version, always shows the Together AI key box when Together is chosen, and starts on Together AI each time.
 
 = 0.72.126 =
 * Art studio: AI pictures now come from Together AI FLUX.1 Schnell (about 0.3 cents a picture; paste your Together key once), three versions per press. AI Horde stays as the free option. Press a picture to see it larger (Add to top layer / Use as background); dragging one onto the square now puts it on the top layer so you can see it.
