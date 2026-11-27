@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.116
+Stable tag: 0.72.117
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,13 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.117 =
+* Art studio, rebuilt on the old studio's layout: projects, elements and templates on the left; tools beside the square; layers with picture thumbnails, eye and delete on the right (drag to reorder, double-click to rename).
+* Art studio text panel: fonts shown in their own face (Rubik Dirt, Frijole, Klee One, Noto JP, Zen Antique and more), size, colour, bold, italic, all caps, shadow, align, vertical align and direction.
+* Art studio: Elements keeps a layer to reuse, Templates keeps a set of layers to lay over other art, undo and redo for every change (Cmd/Ctrl+Z), Flip, grid, safe area, small-size preview, arrow-key nudging, drop or paste pictures on the square.
+* Art studio Generate opens a window with four pictures; drag one onto the square or press it to put it on the back layer.
+* Art studio output: PNG, JPEG or WebP at 1000, 2000 or 3000 px; Download is named with the serial and title; Apply to serial shows the cover it will replace first. Add title and band fills in text from the serial.
 
 = 0.72.116 =
 * Health: now catches every crash during a SongPress request (including ones in WordPress or other plugins, time limits and memory limits), warnings inside SongPress, and requests that came close to a limit. Each entry shows what the request was, how long it ran and its memory use. Keeps the last 30.

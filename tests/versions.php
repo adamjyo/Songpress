@@ -895,6 +895,12 @@ check( 'too short a name matches nothing', Songpress_Names::matches( 'song', '' 
 $pi = Songpress_Art::parse_images( '{"data":[{"url":"https://x.ai/a.png"},{"b64_json":"QUJD"},{"url":"http://bad/x.png"},{"b64_json":"<script>"},"x"]}' );
 check( 'AI reply: https url and base64 kept, junk dropped', $pi, array( 'https://x.ai/a.png', 'data:image/png;base64,QUJD' ) );
 check( 'AI reply: garbage gives nothing', Songpress_Art::parse_images( 'nope' ), array() );
+$el = Songpress_Art::norm_lib_item( 'el', array( 'name' => 'Logo', 'layer' => array( 'type' => 'image', 'src' => 'https://x.com/l.png', 'x' => 5, 'flip' => 1 ) ) );
+check( 'art element keeps a picture layer with its flip', array( $el['name'], $el['layer']['src'], $el['layer']['flip'] ), array( 'Logo', 'https://x.com/l.png', 1 ) );
+check( 'art element refuses an empty picture and a canvas', array( Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'image', 'src' => '' ) ) ), Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'canvas' ) ) ), Songpress_Art::norm_lib_item( 'el', 'x' ) ), array( null, null, null ) );
+$tp = Songpress_Art::norm_lib_item( 'tpl', array( 'name' => 'Badge', 'layers' => array( array( 'type' => 'canvas' ), array( 'type' => 'shape', 'color' => '#f5a623' ), array( 'type' => 'text', 'text' => 'Hi' ) ) ) );
+check( 'art template keeps the layers above the canvas', array( $tp['name'], count( $tp['layers'] ), $tp['layers'][0]['type'] ), array( 'Badge', 2, 'shape' ) );
+check( 'art template with nothing on it is refused', Songpress_Art::norm_lib_item( 'tpl', array( 'layers' => array( array( 'type' => 'canvas' ) ) ) ), null );
 $xb = Songpress_Art::xai_bodies( 'a cat', 4 );
 check( 'AI request tries two models, four pictures', array( count( $xb ), $xb[0]['n'], $xb[1]['model'] ), array( 2, 4, 'grok-imagine-image' ) );
 
