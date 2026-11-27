@@ -382,7 +382,7 @@ class Songpress_Art {
 
 	/* ---------- AI pictures (free services that put no brand on the picture) ---------- */
 
-	const TOGETHER = 'https://api.together.xyz/v1/images/generations';
+	const TOGETHER = 'https://api.together.ai/v1/images/generations';
 	const HORDE    = 'https://aihorde.net/api/v2/generate/';
 	const HORDEKEY = '0000000000'; // The AI Horde's public "anonymous" key.
 
@@ -496,7 +496,8 @@ class Songpress_Art {
 			}
 		}
 		if ( 401 === $code || 403 === $code ) {
-			wp_send_json_error( array( 'message' => __( 'Together AI did not accept the key.', 'songpress' ) ), 403 );
+			$tm = is_array( $j ) ? (string) ( $j['error']['message'] ?? $j['error'] ?? '' ) : '';
+			wp_send_json_error( array( 'message' => __( 'Together AI did not accept the key.', 'songpress' ) . ( '' !== $tm ? ' (' . $tm . ')' : sprintf( ' (%d)', $code ) ) ), 403 );
 		}
 		if ( 402 === $code || 429 === $code ) {
 			wp_send_json_error( array( 'message' => 402 === $code ? __( 'Your Together AI credit is used up. Add a few dollars on their site.', 'songpress' ) : __( 'Together AI says too many requests. Wait a moment and press again.', 'songpress' ) ), 429 );

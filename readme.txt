@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.128
+Stable tag: 0.72.129
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.129 =
+* Art studio: Together AI requests go to api.together.ai (the address their current docs use; the old .xyz address could drop the key), and a refused key now shows Together's own reason.
 
 = 0.72.128 =
 * Art studio: Together AI no longer serves FLUX.1 Schnell, so Generate now offers Juggernaut Lightning Flux (about 0.2 cents a picture) and FLUX.2 dev (about 1.5 cents), three versions per press. The same Together key works.
