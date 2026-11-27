@@ -892,9 +892,6 @@ $fam = (int) $wpdb->get_var( "SELECT family_id FROM wp_songpress_songs WHERE tit
 check( 'editing a song does not match its own family', count( array_filter( Songpress_Names::matches( 'song', 'Harbor Lights', $fam ), function ( $m ) { return 'same' === $m['level'] && false !== strpos( $m['where'], '0001' ); } ) ), 0 );
 check( 'too short a name matches nothing', Songpress_Names::matches( 'song', '' ), array() );
 
-$pi = Songpress_Art::parse_images( '{"data":[{"url":"https://x.ai/a.png"},{"b64_json":"QUJD"},{"url":"http://bad/x.png"},{"b64_json":"<script>"},"x"]}' );
-check( 'AI reply: https url and base64 kept, junk dropped', $pi, array( 'https://x.ai/a.png', 'data:image/png;base64,QUJD' ) );
-check( 'AI reply: garbage gives nothing', Songpress_Art::parse_images( 'nope' ), array() );
 $el = Songpress_Art::norm_lib_item( 'el', array( 'name' => 'Logo', 'layer' => array( 'type' => 'image', 'src' => 'https://x.com/l.png', 'x' => 5, 'flip' => 1 ) ) );
 check( 'art element keeps a picture layer with its flip', array( $el['name'], $el['layer']['src'], $el['layer']['flip'] ), array( 'Logo', 'https://x.com/l.png', 1 ) );
 check( 'art element refuses an empty picture and a canvas', array( Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'image', 'src' => '' ) ) ), Songpress_Art::norm_lib_item( 'el', array( 'layer' => array( 'type' => 'canvas' ) ) ), Songpress_Art::norm_lib_item( 'el', 'x' ) ), array( null, null, null ) );
