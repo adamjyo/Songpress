@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.129
+Stable tag: 0.72.130
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.130 =
+* Art studio: the saved Together key is shown as its first and last four characters and length so it can be compared with the one on Together's site; a key with spaces or odd characters is refused instead of being quietly trimmed.
 
 = 0.72.129 =
 * Art studio: Together AI requests go to api.together.ai (the address their current docs use; the old .xyz address could drop the key), and a refused key now shows Together's own reason.

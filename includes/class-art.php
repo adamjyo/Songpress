@@ -395,13 +395,23 @@ class Songpress_Art {
 		if ( ! Songpress_Caps::can( 'art' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Only Managers can do this.', 'songpress' ) ), 403 );
 		}
-		$k = preg_replace( '/[^A-Za-z0-9_\-.]/', '', (string) wp_unslash( $_POST['key'] ?? '' ) );
+		$raw = trim( (string) wp_unslash( $_POST['key'] ?? '' ) ); // phpcs:ignore
+		$k   = preg_replace( '/[^A-Za-z0-9_\-.]/', '', $raw );
+		if ( $k !== $raw ) {
+			wp_send_json_error( array( 'message' => __( 'That key has spaces or odd characters in it. Copy it again from Together, with nothing before or after it.', 'songpress' ) ), 400 );
+		}
 		if ( '' === $k ) {
 			delete_option( 'songpress_together_key' );
 		} else {
 			update_option( 'songpress_together_key', $k, false );
 		}
-		wp_send_json_success( array( 'has' => '' !== $k ) );
+		wp_send_json_success( array( 'has' => '' !== $k, 'hint' => self::key_hint() ) );
+	}
+
+	/** Enough of the saved key to compare with the one on Together's site, never the whole thing. */
+	private static function key_hint() {
+		$k = self::tk_key();
+		return '' === $k ? '' : sprintf( /* translators: 1: first characters, 2: last characters, 3: length */ __( 'Saved key: %1$s…%2$s (%3$d characters)', 'songpress' ), substr( $k, 0, 4 ), substr( $k, -4 ), strlen( $k ) );
 	}
 
 	private static function prompt_in() {
@@ -662,6 +672,7 @@ class Songpress_Art {
 			'list'   => add_query_arg( array( 'sp_page' => 'art' ), Songpress_Editor::list_url() ),
 			'ai'     => true,
 			'tk'     => '' !== self::tk_key(),
+			'tkhint' => self::key_hint(),
 			'prompt' => (string) ( $s->art_prompt ?? '' ),
 			'logos'  => self::logos(),
 		);
@@ -715,7 +726,7 @@ class Songpress_Art {
 		$o .= '<aside class="spa-right"><div class="spa-head"><h3>' . $tr( 'Layers' ) . '</h3><span><button type="button" class="spa-plus" id="spa-ladd" title="' . esc_attr__( 'New layer', 'songpress' ) . '">+</button></span></div><div class="spa-addmenu" id="spa-addmenu" hidden><button type="button" class="spe-btn" data-add="text">' . $tr( 'Text' ) . '</button><button type="button" class="spe-btn" data-add="rect">' . $tr( 'Box' ) . '</button><button type="button" class="spe-btn" data-add="ellipse">' . $tr( 'Circle' ) . '</button><button type="button" class="spe-btn" id="spa-newdraw">' . $tr( 'Drawing' ) . '</button></div><ul id="spa-layers" class="spa-layers"></ul><div id="spa-props" class="spa-props"></div></aside>';
 		$o .= '</div>';
 		// generate window
-		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . ' <small class="spa-ver">v' . esc_html( SONGPRESS_VERSION ) . '</small></h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class="spe-help">' . $tr( 'Your description is sent to the service you pick below. Press a picture to see it larger; drag one onto the square to put it on the top layer. Every picture is kept in your Media Library.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="together">' . esc_html__( 'Together AI, Juggernaut Lightning Flux (about 0.2 cents a picture, needs a key)', 'songpress' ) . '</option><option value="togetherdev">' . esc_html__( 'Together AI, FLUX.2 dev (about 1.5 cents a picture, better detail, needs a key)', 'songpress' ) . '</option><option value="horde">' . esc_html__( 'AI Horde (free, no key, can queue)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your Together AI key (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="Paste key"></label><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make three', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div><div class="spa-prev" id="spa-prev" hidden><div class="spa-prevbox"><img id="spa-previmg" alt=""><div class="spa-prevbtns"><button type="button" class="spe-save" id="spa-prevtop">' . esc_html__( 'Add to top layer', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevback">' . esc_html__( 'Use as background', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevx">' . esc_html__( 'Close', 'songpress' ) . '</button></div></div></div>';
+		$o .= '<div class="spa-ai" id="spa-ai" hidden><div class="spa-head"><h3>' . $tr( 'Generate' ) . ' <small class="spa-ver">v' . esc_html( SONGPRESS_VERSION ) . '</small></h3><button type="button" class="spa-plus" id="spa-aiclose" aria-label="' . esc_attr__( 'Close', 'songpress' ) . '">×</button></div><p class="spe-help">' . $tr( 'Your description is sent to the service you pick below. Press a picture to see it larger; drag one onto the square to put it on the top layer. Every picture is kept in your Media Library.' ) . '</p><label class="spe-field"><span>' . esc_html__( 'Picture service', 'songpress' ) . '</span><select id="spa-aiprov"><option value="together">' . esc_html__( 'Together AI, Juggernaut Lightning Flux (about 0.2 cents a picture, needs a key)', 'songpress' ) . '</option><option value="togetherdev">' . esc_html__( 'Together AI, FLUX.2 dev (about 1.5 cents a picture, better detail, needs a key)', 'songpress' ) . '</option><option value="horde">' . esc_html__( 'AI Horde (free, no key, can queue)', 'songpress' ) . '</option></select></label><div class="spa-aikey" id="spa-aikey" hidden><label class="spe-field"><span>' . esc_html__( 'Your Together AI key (kept on this site, never shown again)', 'songpress' ) . '</span><input type="password" id="spa-key" autocomplete="off" placeholder="Paste key"></label><p class="spe-help" id="spa-keyinfo"></p><button type="button" class="spe-btn" id="spa-keysave">' . esc_html__( 'Save key', 'songpress' ) . '</button> <button type="button" class="spe-btn danger" id="spa-keyclear">' . esc_html__( 'Remove key', 'songpress' ) . '</button></div><label class="spe-field"><span>' . esc_html__( 'Describe the picture', 'songpress' ) . '</span><textarea id="spa-prompt" rows="3"></textarea></label><label class="spe-check"><input type="checkbox" id="spa-aicover" checked> ' . esc_html__( 'Album cover (square, no lettering)', 'songpress' ) . '</label> <button type="button" class="spe-save" id="spa-aigo">' . esc_html__( 'Make three', 'songpress' ) . '</button><p class="spe-help" id="spa-aimsg"></p><div class="spa-aigrid" id="spa-aigrid"></div></div><div class="spa-prev" id="spa-prev" hidden><div class="spa-prevbox"><img id="spa-previmg" alt=""><div class="spa-prevbtns"><button type="button" class="spe-save" id="spa-prevtop">' . esc_html__( 'Add to top layer', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevback">' . esc_html__( 'Use as background', 'songpress' ) . '</button><button type="button" class="spe-btn" id="spa-prevx">' . esc_html__( 'Close', 'songpress' ) . '</button></div></div></div>';
 		$o .= '<script type="application/json" id="spa-cfg">' . wp_json_encode( $cfg, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script><script>' . self::js() . '</script></div>';
 		return $o;
 	}
@@ -899,11 +910,11 @@ $('spa-aibtn').onclick=function(){if(ai.hidden)aiOpen();else ai.hidden=true};
 $('spa-aiclose').onclick=function(){ai.hidden=true};
 function aimsg(t){$('spa-aimsg').textContent=t||''}
 function post(action,data){var fd=new FormData();fd.append('action',action);fd.append('nonce',C.nonce);for(var k in data)fd.append(k,data[k]);return fetch(C.ajax,{method:'POST',body:fd,credentials:'same-origin'}).then(function(r){return r.json()})}
-function provUi(){$('spa-aikey').hidden=!/^together/.test($('spa-aiprov').value);$('spa-key').placeholder=C.tk?'Key saved. Paste a new one to replace it':'Paste your Together AI key'}
+function provUi(){$('spa-aikey').hidden=!/^together/.test($('spa-aiprov').value);$('spa-key').placeholder=C.tk?'Paste a new key to replace the saved one':'Paste your Together AI key';$('spa-keyinfo').textContent=C.tk?(C.tkhint||'Key saved.'):''}
 $('spa-aiprov').onchange=function(){provUi();try{localStorage.setItem('spa-aiprov',$('spa-aiprov').value)}catch(e){}};
 
-$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your key first.');return}post('songpress_art_key',{key:v}).then(function(j){if(j.success){C.tk=true;$('spa-key').value='';provUi();aimsg('Key saved. Press Make three.')}else aimsg((j.data&&j.data.message)||'Could not save the key')})};
-$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:''}).then(function(){C.tk=false;provUi();aimsg('Key removed.')})};
+$('spa-keysave').onclick=function(){var v=$('spa-key').value.trim();if(!v){aimsg('Paste your key first.');return}post('songpress_art_key',{key:v}).then(function(j){if(j.success){C.tk=true;C.tkhint=j.data.hint||'';$('spa-key').value='';provUi();aimsg('Key saved. Press Make three.')}else aimsg((j.data&&j.data.message)||'Could not save the key')})};
+$('spa-keyclear').onclick=function(){post('songpress_art_key',{key:''}).then(function(){C.tk=false;C.tkhint='';provUi();aimsg('Key removed.')})};
 function claimPick(u){addPicture(u,'AI picture','top');aimsg('Added on top.');return Promise.resolve()}
 function backPick(u){addPicture(u,'AI picture',true);aimsg('Added to the back layer.')}
 var prevU='';
