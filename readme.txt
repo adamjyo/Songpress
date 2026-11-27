@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.115
+Stable tag: 0.72.116
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.116 =
+* Health: now catches every crash during a SongPress request (including ones in WordPress or other plugins, time limits and memory limits), warnings inside SongPress, and requests that came close to a limit. Each entry shows what the request was, how long it ran and its memory use. Keeps the last 30.
 
 = 0.72.115 =
 * DistroKid stats import: TikTok and other services are named correctly even when the saved page does not list them.

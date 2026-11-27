@@ -7,11 +7,18 @@ defined( 'ABSPATH' ) || exit;
  */
 class Songpress_Health {
 
-	const MAX_ERRORS = 10;
+	const MAX_ERRORS = 30;
+
+	/** When this request started, and how many warnings it has already logged (kept small so a noisy page cannot fill the log). */
+	private static $t0    = 0.0;
+	private static $warns = 0;
 
 	public static function init() {
+		self::$t0 = microtime( true );
 		add_action( 'admin_post_songpress_health_clear', array( __CLASS__, 'handle_clear' ) );
 		register_shutdown_function( array( __CLASS__, 'on_shutdown' ) );
+		// Warnings raised inside this plugin's own files are written down too (PHP still handles them as usual).
+		set_error_handler( array( __CLASS__, 'on_warning' ), E_WARNING | E_USER_WARNING | E_DEPRECATED ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions
 	}
 
 	/** Pure: was this PHP error one of ours and bad enough to keep? */
@@ -20,18 +27,96 @@ class Songpress_Health {
 			&& isset( $err['file'] ) && 0 === strpos( wp_normalize_path( (string) $err['file'] ), wp_normalize_path( (string) $dir ) );
 	}
 
-	public static function on_shutdown() {
-		$e = error_get_last();
-		if ( ! self::is_ours( $e, SONGPRESS_DIR ) ) {
-			return;
-		}
-		self::note( (string) $e['message'], str_replace( wp_normalize_path( SONGPRESS_DIR ), '', wp_normalize_path( (string) $e['file'] ) ) . ':' . (int) ( $e['line'] ?? 0 ) );
+	/** Pure: is this a fatal error of any kind (ours, another plugin's, WordPress's, or a time or memory limit)? */
+	public static function is_fatal( $err ) {
+		return is_array( $err ) && in_array( (int) ( $err['type'] ?? 0 ), array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR ), true );
 	}
 
-	public static function note( $message, $where = '' ) {
+	/** Pure: does this request belong to SongPress (one of its screens, an upload, an import, an ajax or admin-post step)? */
+	public static function is_ours_request( $get, $post, $uri ) {
+		foreach ( array( $get, $post ) as $src ) {
+			foreach ( array( 'action' ) as $k ) {
+				if ( isset( $src[ $k ] ) && is_string( $src[ $k ] ) && 0 === strpos( $src[ $k ], 'songpress' ) ) {
+					return true;
+				}
+			}
+			if ( isset( $src['sp_page'] ) ) {
+				return true;
+			}
+		}
+		return false !== strpos( (string) $uri, 'sp_page=' ) || false !== strpos( (string) $uri, '/desktop/' ) || false !== strpos( (string) $uri, '/phone/' ) || false !== strpos( (string) $uri, 'songpress' );
+	}
+
+	/** A short description of what this request was doing, for the log. */
+	public static function describe_request() {
+		$a = '';
+		foreach ( array( $_POST, $_GET ) as $src ) { // phpcs:ignore WordPress.Security.NonceVerification
+			if ( isset( $src['action'] ) && is_string( $src['action'] ) ) {
+				$a = sanitize_key( $src['action'] );
+				break;
+			}
+		}
+		$path = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_parse_url( wp_unslash( $_SERVER['REQUEST_URI'] ), PHP_URL_PATH ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$q    = isset( $_GET['sp_page'] ) && is_string( $_GET['sp_page'] ) ? ' sp_page=' . sanitize_key( $_GET['sp_page'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		$len  = ! empty( $_SERVER['CONTENT_LENGTH'] ) ? ' upload ' . size_format( (int) $_SERVER['CONTENT_LENGTH'] ) : '';
+		return mb_substr( trim( $path . ( '' !== $a ? ' action=' . $a : '' ) . $q . $len ), 0, 160 );
+	}
+
+	/** Seconds this request has run and its memory peak against the limit, for the log. */
+	public static function usage_note() {
+		$secs = self::$t0 > 0 ? round( microtime( true ) - self::$t0, 1 ) : 0;
+		$peak = round( memory_get_peak_usage( true ) / 1048576 );
+		return $secs . 's · ' . $peak . 'MB of ' . ini_get( 'memory_limit' );
+	}
+
+	public static function on_shutdown() {
+		$e = error_get_last();
+		if ( self::is_fatal( $e ) ) {
+			$file  = wp_normalize_path( (string) ( $e['file'] ?? '' ) );
+			$mine  = self::is_ours( $e, SONGPRESS_DIR );
+			$req   = self::is_ours_request( $_GET, $_POST, isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '' ); // phpcs:ignore WordPress.Security
+			if ( $mine || $req ) {
+				$rel = str_replace( wp_normalize_path( SONGPRESS_DIR ), '', $file );
+				$rel = $mine ? $rel : str_replace( wp_normalize_path( WP_CONTENT_DIR ) . '/', '', $rel );
+				self::note( (string) $e['message'], $rel . ':' . (int) ( $e['line'] ?? 0 ), $mine ? 'fatal' : 'fatal (outside SongPress)', true );
+			}
+			return;
+		}
+		// Not a crash, but a SongPress request that came close to a limit is the likely cause of a crash on the next try.
+		if ( self::$t0 > 0 && self::is_ours_request( $_GET, $_POST, isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '' ) ) { // phpcs:ignore WordPress.Security
+			$lim  = self::bytes( ini_get( 'memory_limit' ) );
+			$peak = memory_get_peak_usage( true );
+			$secs = microtime( true ) - self::$t0;
+			$max  = (int) ini_get( 'max_execution_time' );
+			if ( ( $lim > 0 && $peak > 0.8 * $lim ) || ( $max > 0 && $secs > 0.8 * $max ) || $secs > 25 ) {
+				self::note( 'This request came close to a server limit.', self::describe_request(), 'near a limit', true );
+			}
+		}
+	}
+
+	public static function on_warning( $no, $str, $file = '', $line = 0 ) {
+		if ( self::$warns < 3 && is_string( $file ) && 0 === strpos( wp_normalize_path( $file ), wp_normalize_path( SONGPRESS_DIR ) ) ) {
+			++self::$warns;
+			self::note( (string) $str, str_replace( wp_normalize_path( SONGPRESS_DIR ), '', wp_normalize_path( $file ) ) . ':' . (int) $line, 'warning', true );
+		}
+		return false; // let PHP and WordPress carry on as they would have
+	}
+
+	public static function note( $message, $where = '', $kind = 'fatal', $context = false ) {
 		$log = get_option( 'songpress_errors', array() );
 		$log = is_array( $log ) ? $log : array();
-		array_unshift( $log, array( 'at' => gmdate( 'Y-m-d H:i:s' ), 'message' => mb_substr( wp_strip_all_tags( (string) $message ), 0, 240 ), 'where' => (string) $where, 'version' => SONGPRESS_VERSION ) );
+		$msg = mb_substr( wp_strip_all_tags( (string) $message ), 0, 240 );
+		foreach ( $log as $old ) { // the same warning again within an hour is not worth another line
+			if ( 'warning' === $kind && ( $old['message'] ?? '' ) === $msg && ( $old['where'] ?? '' ) === (string) $where && ( $old['kind'] ?? '' ) === 'warning' && strtotime( ( $old['at'] ?? '' ) . ' UTC' ) > time() - HOUR_IN_SECONDS ) {
+				return;
+			}
+		}
+		$row = array( 'at' => gmdate( 'Y-m-d H:i:s' ), 'message' => $msg, 'where' => (string) $where, 'version' => SONGPRESS_VERSION, 'kind' => (string) $kind );
+		if ( $context ) {
+			$row['request'] = self::describe_request();
+			$row['usage']   = self::usage_note();
+		}
+		array_unshift( $log, $row );
 		update_option( 'songpress_errors', array_slice( $log, 0, self::MAX_ERRORS ), false );
 	}
 
@@ -136,7 +221,7 @@ class Songpress_Health {
 		if ( ! empty( $errs ) ) {
 			$o .= '<h3>' . esc_html__( 'Recent plugin errors', 'songpress' ) . '</h3><ul class="spa-list">';
 			foreach ( $errs as $e ) {
-				$o .= '<li><time>' . esc_html( $e['at'] ) . ' UTC</time> ' . esc_html( $e['message'] ) . '<small>' . esc_html( $e['where'] . ' · v' . $e['version'] ) . '</small></li>';
+				$o .= '<li><time>' . esc_html( $e['at'] ) . ' UTC</time> <b>' . esc_html( (string) ( $e['kind'] ?? 'fatal' ) ) . '</b> ' . esc_html( $e['message'] ) . '<small>' . esc_html( $e['where'] . ' · v' . $e['version'] ) . '</small>' . ( ! empty( $e['request'] ) ? '<small>' . esc_html( 'Request: ' . $e['request'] . ' · ' . ( $e['usage'] ?? '' ) ) . '</small>' : '' ) . '</li>';
 			}
 			$o .= '</ul><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">' . wp_nonce_field( 'songpress_health_clear', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="songpress_health_clear"><button class="spe-btn" type="submit">' . esc_html__( 'Clear the list', 'songpress' ) . '</button></form>';
 		}
