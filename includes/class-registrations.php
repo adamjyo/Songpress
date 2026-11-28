@@ -121,6 +121,9 @@ class Songpress_Registrations {
 
 	/** 'released' once the release date has come, 'scheduled' while a release is set for later or the Scheduled box is ticked, otherwise ''. Pure. */
 	public static function release_state( $song, $today = '' ) {
+		if ( isset( $song->version_no ) && 0 === (int) $song->version_no ) { // the original work is never released; its versions are
+			return '';
+		}
 		$today = '' === $today ? current_time( 'Y-m-d' ) : $today;
 		$date  = substr( trim( (string) ( $song->release_date ?? '' ) ), 0, 10 );
 		$at    = trim( (string) ( $song->scheduled_at ?? '' ) );
@@ -148,6 +151,9 @@ class Songpress_Registrations {
 			$o .= '<span class="spr-chip ' . ( 'released' === $rel ? 'green' : 'gold' ) . '" title="' . esc_attr__( 'Release', 'songpress' ) . '">' . esc_html( 'released' === $rel ? __( 'Released', 'songpress' ) : __( 'Scheduled', 'songpress' ) ) . '</span>';
 		}
 		$stage = Songpress_Songs::effective_status( $song );
+		if ( isset( $song->version_no ) && 0 === (int) $song->version_no && 'released' === strtolower( trim( (string) $stage ) ) ) {
+			$stage = ''; // a work with versions never says Released itself
+		}
 		if ( '' === $rel && '' !== trim( (string) $stage ) ) {
 			$o .= '<span class="spr-chip ' . self::stage_color( $stage ) . '" title="' . esc_attr__( 'Status', 'songpress' ) . '">' . esc_html( $stage ) . '</span>';
 		}
