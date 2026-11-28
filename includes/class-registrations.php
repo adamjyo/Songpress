@@ -119,11 +119,23 @@ class Songpress_Registrations {
 		return 'taken down' === $k ? 'red' : 'gold';
 	}
 
+	/** 'released' once the release date has come, 'scheduled' while a release is set for later or the Scheduled box is ticked, otherwise ''. Pure. */
+	public static function release_state( $song, $today = '' ) {
+		$today = '' === $today ? current_time( 'Y-m-d' ) : $today;
+		$date  = substr( trim( (string) ( $song->release_date ?? '' ) ), 0, 10 );
+		$at    = trim( (string) ( $song->scheduled_at ?? '' ) );
+		if ( '' !== $date && $date <= $today ) {
+			return 'released';
+		}
+		return ( '' !== $date || '' !== $at ) ? 'scheduled' : '';
+	}
+
 	/** One compact line of chips for the Works list: the registries, this song's status, then ChPro. */
 	public static function strip( $song, $registries = true ) {
 		$w = self::work_of( (int) $song->id );
 		if ( ! $w ) {
-			return '';
+			$rel = self::release_state( $song );
+			return '' === $rel ? '' : '<span class="spr-chip ' . ( 'released' === $rel ? 'green' : 'gold' ) . '">' . esc_html( 'released' === $rel ? __( 'Released', 'songpress' ) : __( 'Scheduled', 'songpress' ) ) . '</span>';
 		}
 		$now = time();
 		$o   = '';
@@ -131,8 +143,12 @@ class Songpress_Registrations {
 			$st = self::status( $w, $k, $now );
 			$o .= '<span class="spr-chip ' . esc_attr( $st['state'] ) . '" title="' . esc_attr( $d[0] . ( '' !== $st['code'] ? ': ' . $st['code'] : '' ) ) . '">' . esc_html( $d[0] ) . '</span>';
 		}
+		$rel = self::release_state( $song );
+		if ( '' !== $rel ) { // a dated or scheduled release says more than the writing stage
+			$o .= '<span class="spr-chip ' . ( 'released' === $rel ? 'green' : 'gold' ) . '" title="' . esc_attr__( 'Release', 'songpress' ) . '">' . esc_html( 'released' === $rel ? __( 'Released', 'songpress' ) : __( 'Scheduled', 'songpress' ) ) . '</span>';
+		}
 		$stage = Songpress_Songs::effective_status( $song );
-		if ( '' !== trim( (string) $stage ) ) {
+		if ( '' === $rel && '' !== trim( (string) $stage ) ) {
 			$o .= '<span class="spr-chip ' . self::stage_color( $stage ) . '" title="' . esc_attr__( 'Status', 'songpress' ) . '">' . esc_html( $stage ) . '</span>';
 		}
 		if ( $registries ) {
