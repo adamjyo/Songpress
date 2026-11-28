@@ -372,7 +372,7 @@ class Songpress_Frontend {
 			}
 			$out .= '<li class="songpress-row">' . ( $bulk ? '<input type="checkbox" class="songpress-pick" name="ids[]" value="' . (int) $s->id . '" aria-label="' . esc_attr( sprintf( /* translators: %s: song title */ __( 'Select %s', 'songpress' ), $s->title ) ) . '">' : '' ) . $art . '<a class="songpress-rowlink" href="' . $link . '">'
 				. '<span class="songpress-serial">' . esc_html( $s->serial ) . '</span>'
-				. '<span class="songpress-title">' . esc_html( Songpress_Songs::list_title( $s ) ) . '</span>'
+				. '<span class="songpress-title">' . esc_html( Songpress_Songs::list_title( $s ) ) . ( ( 'released' === Songpress_Registrations::release_state( $s ) || ( isset( $isrc[ (int) $s->id ] ) && '' === Songpress_Registrations::release_state( $s ) ) ) ? '<small class="songpress-tag">' . esc_html__( 'Released', 'songpress' ) . '</small>' : '' ) . '</span>'
 				. '<span class="songpress-genre">' . esc_html( $s->genre ) . '</span>'
 				. '<span class="songpress-icons songpress-writers">' . $faces . '</span>'
 				. '<span class="songpress-icons">' . $band . '</span>'

@@ -4,7 +4,7 @@ Tags: music, songs, songwriting, catalog, lyrics
 Requires at least: 6.2
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 0.72.138
+Stable tag: 0.72.139
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -29,6 +29,9 @@ SongPress works with WordPress. It is not made or endorsed by WordPress, and it 
 3. Put `[songpress_catalog]` on a page for the phone catalog.
 
 == Changelog ==
+
+= 0.72.139 =
+* Works list: the Released badge under the title is back. It shows when the release date has come (or the work has an ISRC and no later release is scheduled), and is left off while a release is still scheduled.
 
 = 0.72.138 =
 * Works list: the status chip beside the registries shows Scheduled (gold) while a release is set for a later date or the Scheduled box is ticked, and Released (green) once the release date has come. The small Released tag under the title (which went by ISRC) is gone.
