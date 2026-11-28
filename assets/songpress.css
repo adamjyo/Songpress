@@ -158,7 +158,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-rowlink .songpress-labels{grid-area:label}
 .songpress-icons .sp-face{margin:0!important}
 @container (min-width:620px){
- a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr);grid-template-areas:none}
+ a.songpress-rowlink{grid-template-columns:84px minmax(0,3fr) minmax(165px,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr);grid-template-areas:none}
  .songpress-rowlink>*{grid-area:auto!important}
  .songpress-rowlink .songpress-sub{text-align:left}
 }
@@ -174,7 +174,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .sp-app .songpress-colhead a{color:var(--sp-mute);white-space:nowrap}
 .sp-app .songpress-colhead a:hover,.sp-app .songpress-colhead a.on{color:var(--sp-accent)}
 @container (min-width:620px){
- .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr);gap:0 12px;align-items:center}
+ .songpress-ch-main{display:grid;grid-template-columns:84px minmax(0,3fr) minmax(165px,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr);gap:0 12px;align-items:center}
 }
 
 .songpress-serial{white-space:nowrap}
@@ -190,7 +190,7 @@ a.songpress-rowlink{flex:1;min-width:0;display:grid;grid-template-columns:auto m
 .songpress-ch-play{width:var(--sp-pic,56px)}
 .songpress-colhead .songpress-ch-band{text-align:left}
 @container (min-width:620px){
- .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(0,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr)}
+ .songpress-ch-main{grid-template-columns:84px minmax(0,3fr) minmax(165px,1.2fr) minmax(75px,1.6fr) 75px minmax(220px,2.6fr)}
 }
 
 /* Song editor */
@@ -1475,3 +1475,8 @@ html:has(.songpress-tabs-fixed) .sp-rd-np{bottom:calc(76px + env(safe-area-inset
 .spa-layers li{margin-right:2px}
 .spa-pos{margin-top:8px}
 .spa-back{display:inline-block;margin:0 0 8px;text-decoration:none}
+/* Works list: the writers sit in one line; more than one overlap a little so the row stays one face tall */
+.songpress-list .songpress-writers{flex-wrap:nowrap;min-width:0;overflow:visible;gap:0}
+.songpress-list .songpress-writers .sp-face{flex:none;position:relative}
+.songpress-list .songpress-writers .sp-face+.sp-face{margin-left:calc(var(--sp-pic,56px)*-.42)!important}
+.songpress-list .songpress-writers .sp-face:hover{z-index:2}
